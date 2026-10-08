@@ -106,6 +106,22 @@ span.and{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px}
 .mgrid span{display:block;font-size:12px;color:var(--muted)}.mgrid b{font-size:16px;font-variant-numeric:tabular-nums}
 .dem-meta{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin:-2px 0 10px}
 .dem-meta label{flex-direction:row;align-items:center;gap:6px}.dem-meta select{width:auto;font-size:13px;padding:4px 6px}
+.legenda{display:flex;flex-wrap:wrap;gap:12px;margin:6px 0 10px;font-size:12px}
+.lg{display:inline-flex;align-items:center;gap:5px}.lg i{width:12px;height:10px;border-radius:2px;display:inline-block}
+.gantt{border:1px solid var(--line);border-radius:8px;overflow-x:auto}
+.g-row,.gh-row{display:grid;grid-template-columns:230px minmax(420px,1fr);border-bottom:1px solid var(--line)}
+.gh-row{background:var(--surface-2);font-size:11px;color:var(--muted)}
+.gn{padding:7px 10px;border-right:1px solid var(--line);font-size:13px;display:flex;flex-direction:column;min-width:0}
+.gn b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gn .muted{font-size:11px}
+.gt{position:relative;min-height:34px}.gh-row .gt{min-height:24px}
+.gt span{position:absolute;top:5px;transform:translateX(2px);white-space:nowrap}
+.gb{position:absolute;top:9px;height:16px;border-radius:3px;opacity:.9}
+.bar.carga{grid-template-columns:90px 1fr 80px}.capline{font-size:12px;margin-top:6px}
+.prop-grid{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:14px;min-height:60vh}
+.prop-form{display:flex;flex-direction:column;gap:8px}.prop-form textarea{min-height:70px}
+.ia-rev{white-space:pre-wrap;font-size:14px;line-height:1.55;background:var(--surface-2);border-radius:8px;padding:12px;margin-top:8px}
+#ppPrev{width:100%;min-height:60vh;border:1px solid var(--line);border-radius:8px;background:#fff}
+@media (max-width:760px){.prop-grid{grid-template-columns:1fr}.g-row,.gh-row{grid-template-columns:150px minmax(380px,1fr)}}
 .ignbar{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin:-6px 0 10px}
 .estbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed var(--line)}
 .estbar select{width:auto}
@@ -172,6 +188,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
     <button data-tab="est" class="on">Estimativa</button>
     <button data-tab="proc">Banco de processos</button>
     <button data-tab="tpl">Modelos de demanda</button>
+    <button data-tab="cron">Cronograma</button>
     <button data-tab="cal">Calibração</button>
     <button data-tab="sys">Leitor de System</button>
     <button data-tab="cfg">Parâmetros</button>
@@ -201,6 +218,8 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
           <label style="flex:1;min-width:200px">Nome da estimativa<input id="pNome" placeholder="Ex.: Linha Cozinha Prime"></label>
           <label>Responsável<input id="pResp" placeholder="Nome"></label>
           <label>Data<input id="pData" type="date"></label>
+          <label>Início previsto<input id="pInicio" type="date"></label>
+          <label>Prazo do cliente<input id="pPrazo" type="date" title="Opcional: data que o cliente precisa"></label>
         </div>
         <div class="toolbar noprint" style="margin:12px 0 0">
           <button class="btn pri" id="btnNovaDem">+ Nova demanda</button>
@@ -213,6 +232,9 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
           <button class="btn" id="btnClear">Limpar</button>
           <button class="btn" id="btnToggl">Toggl</button>
           <button class="btn" id="btnZoho">Orçamento Zoho Invoice</button>
+          <button class="btn" id="btnZProj">Zoho Projects</button>
+          <button class="btn" id="btnProposta">Proposta premium</button>
+          <button class="btn" id="btnIA">Assistente IA</button>
         </div>
       </div>
       <div id="demList"></div>
@@ -225,7 +247,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
           <div class="big"><span>Esforço total (com reservas)</span><b id="kTotal">0 h</b></div>
           <div><span>Horas estimadas</span><b id="kBase">0</b></div>
           <div><span>Reservas</span><b id="kRes">0</b></div>
-          <div><span>Prazo (dias úteis)</span><b id="kDias">0</b></div>
+          <div><span>Entrega prevista</span><b id="kDias">—</b></div>
           <div><span>Investimento</span><b id="kValor">R$ 0</b></div>
         </div>
         <div class="range">
@@ -317,6 +339,20 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
   </div>
 </section>
 
+<!-- ================= CRONOGRAMA ================= -->
+<section id="cron" class="tab">
+  <div class="card">
+    <h2>Cronograma da estimativa aberta</h2>
+    <p class="muted">Cada demanda é feita por uma pessoa, fase após fase (P&D → Cadastros → Modulação → Testes…), com as horas já com reserva de risco. Com mais de uma pessoa, as demandas são distribuídas para quem fica livre primeiro. Considera dias úteis, horas produtivas/dia e feriados (Parâmetros).</p>
+    <div id="cronOut"></div>
+  </div>
+  <div class="card">
+    <h2>Carga da equipe por semana</h2>
+    <p class="muted">Soma as estimativas <b>fechadas</b> (demandas não concluídas), cada uma a partir do seu início previsto, mais a estimativa aberta. Barra acima da capacidade = sobrecarga: renegocie prazo, reforce a equipe ou mude o início.</p>
+    <div id="cargaOut"></div>
+  </div>
+</section>
+
 <!-- ================= CALIBRAÇÃO ================= -->
 <section id="cal" class="tab">
   <div class="card">
@@ -350,6 +386,18 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
     <h2>Níveis de risco — reserva por demanda</h2>
     <p class="muted">Substitui a contingência única: cada demanda escolhe seu nível. A aba Calibração mostra o desvio observado por nível para você ajustar estas reservas com dados.</p>
     <div id="riscosBox"></div>
+  </div>
+  <div class="card">
+    <h2>Empresa e proposta</h2>
+    <p class="muted">Dados que assinam a proposta premium.</p>
+    <div class="row">
+      <label style="flex:1;min-width:200px">Empresa<input id="eNome"></label>
+      <label style="flex:1;min-width:160px">Assinatura<input id="eAss" placeholder="Nome de quem assina"></label>
+      <label style="flex:1;min-width:160px">Cargo<input id="eCargo"></label>
+      <label style="flex:1;min-width:200px">Contato<input id="eCont" placeholder="telefone · site"></label>
+    </div>
+    <label style="margin-top:10px">Frase de fechamento<input id="eMantra"></label>
+    <label style="margin-top:10px">Feriados (um por linha, dd/mm/aaaa) — usados no cronograma<textarea id="eFer" style="min-height:60px"></textarea></label>
   </div>
   <div class="card">
     <h2>Backup completo</h2>
@@ -483,6 +531,8 @@ function completarDb(){
   if(!Array.isArray(c.riscos)||!c.riscos.length) c.riscos=[{id:"padrao",nome:"Padrão (já feito antes)",pct:c.cont??10},{id:"novo",nome:"Novo fabricante / linha",pct:20},{id:"inedito",nome:"P&D / inédito",pct:35}];
   if(c.margemAlvo==null) c.margemAlvo=40;
   if(c.gest==null) c.gest=0;
+  if(!c.empresa) c.empresa={nome:"Diâmetro Design for Business",assinatura:"",cargo:"Consultor estratégico",contato:"",mantra:"Viva para transformar, sonhe para realizar e firme que vai!"};
+  if(!Array.isArray(c.feriados)) c.feriados=[];
   if(!db.templates) db.templates=[];
   if(!Array.isArray(db.lixeira)) db.lixeira=[];
   const lim=Date.now()-60*864e5; db.lixeira=db.lixeira.filter(x=>(x.em||0)>lim);  // lixeira guarda 60 dias
@@ -628,6 +678,7 @@ const fases=()=>[...FASES,...new Set(db.processos.map(p=>p.fase).filter(f=>!FASE
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.id===b.dataset.tab));
+  if(b.dataset.tab==="cron") renderCron();
   render();
 });
 
@@ -688,11 +739,12 @@ function renderEstBar(){
     <button class="btn" id="btnNovaVersao">Nova versão</button>
     <button class="btn" id="btnSalvarTpl">Salvar como template</button>`;
   ["btnToggl","btnZoho"].forEach(id=>{const b=document.getElementById(id);b.disabled=!fechada;b.title=fechada?"":"Feche a estimativa para liberar"});
-  ["btnNovaDem","btnXmind","btnExemplo","btnClear","pNome","pResp","pData"].forEach(id=>document.getElementById(id).disabled=fechada);
+  ["btnNovaDem","btnXmind","btnExemplo","btnClear","pNome","pResp","pData","btnIA"].forEach(id=>document.getElementById(id).disabled=fechada);
+  {const b=document.getElementById("btnZProj");b.disabled=!fechada;b.title=fechada?"":"Feche a estimativa para liberar"}
 }
 function renderEst(){
   renderEstBar();
-  $("#pNome").value=est.nome||""; $("#pResp").value=est.resp||""; $("#pData").value=est.data||"";
+  $("#pNome").value=est.nome||""; $("#pInicio").value=inicioDe(est); $("#pPrazo").value=est.prazo||""; $("#pResp").value=est.resp||""; $("#pData").value=est.data||"";
   const r=calc();
 
   $("#demList").innerHTML=est.demandas.map((d,di)=>{
@@ -761,7 +813,8 @@ function renderEst(){
   $("#kTotal").textContent=hrs(r.total);
   $("#kBase").textContent=num(r.base/60);
   $("#kRes").textContent=num(r.res/60);
-  $("#kDias").textContent=num(Math.ceil(r.dias*10)/10);
+  const crr=cronograma(); $("#kDias").textContent=crr.entrega?fmtD(crr.entrega):"—";
+  $("#kDias").title=`${crr.dias} dias úteis a partir de ${fmtD(crr.ini)}`; $("#kDias").classList.toggle("diff",!!(est.prazo&&crr.entrega>est.prazo)); $("#kDias").classList.toggle("up",!!(est.prazo&&crr.entrega>est.prazo));
   $("#kValor").textContent=brl(r.valor);
   $("#rMin").textContent=hrs(r.min); $("#rMax").textContent=hrs(r.max);
   const alvo=+c.margemAlvo||0, abaixo=r.valor&&r.margemPct<alvo;
@@ -950,6 +1003,8 @@ dl.addEventListener("click",async e=>{
     document.querySelector(`textarea[data-d="${ds.obs}"]`).focus();
   }
 });
+$("#pInicio").addEventListener("change",e=>{est.inicio=e.target.value||null;persist();renderEst();renderCron()});
+$("#pPrazo").addEventListener("change",e=>{est.prazo=e.target.value||null;persist();renderEst();renderCron()});
 ["pNome","pResp","pData"].forEach(id=>$("#"+id).addEventListener("input",e=>{
   est[{pNome:"nome",pResp:"resp",pData:"data"}[id]]=e.target.value; persist();
 }));
@@ -1198,7 +1253,7 @@ $("#dbImport").onclick=()=>pickFile(".json,.csv",async f=>{
   }
   persist(); render();
 });
-$("#dbReset").onclick=async()=>{if(await uiConfirm("Restaurar o banco padrão? Processos, modelos e vínculos personalizados serão substituídos.")){db={...seedDb(),templates:db.templates||[]};persist();render()}};
+$("#dbReset").onclick=async()=>{if(await uiConfirm("Restaurar o banco padrão? Processos, modelos e vínculos voltam ao original. Parâmetros, perfis, templates e o arquivo de estimativas são mantidos.")){db={...seedDb(),templates:db.templates||[],cfg:db.cfg,lixeira:db.lixeira||[]};completarDb();persist();render()}};
 
 /* ================= ARQUIVO DE ESTIMATIVAS ================= */
 let arqCliSel=null;
@@ -2004,8 +2059,16 @@ $("#btnZoho").onclick=async()=>{
 
 /* ================= PARÂMETROS ================= */
 const CFG={cMargem:"margemAlvo",cHdia:"hdia",cEquipe:"equipe",cGest:"gest",cOti:"oti",cPes:"pes"};
+const EMP={eNome:"nome",eAss:"assinatura",eCargo:"cargo",eCont:"contato",eMantra:"mantra"};
+Object.entries(EMP).forEach(([id,k])=>$("#"+id).addEventListener("change",e=>{db.cfg.empresa[k]=e.target.value.trim();persist()}));
+$("#eFer").addEventListener("change",e=>{
+  db.cfg.feriados=e.target.value.split(/\n|,|;/).map(x=>x.trim()).filter(Boolean).map(x=>{const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(x);return m?`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`:/^\d{4}-\d{2}-\d{2}$/.test(x)?x:null}).filter(Boolean);
+  persist(); renderCfg(); renderEst(); renderCron();
+});
 function renderCfg(){
   Object.entries(CFG).forEach(([id,k])=>$("#"+id).value=db.cfg[k]);
+  Object.entries(EMP).forEach(([id,k])=>$("#"+id).value=db.cfg.empresa[k]||"");
+  $("#eFer").value=(db.cfg.feriados||[]).map(fmtD).join("\n");
   const c=db.cfg;
   $("#perfisBox").innerHTML=`<div class="tbl"><table><thead><tr><th>Perfil</th><th class="n">Custo/h</th><th class="n">Preço/h</th><th class="n">Margem</th><th></th></tr></thead><tbody>
     ${c.perfis.map((p,i)=>{const m=p.preco?(p.preco-p.custo)/p.preco*100:0;return `<tr><td><input value="${esc(p.nome)}" data-pf="${i}" data-pk="nome"></td>
@@ -2030,6 +2093,330 @@ $("#riscosBox").addEventListener("click",async e=>{
   if(e.target.id==="riAdd"){const nome=(await uiPrompt("Nome do nível de risco:")||"").trim();if(!nome) return;db.cfg.riscos.push({id:uid(),nome,pct:15});persist();renderCfg();renderEst()}
   else if(e.target.dataset.ridel!==undefined){const x=db.cfg.riscos[+e.target.dataset.ridel];if(await uiConfirm(`Excluir o nível “${x.nome}”? Demandas que o usam passam para “${db.cfg.riscos.find(y=>y!==x).nome}”.`)){db.cfg.riscos.splice(+e.target.dataset.ridel,1);persist();renderCfg();renderEst()}}
 });
+
+/* ================= CRONOGRAMA ================= */
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const dIso=s=>new Date(s+"T12:00:00");
+const fmtD=s=>s?dIso(s).toLocaleDateString("pt-BR"):"—";
+const ehUtil=d=>{const w=d.getDay();return w!==0&&w!==6&&!(db.cfg.feriados||[]).includes(iso(d))};
+function proxUtil(s){const d=dIso(s);while(!ehUtil(d)) d.setDate(d.getDate()+1);return iso(d)}
+function diaUtil(iniIso,k){const d=dIso(proxUtil(iniIso));let n=0;while(n<k){d.setDate(d.getDate()+1);if(ehUtil(d)) n++}return iso(d)}
+const inicioDe=e=>e.inicio||proxUtil(iso(new Date(Date.now()+864e5)));
+function cronograma(e=est,eqForc){
+  const c=db.cfg, hd=Math.max(1,+c.hdia||6), eq=Math.max(1,eqForc||+c.equipe||1), ini=inicioDe(e);
+  const pessoas=Array(eq).fill(0), itens=[], ordemF=fases();
+  (e.demandas||[]).forEach((d,di)=>{
+    if(!contaDem(d)||!d.linhas.length) return;
+    const f=fatorDem(d), porF={};
+    d.linhas.forEach(l=>{const fa=lineFase(l);porF[fa]=(porF[fa]||0)+lineMin(l)/60*f});
+    const ordem=[...ordemF.filter(x=>porF[x]),...Object.keys(porF).filter(x=>!ordemF.includes(x))];
+    const pi=pessoas.indexOf(Math.min(...pessoas)), t0=pessoas[pi]; let t=t0;
+    const segs=ordem.map(fa=>{const sg={fase:fa,h:porF[fa],ini:t,fim:t+porF[fa]};t+=porF[fa];return sg});
+    pessoas[pi]=t;
+    itens.push({di,nome:d.nome,pessoa:pi+1,ini:t0,fim:t,h:t-t0,segs,andamento:d.andamento||"nao_iniciada"});
+  });
+  const fimH=Math.max(0,...pessoas), dias=Math.ceil(fimH/hd-1e-9);
+  const dIni=h=>diaUtil(ini,Math.floor(h/hd+1e-9)), dFim=h=>diaUtil(ini,Math.max(0,Math.ceil(h/hd-1e-9)-1));
+  itens.forEach(it=>{it.dataIni=dIni(it.ini);it.dataFim=dFim(it.fim)});
+  return {ini:proxUtil(ini),itens,fimH,dias,hd,eq,entrega:itens.length?dFim(fimH):null};
+}
+function equipeParaPrazo(e,prazo){for(let n=1;n<=20;n++){const c=cronograma(e,n);if(!c.entrega||c.entrega<=prazo) return n}return null}
+const COR_FASE=["#c98a4b","#3b82c4","#2f7a4b","#8e5bb5","#b08a12","#c2543a","#4a8f9c","#7a7a72"];
+const corFase=f=>COR_FASE[Math.max(0,fases().indexOf(f))%COR_FASE.length];
+function renderCron(){
+  const cr=cronograma(), box=$("#cronOut"); if(!box) return;
+  if(!cr.itens.length){box.innerHTML='<p class="empty">Sem demandas contabilizadas na estimativa aberta.</p>';$("#cargaOut").innerHTML="";renderCarga();return}
+  const tot=Math.max(cr.dias,1), prazo=est.prazo, atrasa=prazo&&cr.entrega>prazo, nec=atrasa?equipeParaPrazo(est,prazo):null;
+  const sem=[];for(let k=0;k<tot;k+=5) sem.push(k);
+  const legenda=[...new Set(cr.itens.flatMap(i=>i.segs.map(s=>s.fase)))].map(f=>`<span class="lg"><i style="background:${corFase(f)}"></i>${esc(f)}</span>`).join("");
+  box.innerHTML=`<div class="kpi" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:12px">
+      <div><span>Início</span><b>${fmtD(cr.ini)}</b></div><div><span>Entrega prevista</span><b class="${atrasa?"diff up":""}">${fmtD(cr.entrega)}</b></div>
+      <div><span>Dias úteis</span><b>${cr.dias}</b></div><div><span>Equipe</span><b>${cr.eq} pessoa${cr.eq>1?"s":""} · ${cr.hd} h/dia</b></div></div>
+    ${prazo?`<p class="msg ${atrasa?"err":"ok"}">${atrasa?`Passa do prazo do cliente (${fmtD(prazo)}). ${nec?`Com <b>${nec} pessoas</b> a entrega cabe no prazo.`:"Nem com 20 pessoas cabe: renegocie o prazo ou reduza o escopo."}`:`Dentro do prazo do cliente (${fmtD(prazo)}).`}</p>`:""}
+    <div class="legenda">${legenda}</div>
+    <div class="gantt">
+      <div class="gh-row"><div class="gn"></div><div class="gt">${sem.map(k=>`<span style="left:${k/tot*100}%">${fmtD(diaUtil(cr.ini,k)).slice(0,5)}</span>`).join("")}</div></div>
+      ${cr.itens.map(it=>`<div class="g-row"><div class="gn" title="${esc(it.nome)}"><b>${esc(it.nome)}</b><span class="muted">${cr.eq>1?`pessoa ${it.pessoa} · `:""}${fmtD(it.dataIni).slice(0,5)} → ${fmtD(it.dataFim).slice(0,5)} · ${num(it.h)} h</span></div>
+        <div class="gt">${it.segs.map(sg=>`<i class="gb" title="${esc(sg.fase)}: ${num(sg.h)} h" style="left:${sg.ini/cr.hd/tot*100}%;width:${Math.max(.4,(sg.fim-sg.ini)/cr.hd/tot*100)}%;background:${corFase(sg.fase)}"></i>`).join("")}</div></div>`).join("")}
+    </div>`;
+  renderCarga();
+}
+function renderCarga(){
+  const box=$("#cargaOut"); if(!box) return;
+  const c=db.cfg, hd=Math.max(1,+c.hdia||6), cap=hd*Math.max(1,+c.equipe||1)*5, semanas={};
+  const segunda=s=>{const d=dIso(s);const w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return iso(d)};
+  const lista=todasEstimativas().filter(e=>e.status==="fechada"||e.id===est.id);
+  lista.forEach(e=>{
+    const ef={...e,demandas:(e.demandas||[]).map(d=>d.andamento==="concluida"?{...d,ignorada:true}:d)}, cr=cronograma(ef);
+    cr.itens.forEach(it=>{
+      for(let h=Math.floor(it.ini/hd)*hd;h<it.fim;h+=hd){
+        const a=Math.max(h,it.ini), b=Math.min(h+hd,it.fim); if(b<=a) continue;
+        const sm=segunda(diaUtil(cr.ini,Math.floor(h/hd+1e-9)));
+        const o=semanas[sm]||(semanas[sm]={h:0,ests:new Set()}); o.h+=b-a; o.ests.add(e.nome+" v"+(e.versao||1)+(e.id===est.id&&e.status!=="fechada"?" (simulação)":""));
+      }
+    });
+  });
+  const ks=Object.keys(semanas).sort().slice(0,16);
+  if(!ks.length){box.innerHTML='<p class="empty">Sem carga planejada.</p>';return}
+  const mx=Math.max(cap,...ks.map(k=>semanas[k].h));
+  box.innerHTML=`<p class="muted">Capacidade: ${num(cap)} h/semana (${c.equipe} pessoa${c.equipe>1?"s":""} × ${hd} h × 5 dias).</p>`+ks.map(k=>{const o=semanas[k],sob=o.h>cap+0.01;
+    return `<div class="bar carga"><span>sem. ${fmtD(k).slice(0,5)}</span><i style="width:${o.h/mx*100}%;${sob?"background:var(--warn)":""}" title="${esc([...o.ests].join(" · "))}"></i><span class="n" style="text-align:right;${sob?"color:var(--warn);font-weight:600":""}">${num(o.h)} h${sob?" ⚠":""}</span></div>`}).join("")
+    +`<div class="capline muted">linha de capacidade: ${num(cap)} h</div>`;
+}
+
+/* ================= PROPOSTA PREMIUM ================= */
+const DESC_FASE={"P&D":"Desenho, protótipo e definição técnica de soluções inéditas antes de qualquer cadastro.",
+  "Estrutura da linha":"Preparação do ambiente, plugins e estrutura de grupos e camadas da biblioteca.",
+  "Configurador":"Parâmetros e atributos que tornam os módulos configuráveis pelo projetista.",
+  "Cadastros":"Cadastro de entidades, Builder, referências e orçamento, com o padrão técnico da fábrica.",
+  "Modulação":"Montagem das aplicações: caixas, modelos formatos, entidades finais e funções.",
+  "Testes":"Validação em ambiente e teste de produção — a biblioteca só é entregue depois de funcionar na fábrica.",
+  "Publicação":"Validação do sistema, geração de miniaturas e publicação para a equipe.",
+  "Administrativo":"Alinhamentos, comunicação e gestão da entrega."};
+function propPadrao(){
+  return {titulo:"Proposta de customização de biblioteca Promob",
+    contexto:`A ${(arq.clientes[est.clienteId]||{}).nome||"empresa"} precisa que a biblioteca Promob reflita com precisão o seu produto e o seu processo fabril. Cada item fora do padrão vira retrabalho de projeto, erro de orçamento e peça errada na produção.`,
+    objetivo:"Entregar uma biblioteca padronizada, testada em ambiente e em produção, que permita ao time de projetos vender e detalhar com velocidade, sem depender de ajustes manuais.",
+    condicoes:"50% na aprovação e 50% na entrega, via boleto ou PIX.",validade:15,
+    premissas:"Fornecimento das fichas técnicas, desenhos e padrões da fábrica no início do projeto.\nUm ponto focal do cliente para validação em até 2 dias úteis.\nAlterações de escopo após a aprovação são orçadas à parte.",
+    proximos:"Aprovação da proposta\nReunião de kick-off e entrega dos materiais técnicos\nExecução com status semanal\nTeste de produção e entrega da biblioteca",
+    mostrarHoras:false};
+}
+function propostaHTML(p){
+  const r=calc(), cr=cronograma(), emp=db.cfg.empresa, cli=(arq.clientes[est.clienteId]||{}).nome||"", rasc=est.status!=="fechada";
+  const dems=est.demandas.map((d,i)=>({d,i})).filter(({d})=>contaDem(d)&&d.linhas.length);
+  const fasesUsadas=fases().filter(f=>dems.some(({d})=>d.linhas.some(l=>lineFase(l)===f)));
+  const val=new Date(Date.now()+(+p.validade||15)*864e5).toLocaleDateString("pt-BR");
+  const li=t=>String(t||"").split("\n").map(x=>x.trim()).filter(Boolean);
+  const e=esc;
+  const escopo=dems.map(({d,i})=>{
+    const grupos={}; d.linhas.forEach(l=>{const pr=proc(l.cod), g=pr?(pr.grupo||pr.fase):"Atividades específicas"; (grupos[g]=grupos[g]||[]).push((pr?pr.nome:l.desc)+(l.det?` — ${l.det}`:"")+(l.qtd>1?` (${num(l.qtd,0)})`:""))});
+    const it=cr.itens.find(x=>x.di===i);
+    return `<section class="dem"><h3>${e(d.nome)}</h3>${d.obs?`<p>${e(d.obs)}</p>`:""}
+      <div class="cols">${Object.entries(grupos).map(([g,ls])=>`<div><h4>${e(g)}</h4><ul>${[...new Set(ls)].map(x=>`<li>${e(x)}</li>`).join("")}</ul></div>`).join("")}</div>
+      ${it?`<p class="meta">Prazo: ${fmtD(it.dataIni)} a ${fmtD(it.dataFim)}${p.mostrarHoras?` · ${num(it.h)} h`:""}</p>`:""}</section>`}).join("");
+  const inv=dems.map(({d,i})=>`<tr><td>${e(d.nome)}</td>${p.mostrarHoras?`<td class="n">${num(d.linhas.reduce((s,l)=>s+lineMin(l),0)*fatorDem(d)/60)} h</td>`:""}<td class="n">${brl(r.porDemVal[i].valor)}</td></tr>`).join("");
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(p.titulo)} — ${e(cli)}</title>
+<style>
+:root{--ink:#1d1c1a;--mut:#6b6862;--acc:#9a5b1e;--line:#e3dfd7;--soft:#f5f2ec}
+*{box-sizing:border-box}body{margin:0;font:15px/1.6 Georgia,"Times New Roman",serif;color:var(--ink);background:#fff}
+.pg{max-width:820px;margin:0 auto;padding:48px 40px}
+.capa{min-height:92vh;display:flex;flex-direction:column;justify-content:space-between;border-left:6px solid var(--acc);padding:40px 40px 32px;background:var(--soft)}
+.capa .emp{font:600 14px/1.4 system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--acc)}
+.capa h1{font-size:40px;line-height:1.15;margin:0 0 16px}.capa .cli{font-size:22px;color:var(--mut)}
+.capa .info{font:13px/1.7 system-ui,sans-serif;color:var(--mut)}
+h2{font:700 13px/1.4 system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin:44px 0 10px;border-bottom:1px solid var(--line);padding-bottom:6px}
+h3{font-size:20px;margin:22px 0 6px}h4{font:600 12px/1.4 system-ui,sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:10px 0 4px}
+ul{margin:4px 0 0;padding-left:18px}li{margin:2px 0}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:4px 24px}
+.meta{font:13px system-ui,sans-serif;color:var(--mut)}
+.fases{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.fases div{background:var(--soft);padding:12px 14px;border-radius:6px}
+.fases b{display:block;font-family:system-ui,sans-serif;font-size:13px;color:var(--acc)}
+table{width:100%;border-collapse:collapse;font-family:system-ui,sans-serif;font-size:14px}td,th{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left}
+.n{text-align:right;white-space:nowrap}.tot td{font-weight:700;font-size:16px;border-top:2px solid var(--ink)}
+.fecho{margin-top:48px;padding:28px;background:var(--ink);color:#fff;border-radius:6px}.fecho p{margin:0}.fecho .m{font-size:20px;font-style:italic;margin-bottom:14px}
+.ass{font:13px/1.6 system-ui,sans-serif;color:#d8d3ca}
+.rasc{position:fixed;top:12px;right:12px;font:700 12px system-ui;background:#b4541a;color:#fff;padding:4px 10px;border-radius:4px}
+@media print{.capa{min-height:96vh;page-break-after:always}.dem{page-break-inside:avoid}.rasc{position:absolute}}
+</style></head><body>${rasc?'<div class="rasc">RASCUNHO</div>':""}
+<div class="pg"><div class="capa"><div class="emp">${e(emp.nome)}</div>
+<div><h1>${e(p.titulo)}</h1><div class="cli">${e(cli)} · ${e(est.nome)}</div></div>
+<div class="info">Versão ${est.versao||1} · ${fmtD(hoje())} · válida até ${val}${emp.contato?`<br>${e(emp.contato)}`:""}</div></div>
+<h2>1 · Contexto</h2><p>${e(p.contexto)}</p>
+<h2>2 · Objetivo</h2><p>${e(p.objetivo)}</p>
+<h2>3 · Método</h2><p>Estimativa por contagem de processos-padrão, calibrada com o histórico real de execução. Cada demanda passa pelas etapas abaixo e só é entregue depois de validada em produção.</p>
+<div class="fases">${fasesUsadas.map((f,k)=>`<div><b>${k+1}. ${e(f)}</b>${e(DESC_FASE[f]||"")}</div>`).join("")}</div>
+<h2>4 · Escopo e entregáveis</h2>${escopo}
+<h2>5 · Cronograma</h2><p>Início previsto em <b>${fmtD(cr.ini)}</b> e entrega da biblioteca em <b>${fmtD(cr.entrega)}</b> (${cr.dias} dias úteis), contados a partir da aprovação e do recebimento dos materiais técnicos.</p>
+<h2>6 · Investimento</h2><table><thead><tr><th>Demanda</th>${p.mostrarHoras?'<th class="n">Esforço</th>':""}<th class="n">Valor</th></tr></thead><tbody>${inv}
+<tr class="tot"><td>Total</td>${p.mostrarHoras?`<td class="n">${num(r.total/60)} h</td>`:""}<td class="n">${brl(r.valor)}</td></tr></tbody></table>
+<p><b>Condições:</b> ${e(p.condicoes)}</p>
+<h2>7 · Premissas</h2><ul>${li(p.premissas).map(x=>`<li>${e(x)}</li>`).join("")}</ul>
+<h2>8 · Próximos passos</h2><ol>${li(p.proximos).map(x=>`<li>${e(x)}</li>`).join("")}</ol>
+<div class="fecho"><p class="m">“${e(emp.mantra)}”</p><p class="ass">${e(emp.assinatura||emp.nome)}${emp.cargo?` · ${e(emp.cargo)}`:""}<br>${e(emp.nome)}</p></div>
+</div></body></html>`;
+}
+$("#btnProposta").onclick=()=>{
+  const p=Object.assign(propPadrao(),est.proposta||{});
+  abrirModal("Proposta premium",`${est.status!=="fechada"?'<div class="msg">Estimativa em rascunho: a proposta sai com a marca RASCUNHO. Feche a estimativa para a versão final.</div>':""}
+    <div class="prop-grid"><div class="prop-form">
+      <label>Título<input id="ppTit" value="${esc(p.titulo)}"></label>
+      <label>Contexto (o problema do cliente)<textarea id="ppCtx">${esc(p.contexto)}</textarea></label>
+      <label>Objetivo (a transformação)<textarea id="ppObj">${esc(p.objetivo)}</textarea></label>
+      <label>Condições de pagamento<textarea id="ppCond" style="min-height:44px">${esc(p.condicoes)}</textarea></label>
+      <div class="row"><label>Validade (dias)<input id="ppVal" type="number" min="1" value="${p.validade}"></label>
+      <label style="flex-direction:row;align-items:center;gap:6px;margin-top:16px"><input type="checkbox" id="ppHoras" ${p.mostrarHoras?"checked":""}> mostrar horas</label></div>
+      <label>Premissas (uma por linha)<textarea id="ppPrem">${esc(p.premissas)}</textarea></label>
+      <label>Próximos passos (um por linha)<textarea id="ppProx">${esc(p.proximos)}</textarea></label>
+    </div><iframe id="ppPrev" title="Pré-visualização"></iframe></div>`,
+    [{label:"Baixar proposta (.html)",pri:true,fn:()=>{ler();download(propostaHTML(est.proposta),`Proposta - ${(arq.clientes[est.clienteId]||{}).nome||""} - ${est.nome} v${est.versao||1}.html`,"text/html")}},
+     {label:"Imprimir / PDF",fn:()=>{ler();const f=$("#ppPrev");try{f.contentWindow.focus();f.contentWindow.print()}catch(e){uiAlert("Este visualizador não permite imprimir daqui. Baixe a proposta (.html), abra no navegador e use Imprimir › Salvar como PDF.")}}},
+     {label:"Restaurar textos padrão",fn:()=>{delete est.proposta;persist();fecharModal();$("#btnProposta").click()}}]);
+  const ler=()=>{est.proposta={titulo:$("#ppTit").value,contexto:$("#ppCtx").value,objetivo:$("#ppObj").value,condicoes:$("#ppCond").value,validade:+$("#ppVal").value||15,
+    premissas:$("#ppPrem").value,proximos:$("#ppProx").value,mostrarHoras:$("#ppHoras").checked};persist()};
+  const prev=()=>{ler();$("#ppPrev").srcdoc=propostaHTML(est.proposta)};
+  prev(); $("#mBody").querySelectorAll(".prop-form input,.prop-form textarea").forEach(el=>el.addEventListener("change",prev));
+};
+
+/* ================= ZOHO PROJECTS ================= */
+const ZP="Zoho Projects";
+let zpMcp=null;
+const zpPay=r=>{const p=r&&r.payload!==undefined?r.payload:r;return p&&p.data!==undefined?p.data:p};
+const zpId=o=>{if(!o) return null; if(typeof o!=="object") return null; return o.id||(o.result&&(o.result.id||(Array.isArray(o.result)&&o.result[0]&&o.result[0].id)))||(o.project&&o.project.id)||(o.tasklist&&o.tasklist.id)||(Array.isArray(o.projects)&&o.projects[0]&&o.projects[0].id)||(Array.isArray(o.tasklists)&&o.tasklists[0]&&o.tasklists[0].id)||(Array.isArray(o.tasks)&&o.tasks[0]&&o.tasks[0].id)||null};
+function zpErro(e){
+  const c=e&&e.code;
+  if(c==="needs_reauth") return "A conexão com o Zoho Projects expirou. Reconecte em claude.ai › Configurações › Conectores.";
+  if(c==="server_not_connected"||c==="selection_required") return "Conector Zoho Projects não disponível. Adicione-o em claude.ai › Configurações › Conectores.";
+  if(c==="not_in_manifest"||c==="approval_required"||c==="consent_required") return "O acesso ao Zoho Projects não foi permitido para esta página.";
+  if(c==="server_unavailable") return "O Zoho Projects não respondeu. Confira no Zoho o que já foi criado antes de tentar de novo.";
+  if(c==="tool_error") return "O Zoho Projects recusou: "+(e.message||"erro")+" (o plano Free tem limite de projetos ativos).";
+  return "Falha ao falar com o Zoho Projects"+(e&&e.message?": "+e.message:".");
+}
+$("#btnZProj").onclick=async()=>{
+  zpMcp=(window.claude&&window.claude.use)?await window.claude.use("mcp").catch(()=>null):null;
+  const cr=cronograma(), dems=est.demandas.filter(d=>contaDem(d)&&d.linhas.length);
+  const cli=(arq.clientes[est.clienteId]||{}).nome||"", nomeProj=`${cli} · ${est.nome} v${est.versao||1}`.slice(0,200);
+  const nT=dems.reduce((s,d)=>s+d.linhas.length,0);
+  if(!zpMcp){
+    abrirModal("Zoho Projects",`<div class="msg">A criação automática funciona no link publicado em claude.ai com o conector Zoho Projects. Aqui, use a estrutura abaixo.</div>
+      <textarea class="code" readonly style="min-height:240px">${esc(`Projeto: ${nomeProj}\nInício ${fmtD(cr.ini)} · Entrega ${fmtD(cr.entrega)}\n\n`+dems.map(d=>`LISTA: ${d.nome}\n`+d.linhas.map((l,i)=>{const p=proc(l.cod);return `  ${String(i+1).padStart(2,"0")}. ${p?p.nome:l.desc}${l.det?" — "+l.det:""} (${num(lineMin(l)*fatorDem(d)/60)} h)`}).join("\n")).join("\n\n"))}</textarea>`);
+    return;
+  }
+  abrirModal("Enviar ao Zoho Projects",`<div id="zpSt" class="msg">Conectando ao Zoho Projects…</div><div id="zpForm"></div>`);
+  try{
+    const ps=zpPay(await zpMcp.callTool(ZP,"get_portals",{},{cache:false})), portais=(ps&&ps.result)||[];
+    if(!portais.length) throw {code:"tool_error",message:"nenhum portal encontrado"};
+    $("#zpSt").remove();
+    $("#zpForm").innerHTML=`${est.zohoProjeto?`<div class="msg err">Esta estimativa já foi enviada em ${new Date(est.zohoProjeto.em).toLocaleString("pt-BR")} (projeto ${esc(est.zohoProjeto.id||"")}). Enviar de novo cria outro projeto.</div>`:""}
+      <div class="row"><label>Portal<select id="zpPortal">${portais.map(p=>`<option value="${esc(p.id)}" data-own="${esc(p.owner&&p.owner.zpuid||"")}" data-url="${esc(p.portal_url||"")}">${esc(p.org_name||p.portal_name)}</option>`).join("")}</select></label>
+      <label style="flex:1;min-width:240px">Nome do projeto<input id="zpNome" value="${esc(nomeProj)}"></label></div>
+      <p class="muted">Será criado: <b>1 projeto</b> (${fmtD(cr.ini)} → ${fmtD(cr.entrega)}), <b>${dems.length} listas de tarefas</b> (uma por demanda) e <b>${nT} tarefas</b> (o passo a passo), cada uma com as horas estimadas e o “como executar” do banco na descrição.</p>
+      <div id="zpProg"></div>`;
+    $("#mFoot").insertAdjacentHTML("afterbegin",'<button class="btn pri" id="zpGo">Criar no Zoho Projects</button>');
+    $("#zpGo").onclick=async()=>{
+      if(!await uiConfirm(`Criar o projeto “${$("#zpNome").value}” com ${dems.length} listas e ${nT} tarefas no Zoho Projects?`)) return;
+      const sel=$("#zpPortal").selectedOptions[0], portal=sel.value, owner=sel.dataset.own, prog=$("#zpProg");
+      $("#zpGo").disabled=true; let feitas=0;
+      const call=(tool,input)=>zpMcp.callTool(ZP,tool,input,{cache:false}).then(zpPay);
+      const st=t=>prog.innerHTML=`<div class="msg">${t}</div>`;
+      try{
+        st("Criando projeto…");
+        const pj=await call("create_a_project",{path_variables:{portal_id:portal},body:{name:$("#zpNome").value.trim()||nomeProj,owner:{zpuid:owner},start_date:cr.ini,end_date:cr.entrega||cr.ini,
+          description:`Gerado pelo EstimaCerto. ${num(calc().total/60)} h estimadas (com reservas), ${dems.length} demandas. Cliente: ${cli}.`}});
+        const pid=zpId(pj); if(!pid) throw {code:"tool_error",message:"o Zoho não devolveu o ID do projeto"};
+        est.zohoProjeto={portal,id:String(pid),em:Date.now()}; persist();
+        for(const d of dems){
+          st(`Lista “${esc(d.nome)}”… (${feitas}/${nT} tarefas)`);
+          const tl=await call("create_task_list",{path_variables:{portal_id:portal,project_id:String(pid)},body:{name:d.nome.slice(0,200)}});
+          const tlid=zpId(tl);
+          for(const [i,l] of d.linhas.entries()){
+            const p=proc(l.cod), h=lineMin(l)*fatorDem(d)/60;
+            await call("create_a_task",{path_variables:{portal_id:portal,project_id:String(pid)},body:{name:`${String(i+1).padStart(2,"0")}. ${p?p.nome:l.desc}${l.det?" — "+l.det:""}`.slice(0,200),
+              ...(tlid?{tasklist:{id:String(tlid)}}:{}),
+              description:`Estimado: ${num(h)} h (${num(l.qtd,0)} × ${num(l.min)} min + reserva de risco).${l.cod?` Processo ${l.cod}.`:""}${p&&p.desc?"\n\nComo executar:\n"+p.desc:""}`}});
+            feitas++; if(feitas%5===0) st(`Criando tarefas… ${feitas}/${nT}`);
+          }
+        }
+        const url=sel.dataset.url;
+        prog.innerHTML=`<div class="msg ok">Projeto criado com ${dems.length} listas e ${feitas} tarefas.${url?` <a href="${esc(url)}" target="_blank" rel="noopener">Abrir o Zoho Projects</a>`:""}</div>`;
+      }catch(e){prog.innerHTML=`<div class="msg err">${esc(zpErro(e))} ${feitas?`(${feitas} tarefas já criadas.)`:""}</div>`;$("#zpGo").disabled=false}
+    };
+  }catch(e){const x=$("#zpSt"); if(x){x.className="msg err";x.textContent=zpErro(e)}}
+};
+
+/* ================= ASSISTENTE IA ================= */
+let iaSample=null, iaCtl=null, iaRes=null;
+function iaErro(e){
+  const c=e&&e.code;
+  if(c==="not_granted"||c==="sampling_disabled"||c==="not_declared"||c==="capability_disabled"||c==="capability_removed") return "O assistente não está disponível nesta visualização (permissão não concedida).";
+  if(c==="rate_limited") return "Limite de uso atingido agora. Tente de novo em alguns minutos.";
+  if(c==="invalid_json"||c==="empty_completion") return "A resposta veio fora do formato. Tente de novo ou resuma o briefing.";
+  if(c==="prompt_too_large") return "Briefing grande demais. Cole só o essencial.";
+  if(c==="refused") return "O assistente não respondeu a este conteúdo. Reformule o briefing.";
+  if(c==="session_expired") return "Sua sessão expirou. Entre de novo no claude.ai.";
+  return "Falha no assistente. Tente de novo.";
+}
+const catalogoIA=()=>db.processos.map(p=>`${p.cod}|${p.fase}|${p.grupo||""}|${p.nome}|${p.un}|${p.min}`).join("\n");
+function promptMontar(brief){
+  return `Você é um orçamentista sênior de customização de bibliotecas Promob (Catalog/Builder) para a indústria moveleira.
+A partir do BRIEFING do cliente, monte demandas de trabalho usando SOMENTE os processos do CATÁLOGO quando houver correspondência.
+Regras:
+- Uma demanda por entrega/funcionalidade pedida (ex.: "Portas de alumínio", "Fita frontal").
+- Cada linha: código do catálogo, quantidade de unidades (na unidade do processo) e um detalhe curto (variante, ambiente). Estime quantidades plausíveis a partir do briefing; se não houver informação, use 1.
+- Se algo necessário não existir no catálogo, use "cod": null com "desc" descrevendo a atividade e "min" (minutos por unidade) estimado.
+- Toda demanda deve terminar com testes (TST-01 e, se houver produção, TST-02) e administrativo (ADM-01) quando esses códigos existirem.
+- "risco": "padrao" (já feito antes), "novo" (novo fabricante/linha) ou "inedito" (P&D, sem referência).
+- Liste em "perguntas" o que falta saber para fechar a estimativa e em "alertas" riscos de escopo.
+Responda APENAS com JSON neste formato:
+{"demandas":[{"nome":"","obs":"","risco":"padrao","linhas":[{"cod":"ENT-01","qtd":2,"det":"Afastador"},{"cod":null,"desc":"...","min":30,"qtd":1,"det":""}]}],"perguntas":[""],"alertas":[""]}
+
+CATÁLOGO (código|fase|grupo|processo|unidade|min por unidade):
+${catalogoIA()}
+
+BRIEFING:
+${brief.slice(0,20000)}`;
+}
+function promptRevisar(){
+  const r=calc();
+  const txt=est.demandas.filter(d=>contaDem(d)).map(d=>`## ${d.nome} (risco: ${riscoDe(d).nome})\n`+d.linhas.map(l=>{const p=proc(l.cod);return `- ${l.cod||"avulsa"} ${p?p.nome:l.desc}${l.det?" — "+l.det:""}: ${l.qtd} × ${l.min} min${p&&+l.min!==+p.min?` (padrão ${p.min})`:""}`}).join("\n")).join("\n\n");
+  return `Você é um revisor sênior de estimativas de customização de bibliotecas Promob. Revise a estimativa abaixo e aponte, em português, de forma direta e em tópicos curtos:
+1. Etapas que costumam faltar (testes, revisão de referência/orçamento, publicação, administrativo) por demanda.
+2. Quantidades ou tempos que parecem fora do padrão (compare com o padrão do catálogo).
+3. Riscos de escopo e premissas que deveriam ir para a proposta.
+4. Uma frase final com a sua avaliação de confiança na estimativa (alta, média ou baixa) e por quê.
+Não reescreva a estimativa inteira. No máximo 15 tópicos.
+
+Total: ${num(r.base/60)} h técnicas + ${num(r.res/60)} h de reserva; margem ${num(r.margemPct,0)}%.
+
+ESTIMATIVA:
+${txt.slice(0,40000)}
+
+CATÁLOGO DE REFERÊNCIA (código|fase|grupo|processo|unidade|min):
+${catalogoIA()}`;
+}
+$("#btnIA").onclick=async()=>{
+  iaSample=(window.claude&&window.claude.use)?await window.claude.use("sample").catch(()=>null):null;
+  abrirModal("Assistente IA",`${iaSample?"":'<div class="msg err">O assistente funciona no link publicado em claude.ai. Aberto como arquivo local, ele não está disponível.</div>'}
+    <p class="muted">Cole o briefing do cliente (e-mail, mensagem, transcrição de reunião). O assistente monta as demandas com os processos do seu banco; você revisa e escolhe o que entra. A outra opção revisa a estimativa aberta e aponta o que pode estar faltando.</p>
+    <textarea id="iaBrief" style="min-height:140px" placeholder="Ex.: Precisamos incluir portas de alumínio com vidro como item de compra, 40 modelos de frentes, e restringir a profundidade das gavetas invisíveis entre 300 e 550 mm…"></textarea>
+    <div id="iaOut"></div>`,
+    [{label:"Montar demandas",pri:true,id:"iaMontar",fn:async()=>{
+      if(!iaSample) return; const b=$("#iaBrief").value.trim(); if(!b){uiAlert("Cole o briefing primeiro.");return}
+      iaCtl=new AbortController(); const out=$("#iaOut"); out.innerHTML='<div class="msg">Analisando o briefing… (pode levar até um minuto) <button class="btn sm" id="iaStop">Parar</button></div>';
+      $("#iaStop").onclick=()=>iaCtl.abort();
+      try{iaRes=await iaSample.json(promptMontar(b),{signal:iaCtl.signal});mostrarIA()}
+      catch(e){out.innerHTML=e&&e.code==="cancelled"?"":`<div class="msg err">${esc(iaErro(e))}</div>`}
+    }},
+    {label:"Revisar estimativa aberta",id:"iaRev",fn:async()=>{
+      if(!iaSample) return; iaCtl=new AbortController(); const out=$("#iaOut");
+      out.innerHTML='<div class="msg">Revisando… <button class="btn sm" id="iaStop">Parar</button></div><div class="ia-rev" id="iaTxt"></div>'; $("#iaStop").onclick=()=>iaCtl.abort();
+      try{await iaSample(promptRevisar(),{signal:iaCtl.signal,onText:({text})=>{$("#iaTxt").textContent=text}});out.querySelector(".msg").remove()}
+      catch(e){const m=out.querySelector(".msg"); if(m){m.className=e&&e.code==="cancelled"?"msg":"msg err";m.textContent=e&&e.code==="cancelled"?"Interrompido.":iaErro(e)}}
+    }}]);
+  if(!iaSample){$("#iaMontar").disabled=true;$("#iaRev").disabled=true}
+};
+function mostrarIA(){
+  const r=iaRes||{}, dems=Array.isArray(r.demandas)?r.demandas:[];
+  const riscoId=v=>db.cfg.riscos.some(x=>x.id===v)?v:db.cfg.riscos[0].id;
+  iaRes.demandas=dems.map(d=>({nome:String(d.nome||"Demanda"),obs:String(d.obs||""),risco:riscoId(d.risco),
+    linhas:(Array.isArray(d.linhas)?d.linhas:[]).map(l=>{const p=l.cod&&proc(String(l.cod));const qtd=Math.max(0,+l.qtd||1);
+      return p?{cod:p.cod,det:String(l.det||""),qtd,min:p.min}:{cod:"",desc:String(l.desc||l.cod||"Atividade"),det:String(l.det||""),qtd,min:Math.max(0,+l.min||10)}})}));
+  const lst=(t,a)=>Array.isArray(a)&&a.filter(Boolean).length?`<h3 style="margin:14px 0 4px">${t}</h3><ul>${a.filter(Boolean).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:"";
+  $("#iaOut").innerHTML=iaRes.demandas.length?`<h3 style="margin:14px 0 6px">Demandas sugeridas</h3>`+iaRes.demandas.map((d,i)=>{
+    const h=d.linhas.reduce((s,l)=>s+lineMin(l),0), av=d.linhas.filter(l=>!l.cod).length;
+    return `<div class="card" style="padding:10px 12px;margin-bottom:8px"><label style="flex-direction:row;align-items:center;gap:8px;font-size:14px;color:var(--text)"><input type="checkbox" data-iad="${i}" checked><b>${esc(d.nome)}</b>
+      <span class="pill">${d.linhas.length} linhas · ${hm(h)}</span><span class="pill">${esc((db.cfg.riscos.find(x=>x.id===d.risco)||{}).nome||"")}</span>${av?`<span class="pill w">${av} avulsa${av>1?"s":""}</span>`:""}</label>
+      ${d.obs?`<p class="muted" style="margin:4px 0">${esc(d.obs)}</p>`:""}
+      <div class="muted" style="font-size:12px">${d.linhas.map(l=>{const p=proc(l.cod);return `${l.cod||"avulsa"} ${esc(p?p.nome:l.desc)}${l.det?" — "+esc(l.det):""} ×${num(l.qtd,0)}`}).join(" · ")}</div></div>`}).join("")
+    +`<div class="toolbar"><button class="btn pri" id="iaAdd">Adicionar selecionadas à estimativa</button></div>`+lst("Perguntas para o cliente",r.perguntas)+lst("Alertas de escopo",r.alertas)
+    :'<div class="msg err">O assistente não identificou demandas. Detalhe mais o briefing.</div>';
+  const add=$("#iaAdd"); if(add) add.onclick=()=>{
+    const sel=iaRes.demandas.filter((d,i)=>document.querySelector(`[data-iad="${i}"]`).checked); if(!sel.length) return;
+    const perg=Array.isArray(r.perguntas)?r.perguntas.filter(Boolean):[];
+    sel.forEach((d,k)=>est.demandas.push({nome:d.nome,status:"estimar",obs:(d.obs||"")+(k===0&&perg.length?(d.obs?"\n":"")+"Perguntas ao cliente: "+perg.join(" | "):""),risco:d.risco,linhas:d.linhas}));
+    persist(); renderEst(); fecharModal(); uiAlert(`${sel.length} demanda(s) adicionada(s). Revise quantidades e linhas avulsas antes de fechar.`);
+  };
+}
 
 /* ================= CALIBRAÇÃO ================= */
 const todasEstimativas=()=>Object.values(arq.estimativas).filter(e=>!e.excluida).map(e=>e.id===est.id?est:e);
@@ -2174,7 +2561,7 @@ function pickFile(accept,cb){
     try{await cb(f)}catch(err){uiAlert("Não foi possível importar: "+err.message)}};
   inp.click();
 }
-function render(){renderEst();renderArquivo();renderProc();renderTpl();renderCal();renderSys();renderCfg()}
+function render(){renderEst();renderArquivo();renderProc();renderTpl();renderCron();renderCal();renderSys();renderCfg()}
 render();
 Sync.init();
 </script>

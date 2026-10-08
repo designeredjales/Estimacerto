@@ -150,6 +150,23 @@ quais tempos-padrão ajustar no banco.
 - **Lixeira** (Parâmetros): processos, modelos, demandas e estimativas excluídos ficam 60 dias, com
   restaurar e excluir definitivamente.
 
+## Proposta, cronograma, Zoho Projects e IA (Onda 2)
+
+- **Proposta premium** (botão na estimativa): capa, contexto, objetivo, método (fases usadas),
+  escopo e entregáveis por demanda, cronograma, investimento, condições, premissas, próximos passos e
+  fechamento com a frase da empresa. Textos editáveis por estimativa, pré-visualização ao lado,
+  download em .html (abrir e “Salvar como PDF”). Em rascunho sai com a marca RASCUNHO.
+  Dados da empresa em Parâmetros.
+- **Cronograma** (aba): início previsto e prazo do cliente na estimativa; cada demanda por uma pessoa,
+  fase após fase, com horas com reserva, dias úteis, horas/dia e feriados. Gantt por fase, entrega
+  prevista (também no painel), alerta de prazo com a equipe necessária, e **carga semanal** somando as
+  estimativas fechadas × capacidade.
+- **Zoho Projects** (estimativa fechada, link publicado): cria projeto (datas do cronograma), uma lista
+  de tarefas por demanda e uma tarefa por passo, com horas estimadas e o “como executar” do banco.
+- **Assistente IA** (link publicado): “Montar demandas” a partir de um briefing colado, usando o
+  catálogo do banco (com revisão antes de entrar), e “Revisar estimativa aberta” (etapas faltando,
+  tempos fora do padrão, riscos de escopo).
+
 ## Fórmula
 
 ```
