@@ -314,3 +314,22 @@ prazo (dias)    = total ÷ (horas produtivas/dia × pessoas)
 - Fechado, o painel mostra o que está preenchido e a primeira linha da descrição.
 - **Demandas antigas:** a observação (que antes ia para a proposta) é copiada para a descrição na primeira abertura, sem as "Perguntas ao cliente". Textos gerados automaticamente (Leitor de System) ficam só como observação.
 - **Recolher:** ▾/▸ no cabeçalho recolhe a tabela de processos e modelos da demanda; o rodapé mostra "▸ Mostrar N linhas · M modelos". No topo, **Recolher/Expandir todas** e **Descrições: abrir/fechar todas**. Recolher funciona também com a estimativa fechada.
+
+## Busca, etiquetas e filtros (Banco e Modelos)
+
+- **Barra de busca** em linha própria, com contador ("3 de 80"). A busca é por palavras: todas precisam aparecer, em qualquer ordem. `#etiqueta` exige a etiqueta.
+- **Etiquetas** em processos e modelos: 🏷 na linha ou no cartão, campo no editor de processo, e em lote ("🏷 Etiquetar" / "Tirar etiqueta" nos processos da tela). As etiquetas aparecem coloridas. Clicar numa etiqueta filtra; várias juntas combinam (E).
+- **Filtros do Banco:** unidade de contagem, unidade de tempo (min, h, dia), fonte (Histórico/Manual) e "unidade com regra". As ações em lote valem para o que está filtrado.
+- Na estimativa, as buscas de processo e de modelo também entendem `#etiqueta`.
+
+## Tempo em min, h ou dia · unidades de medida com regra
+
+- O tempo-padrão de cada processo pode ser digitado em **min, h ou dia** (dia = horas produtivas/dia dos Parâmetros). Internamente fica em minutos. Se as horas/dia mudam, processos em "dia" continuam valendo o mesmo número de dias.
+- **Parâmetros › Unidades de medida:** para cada unidade de contagem (entidade, módulo, m², visita…):
+  - em que unidade o tempo é digitado;
+  - **quantidade mínima**;
+  - **arredondamento** (para cima inteiro ou de meio em meio).
+
+  Ex.: "visita técnica · dia · mínimo 1 · meio em meio".
+- **Na estimativa,** a linha mostra o tempo na unidade do processo e, quando a regra muda a quantidade, "cobra X". Totais, escopo, proposta e Zoho já usam a quantidade cobrada.
+- **No editor de processo,** a unidade é uma lista com a regra de cada uma e a opção "＋ Criar unidade". Escolher a unidade já sugere a unidade de tempo dela.

@@ -143,6 +143,14 @@ span.and{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px}
 .dtxt label{font-size:12px}.dtxt textarea{min-height:110px;font-size:13px}
 @media (max-width:760px){.dtxt{grid-template-columns:1fr}}
 @media print{.dtxt-res .muted{display:none}}
+.busca.linha{margin:6px 0 8px;width:100%}.busca.linha input{padding:10px 110px 10px 12px;font-size:15px}
+.busca{flex:1;min-width:240px;position:relative;display:flex;align-items:center}.busca input{width:100%;padding-right:90px;font-size:14px}.busca>span{position:absolute;right:10px;font-size:12px;pointer-events:none}
+.tagbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 0 10px}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;line-height:1.6;padding:0 8px;border-radius:999px;border:1px solid hsl(var(--h) 45% 50% / .45);background:hsl(var(--h) 60% 50% / .14);color:inherit;cursor:pointer;white-space:nowrap}
+button.tag{font:inherit;font-size:12px;padding:2px 9px}.tag.on{background:hsl(var(--h) 60% 45% / .55);border-color:hsl(var(--h) 60% 40%);font-weight:600}.tag small{opacity:.65}
+.tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;align-items:center}
+.filtros{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 0 6px}.filtros select{width:auto;font-size:13px;padding:4px 6px}
+.tval{display:inline-flex;gap:3px;align-items:center}.tval input{width:72px}.tval select{width:auto;padding:4px}#peMin{width:90px}
 .lblm{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}.chips{display:flex;flex-wrap:wrap;gap:4px}
 .escol{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px}.escol label{flex-direction:row;align-items:center;gap:5px}.escol select{width:auto;padding:3px 5px;font-size:13px}
 .eblk{border:1px solid var(--line);border-radius:6px;padding:6px;margin-bottom:6px;display:flex;flex-direction:column;gap:4px}.eblk.off{opacity:.55}
@@ -312,27 +320,35 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
 <section id="proc" class="tab">
   <div class="card">
     <h2>Banco de processos repetitivos</h2>
-    <p class="muted">Classificação: <b>Fase › Grupo › Processo</b>. O tempo-padrão é em minutos por unidade.
+    <p class="muted">Classificação: <b>Fase › Grupo › Processo</b>. O tempo-padrão é por unidade de contagem, digitado em min, h ou dia (regras de cada unidade em Parâmetros › Unidades de medida).
       <span class="pill h">Histórico</span> = medido nas estimativas reais da equipe.
       <span class="pill w">Manual</span> = derivado do guia Catalog Builder; calibrar com o histórico.</p>
     <div class="toolbar">
       <label style="flex-direction:row;align-items:center;gap:6px">Catálogo<select id="pCat" style="width:auto"></select></label>
       <button class="btn pri" id="pAdd">+ Novo processo</button>
-      <input id="pFiltro" placeholder="Filtrar…" style="flex:1;min-width:160px">
       <button class="btn" id="dbExport">Exportar banco (.json)</button>
       <button class="btn" id="dbImport">Importar banco (.json / .csv)</button>
       <button class="btn" id="dbReset">Restaurar padrão</button>
     </div>
+    <div class="busca linha"><input id="pFiltro" type="search" placeholder="🔎 Buscar por código, nome, grupo, fase, descrição ou #etiqueta… (várias palavras: todas precisam aparecer)" autocomplete="off"><span id="pConta" class="muted"></span></div>
+    <div class="filtros"><span class="muted" style="font-size:12px">Filtrar:</span>
+      <select id="pfUn" title="Unidade de contagem"></select>
+      <select id="pfTu" title="Unidade de tempo do tempo-padrão"><option value="">Tempo: min, h e dia</option><option value="min">Tempo em minutos</option><option value="h">Tempo em horas</option><option value="dia">Tempo em dias</option></select>
+      <select id="pfFonte"><option value="">Fonte: todas</option><option value="H">Histórico</option><option value="M">Manual</option></select>
+      <select id="pfRegra"><option value="">Regra: todas</option><option value="com">Unidade com regra</option><option value="sem">Unidade sem regra</option></select></div>
+    <div class="tagbar" id="pTags"></div>
     <div class="toolbar">
       <button class="btn pri" id="dbXmind">Importar XMind no banco</button>
       <button class="btn" id="dbCalib">Calibrar pelo realizado</button>
       <span class="muted">Em lote, nos processos filtrados:</span>
       <input type="number" id="bulkPct" value="10" step="1" style="width:70px" title="%"> <button class="btn" id="bulkPctBtn">Ajustar tempo %</button>
       <select id="bulkFase" style="width:auto"></select> <button class="btn" id="bulkFaseBtn">Mover para fase</button>
+      <button class="btn" id="bulkTag">🏷 Etiquetar</button><button class="btn" id="bulkUntag">Tirar etiqueta</button>
     </div>
     <div class="tbl"><table>
-      <thead><tr><th style="width:80px">Código</th><th>Processo</th><th style="width:120px">Unidade</th><th class="n" style="width:90px">min/unid.</th><th style="width:90px">Fonte</th><th style="width:150px">Ações</th></tr></thead>
+      <thead><tr><th style="width:80px">Código</th><th>Processo</th><th style="width:120px">Unidade</th><th class="n" style="width:150px">Tempo/unid.</th><th style="width:90px">Fonte</th><th style="width:150px">Ações</th></tr></thead>
       <tbody id="procBody"></tbody>
+      <datalist id="dlUnidades"></datalist>
     </table></div>
   </div>
 </section>
@@ -347,7 +363,9 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
   <div class="card">
     <h2>Modelos de demanda</h2>
     <p class="muted">Pacotes de processos que se repetem (fechamento, orçamento, montagem de entidade…). Organize em <b>grupos</b> (ex.: SC Sistema de Correr › M1 Trilho › M1.1, M1.2…) e inclua <b>modelos existentes</b> como grupos vinculados. Crie aqui ou pelo botão “Salvar como modelo” de uma demanda pronta. Na estimativa, “Aplicar modelo” insere todos os processos na demanda, com as quantidades multiplicadas pelos grupos.</p>
-    <div class="toolbar"><label style="flex-direction:row;align-items:center;gap:6px">Catálogo<select id="tCat" style="width:auto"></select></label><input id="tBusca" placeholder="Buscar modelo pelo nome, código ou processo…" style="flex:1;min-width:220px" autocomplete="off"><button class="btn pri" id="tAdd">+ Novo modelo</button></div>
+    <div class="toolbar"><label style="flex-direction:row;align-items:center;gap:6px">Catálogo<select id="tCat" style="width:auto"></select></label><button class="btn pri" id="tAdd">+ Novo modelo</button></div>
+    <div class="busca linha"><input id="tBusca" type="search" placeholder="🔎 Buscar modelo por nome, código, grupo, processo ou #etiqueta…" autocomplete="off"><span id="tConta" class="muted"></span></div>
+    <div class="tagbar" id="tTags"></div>
     <div id="tNovoBox"></div>
     <div id="tplList"></div>
   </div>
@@ -442,6 +460,11 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
       <label>Fator pessimista<input id="cPes" type="number" min="0" step="0.05"></label>
     </div>
     <p class="muted" style="margin-top:12px">O “Administrativo” de cada demanda já entra como processo (ADM-01). Use “Gestão extra” só para overhead fora disso; ela soma à reserva de risco de cada demanda.</p>
+  </div>
+  <div class="card">
+    <h2>Unidades de medida</h2>
+    <p class="muted">Unidade de contagem dos processos (entidade, módulo, m², visita…). Para cada uma: em que unidade o tempo-padrão é digitado (min, h ou dia) e a <b>regra de quantidade</b> cobrada na estimativa: quantidade mínima e arredondamento. Ex.: “visita técnica · tempo em dia · mínimo 1 · de meio em meio”.</p>
+    <div id="unBox"></div>
   </div>
   <div class="card">
     <h2>Perfis — custo e preço por hora</h2>
@@ -624,6 +647,7 @@ function completarDb(){
   if(!Array.isArray(c.riscos)||!c.riscos.length) c.riscos=[{id:"padrao",nome:"Padrão (já feito antes)",pct:c.cont??10},{id:"novo",nome:"Novo fabricante / linha",pct:20},{id:"inedito",nome:"P&D / inédito",pct:35}];
   c.perfis.forEach(p=>{if(!p.tipo) p.tipo=p.id==="pad"?"centro":"pessoa"});
   if(c.escopoPadrao){c.escopoTemplates=c.escopoTemplates||[];c.escopoTemplates.push({id:uid(),nome:"Padrão",padrao:!c.escopoTemplates.some(t=>t.padrao),cfg:c.escopoPadrao,pag:null,em:Date.now()});delete c.escopoPadrao}
+  if(!Array.isArray(c.unidades)) c.unidades=[];
   if(c.margemAlvo==null) c.margemAlvo=40;
   if(c.gest==null) c.gest=0;
   if(!c.empresa) c.empresa={nome:"Diâmetro Design for Business",assinatura:"",cargo:"Consultor estratégico",contato:"",mantra:"Viva para transformar, sonhe para realizar e firme que vai!"};
@@ -789,7 +813,24 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
 });
 
 /* ================= CÁLCULO ================= */
-const lineMin=l=>(+l.qtd||0)*(+l.min||0);
+// Tempo-padrão guardado em minutos (p.min); cada processo escolhe como exibir/digitar: min, h ou dia (dia = horas produtivas/dia)
+const T_UN={min:"min",h:"h",dia:"dia"};
+const fatT=u=>u==="h"?60:u==="dia"?Math.max(1,+db.cfg.hdia||6)*60:1;
+const tUnDe=p=>p&&T_UN[p.tUn]?p.tUn:"min";
+const emUn=(min,u)=>Math.round((+min||0)/fatT(u)*1000)/1000;
+const deUn=(v,u)=>Math.max(0,+v||0)*fatT(u);
+const rotT=(v,u)=>u==="dia"?(Math.abs(v-1)<1e-9?"dia":"dias"):u;
+const fmtT=(min,u)=>{const v=emUn(min,u);return `${num(v,2)} ${rotT(v,u)}`};
+// Regras da unidade de contagem: quantidade mínima e arredondamento (ex.: visita técnica cobra no mínimo 1, de meio em meio)
+const regraUn=nome=>(db.cfg.unidades||[]).find(u=>norm(u.nome)===norm(nome||""));
+function qtdEfetiva(l){
+  let q=+l.qtd||0; if(!q) return 0;
+  const p=proc(l.cod), r=regraUn(p?p.un:l.un); if(!r) return q;
+  if(r.arred==="inteiro") q=Math.ceil(q-1e-9); else if(r.arred==="meio") q=Math.ceil(q*2-1e-9)/2;
+  if(+r.minimo>0) q=Math.max(q,+r.minimo);
+  return q;
+}
+const lineMin=l=>qtdEfetiva(l)*(+l.min||0);
 // demanda entra nos totais, no Toggl e no Zoho só se não estiver em discussão nem ignorada
 const contaDem=d=>d.status!=="discussao"&&!d.ignorada;
 const ANDAMENTO=[["nao_iniciada","Não iniciada"],["andamento","Em andamento"],["aguardando","Aguardando cliente"],["bloqueada","Bloqueada"],["concluida","Concluída"]];
@@ -1067,13 +1108,13 @@ function renderEstCorpo(){
         <td class="noprint" style="white-space:nowrap"><button class="x" data-blkdes="${di}:${esc(b.id)}" title="Desagrupar: as linhas ficam soltas na demanda">⤫</button><button class="x" data-blkdel="${di}:${esc(b.id)}" title="Remover o modelo e todas as linhas dele">×</button></td></tr>`:"";
       blkAnt=b?b.id:null;
       const desc=p?(p.desc?`<span title="${esc(p.desc)}" style="text-decoration:underline dotted">${esc(p.nome)}</span>`:esc(p.nome)):(l.desc?esc(l.desc):'<span class="muted">processo não encontrado</span>');
-      const dif=p&&+l.min!==+p.min?`<div class="diff ${+l.min>p.min?"up":"down"}">padrão ${num(p.min)}</div>`:"";
+      const tu=tUnDe(p), dif=p&&+l.min!==+p.min?`<div class="diff ${+l.min>p.min?"up":"down"}">padrão ${fmtT(p.min,tu)}</div>`:"", qe=qtdEfetiva(l);
       return cab+`<tr${b?' class="blk-l"':""}>
         <td>${p?esc(p.cod):'<span class="pill">avulso</span>'}</td>
         <td>${desc}<input class="det" placeholder="detalhe / variante" value="${esc(l.det)}" data-d="${di}" data-l="${li}" data-k="det" style="margin-top:3px;font-size:13px"></td>
         <td class="muted">${esc(p?p.un:(l.un||"unid."))}</td>
-        <td class="n"><input type="number" min="0" step="1" value="${l.qtd}" data-d="${di}" data-l="${li}" data-k="qtd"></td>
-        <td class="n"><input type="number" min="0" step="1" value="${l.min}" data-d="${di}" data-l="${li}" data-k="min">${dif}</td>
+        <td class="n"><input type="number" min="0" step="any" value="${l.qtd}" data-d="${di}" data-l="${li}" data-k="qtd">${qe!==(+l.qtd||0)?`<div class="diff" title="${esc(descRegra(regraUn(p?p.un:l.un)))}">cobra ${num(qe,2)}</div>`:""}</td>
+        <td class="n"><span class="tval"><input type="number" min="0" step="any" value="${emUn(l.min,tu)}" data-d="${di}" data-l="${li}" data-k="min" data-tu="${tu}"><span class="muted">${tu}</span></span>${dif}</td>
         <td class="n"><b>${hm(lineMin(l))}</b></td>
         <td class="n noprint"><input type="number" min="0" step="1" placeholder="—" value="${l.real??""}" data-d="${di}" data-l="${li}" data-k="real" title="Minutos realizados (calibração)"></td>
         <td class="noprint"><button class="x" data-dell="${di}:${li}" title="Remover linha">×</button></td></tr>`;
@@ -1099,13 +1140,13 @@ function renderEstCorpo(){
       </div>
       ${painelTextos(d,di)}
       ${d.recolhida?"":`${d.linhas.length?`<div class="tbl"><table>
-        <thead><tr><th>Cód.</th><th>Atividade</th><th>Unid.</th><th class="n">Qtd.</th><th class="n">min/unid.</th><th class="n">Total</th><th class="n noprint">Real (min)</th><th class="noprint"></th></tr></thead>
+        <thead><tr><th>Cód.</th><th>Atividade</th><th>Unid.</th><th class="n">Qtd.</th><th class="n">Tempo/unid.</th><th class="n">Total</th><th class="n noprint">Real (min)</th><th class="noprint"></th></tr></thead>
         <tbody>${rows}</tbody></table></div>`:""}
       <div class="addrow">
         <div class="combo" data-cb="p" data-d="${di}"><input class="cbi" placeholder="Processo: digite código ou nome…" autocomplete="off" spellcheck="false"><div class="cmenu"></div></div>
         <input placeholder="detalhe / variante" data-adddet="${di}" style="width:150px">
         <input type="number" min="0" step="1" value="1" data-addq="${di}" title="Quantidade">
-        <input type="number" min="0" step="1" placeholder="min" data-addm="${di}" title="Minutos por unidade (vazio = padrão do banco)">
+        <input type="number" min="0" step="any" placeholder="tempo" data-addm="${di}" title="Tempo por unidade, na unidade de tempo do processo (min, h ou dia). Vazio = padrão do banco">
         <button class="btn" data-add="${di}">Adicionar</button>
         <span class="addmod"><div class="combo cm" data-cb="m" data-d="${di}"><input class="cbi" placeholder="Aplicar modelo: digite…" autocomplete="off" spellcheck="false"><div class="cmenu"></div></div><input type="number" min="0" step="1" value="1" data-addmq="${di}" title="Quantidade do modelo (multiplica todas as linhas dele)"></span>
 
@@ -1165,6 +1206,7 @@ dl.addEventListener("change",e=>{
     const l=d.linhas[+t.dataset.l], k=t.dataset.k;
     if(k==="det") l.det=t.value;
     else if(k==="real") l.real=t.value===""?undefined:Math.max(0,+t.value||0);
+    else if(k==="min") l.min=Math.round(deUn(t.value,t.dataset.tu||"min")*1000)/1000;
     else{l[k]=Math.max(0,+t.value||0); const b=k==="qtd"&&l.blk&&blocoDe(d,l.blk); if(b) l.qb=b.qtd?l.qtd/b.qtd:l.qtd}
   }
   else if(t.dataset.blkq!==undefined){const b=blocoDe(d,t.dataset.blkq); if(b) qtdBloco(d,b,t.value)}
@@ -1203,20 +1245,20 @@ function opcoesCombo(tipo,q,di,ctx){
   if(tipo==="p"){
     let ultFase="";
     const cc=ctx==="mod"?((db.modelos[+di]||{}).catalogo||"promob"):catAtual();
-    procsCat(cc).filter(p=>!nq||norm(p.cod+" "+p.nome+" "+p.grupo+" "+p.fase).includes(nq)).slice(0,60).forEach(p=>{
+    procsCat(cc).filter(p=>casaBusca(p.cod+" "+p.nome+" "+p.grupo+" "+p.fase,tagsDe(p),q)).slice(0,60).forEach(p=>{
       if(p.fase!==ultFase){ultFase=p.fase;its.push({grupo:p.fase})}
       its.push({v:p.cod,txt:`${p.cod} · ${p.nome}`,html:`<b>${esc(p.cod)}</b> ${esc(p.nome)} <span class="muted">${esc(p.grupo||"")} · ${num(p.min)} min/${esc(p.un)}</span>`});
     });
-    if(q.trim()&&!db.processos.some(p=>norm(p.nome)===nq||norm(p.cod)===nq)){
+    if(q.trim()&&!q.trim().startsWith("#")&&!db.processos.some(p=>norm(p.nome)===nq||norm(p.cod)===nq)){
       its.push({v:"__novo",cls:"novo",html:`＋ Cadastrar novo processo “${esc(q.trim())}”`});
       if(ctx!=="mod") its.push({v:"__avulso",cls:"novo alt",html:`Usar como linha avulsa “${esc(q.trim())}” (sem cadastrar)`});
     }
   }else{
-    db.modelos.filter(m=>(m.catalogo||"promob")===catAtual()&&(!nq||norm(m.cod+" "+m.nome).includes(nq))).forEach(m=>{
+    db.modelos.filter(m=>(m.catalogo||"promob")===catAtual()&&casaBusca(m.cod+" "+m.nome,tagsDe(m),q)).forEach(m=>{
       const f=folhasDe(m), ng=contaGrupos(m.itens);
       its.push({v:m.cod,html:`<b>${esc(m.cod)}</b> ${esc(m.nome)} <span class="muted">${f.length} linhas${ng?` em ${ng} grupo${ng>1?"s":""}`:""} · ${hm(minFolhas(f))}</span>`});
     });
-    if(q.trim()&&!db.modelos.some(m=>norm(m.nome)===nq||norm(m.cod)===nq)){
+    if(q.trim()&&!q.trim().startsWith("#")&&!db.modelos.some(m=>norm(m.nome)===nq||norm(m.cod)===nq)){
       if(est.demandas[di]&&est.demandas[di].linhas.length) its.push({v:"__novomod",cls:"novo",html:`＋ Criar modelo “${esc(q.trim())}” com as linhas desta demanda`});
       its.push({v:"__novomodvazio",cls:"novo alt",html:`＋ Criar modelo vazio “${esc(q.trim())}” (preencher na aba Modelos)`});
     }
@@ -1327,7 +1369,7 @@ dl.addEventListener("click",async e=>{
     if(cod==="__avulso"){
       const desc=inp.dataset.txt||det; if(!desc){uiAlert("Descreva a linha avulsa.");return}
       d.linhas.push({cod:"",desc,det:inp.dataset.txt?det:"",qtd,min:Math.max(0,+mIn||0)});
-    }else d.linhas.push({cod,det,qtd,min:mIn===""?proc(cod).min:Math.max(0,+mIn||0)});
+    }else d.linhas.push({cod,det,qtd,min:mIn===""?proc(cod).min:Math.round(deUn(mIn,tUnDe(proc(cod)))*1000)/1000});
     persist(); renderEst();
   }else if(ds.dell){
     const [di,li]=ds.dell.split(":").map(Number), d=est.demandas[di], l=d.linhas.splice(li,1)[0];
@@ -1476,10 +1518,40 @@ function renderCatSelects(){
   const o=db.catalogos.map(c=>`<option value="${esc(c.id)}" ${c.id===bancoCat?"selected":""}>${esc(c.nome)} (${procsCat(c.id).length})</option>`).join("");
   ["#pCat","#tCat"].forEach(sel=>{const el=document.querySelector(sel); if(el) el.innerHTML=o});
 }
+// garante no cadastro de unidades toda unidade usada por algum processo
+function sincUnidades(){const u=db.cfg.unidades||(db.cfg.unidades=[]);let mud=false;
+  db.processos.forEach(p=>{if(p.un&&!regraUn(p.un)){u.push({nome:p.un,tempo:tUnDe(p),minimo:0,arred:"nao"});mud=true}});return mud}
+const descRegra=r=>r?[+r.minimo>0?`mínimo ${num(+r.minimo,2)}`:"",r.arred==="inteiro"?"arredonda para cima (inteiro)":r.arred==="meio"?"arredonda de meio em meio":""].filter(Boolean).join(" · "):"";
+/* ---------- Busca e etiquetas (banco e modelos) ---------- */
+const tagsDe=x=>Array.isArray(x&&x.tags)?x.tags:[];
+function addTags(x,lista){const t=tagsDe(x).slice();lista.forEach(n=>{n=String(n).replace(/^#/,"").trim();if(n&&!t.some(y=>norm(y)===norm(n))) t.push(n)});x.tags=t}
+function setTags(x,txt){x.tags=[];addTags(x,String(txt||"").split(/[,;\n]/))}
+const corTag=t=>{let h=0;for(const c of norm(t)) h=(h*31+c.charCodeAt(0))%360;return h};
+const pillTag=(t,attr="")=>`<span class="tag" style="--h:${corTag(t)}" ${attr} title="Filtrar por esta etiqueta">#${esc(t)}</span>`;
+// busca por palavras (todas precisam aparecer); "#etiqueta" exige a etiqueta
+function casaBusca(texto,tags,q){
+  const ws=norm(q||"").split(/\s+/).filter(Boolean); if(!ws.length) return true;
+  const tx=norm(texto+" "+tags.join(" ")), tn=tags.map(norm);
+  return ws.every(w=>w.startsWith("#")?tn.some(t=>t.startsWith(w.slice(1))):tx.includes(w));
+}
+const filtroTagsP=new Set(), filtroTagsM=new Set();
+const temTags=(x,sel)=>[...sel].every(t=>tagsDe(x).some(y=>norm(y)===t));
+function barraTags(lista,sel,box,attr){
+  const cont={}; lista.forEach(x=>tagsDe(x).forEach(t=>{const k=norm(t);(cont[k]=cont[k]||{t,n:0}).n++}));
+  const ks=Object.keys(cont).sort((a,b)=>cont[b].n-cont[a].n||a.localeCompare(b));
+  $(box).innerHTML=ks.length?`<span class="muted" style="font-size:12px">Etiquetas:</span>${ks.map(k=>`<button class="tag tagf${sel.has(k)?" on":""}" style="--h:${corTag(cont[k].t)}" ${attr}="${esc(k)}">#${esc(cont[k].t)} <small>${cont[k].n}</small></button>`).join("")}${sel.size?`<button class="btn sm" ${attr}="__limpar">limpar filtro</button>`:""}`
+    :`<span class="muted" style="font-size:12px">Sem etiquetas ainda. Use 🏷 para etiquetar e filtrar com um clique.</span>`;
+}
 function renderProc(){
   renderCatSelects();
-  const f=norm($("#pFiltro").value);
-  const casa=p=>(p.catalogo||"promob")===bancoCat&&(!f||norm(p.cod+" "+p.fase+" "+p.grupo+" "+p.nome+" "+p.un+" "+(p.desc||"")).includes(f));
+  if(sincUnidades()) persist();
+  const q=$("#pFiltro").value, fx=filtrosProc(), f=norm(q)||(filtroTagsP.size||fx.ativo?"#":"");
+  const doCat=db.processos.filter(p=>(p.catalogo||"promob")===bancoCat);
+  {const sel=$("#pfUn").value, us=[...new Set(doCat.map(p=>p.un||"unid."))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+   $("#pfUn").innerHTML=`<option value="">Unidade: todas</option>`+us.map(u=>`<option ${u===sel?"selected":""}>${esc(u)}</option>`).join("")}
+  const casa=p=>(p.catalogo||"promob")===bancoCat&&temTags(p,filtroTagsP)&&fx.ok(p)&&casaBusca(p.cod+" "+p.fase+" "+p.grupo+" "+p.nome+" "+p.un+" "+(p.desc||""),tagsDe(p),q);
+  barraTags(doCat,filtroTagsP,"#pTags","data-tagp");
+  {const n=doCat.filter(casa).length; $("#pConta").textContent=f?`${n} de ${doCat.length}`:`${doCat.length} processos`}
   let h="";
   fases().forEach(fase=>{
     const naFase=db.processos.filter(p=>p.fase===fase&&(p.catalogo||"promob")===bancoCat);
@@ -1496,14 +1568,15 @@ function renderProc(){
         ${g?`<button class="btn sm" data-grn="${esc(fase)}" data-pg="${esc(g)}">Renomear grupo</button>`:""}</div></td></tr>`;
       h+=ps.map(({p,i})=>`<tr>
         <td><b>${esc(p.cod)}</b></td>
-        <td><input value="${esc(p.nome)}" data-i="${i}" data-k="nome">${p.desc?`<div class="diff" title="${esc(p.desc)}">${esc(p.desc.split("\n")[0].slice(0,110))}</div>`:""}</td>
-        <td><input value="${esc(p.un)}" data-i="${i}" data-k="un"></td>
-        <td class="n"><input type="number" min="0" step="1" value="${p.min}" data-i="${i}" data-k="min"></td>
+        <td><input value="${esc(p.nome)}" data-i="${i}" data-k="nome">${p.desc?`<div class="diff" title="${esc(p.desc)}">${esc(p.desc.split("\n")[0].slice(0,110))}</div>`:""}${tagsDe(p).length?`<div class="tags">${tagsDe(p).map(t=>pillTag(t,`data-tagp="${esc(norm(t))}"`)).join("")}</div>`:""}</td>
+        <td><input value="${esc(p.un)}" data-i="${i}" data-k="un" list="dlUnidades">${descRegra(regraUn(p.un))?`<div class="muted" style="font-size:11px" title="Regra da unidade (Parâmetros)">${esc(descRegra(regraUn(p.un)))}</div>`:""}</td>
+        <td class="n"><span class="tval"><input type="number" min="0" step="any" value="${emUn(p.min,tUnDe(p))}" data-i="${i}" data-k="tval"><select data-i="${i}" data-k="tun" title="Unidade do tempo">${Object.keys(T_UN).map(u=>`<option value="${u}" ${tUnDe(p)===u?"selected":""}>${u}</option>`).join("")}</select></span></td>
         <td><span class="pill ${p.fonte==="H"?"h":"w"}">${p.fonte==="H"?"Histórico":"Manual"}</span></td>
-        <td class="acts"><button class="x" data-ped="${i}" title="Editar tudo">✎</button><button class="x" data-pdup="${i}" title="Duplicar">⧉</button><button class="x" data-pcm="${i}" title="Copiar ou mover (outro grupo, fase, catálogo ou para um modelo)">⇄</button><button class="x" data-pmv="${i}" data-dir="-1" title="Subir">↑</button><button class="x" data-pmv="${i}" data-dir="1" title="Descer">↓</button><button class="x" data-pdel="${i}" title="Excluir">×</button></td></tr>`).join("");
+        <td class="acts"><button class="x" data-ped="${i}" title="Editar tudo">✎</button><button class="x" data-ptag="${i}" title="Etiquetas">🏷</button><button class="x" data-pdup="${i}" title="Duplicar">⧉</button><button class="x" data-pcm="${i}" title="Copiar ou mover (outro grupo, fase, catálogo ou para um modelo)">⇄</button><button class="x" data-pmv="${i}" data-dir="-1" title="Subir">↑</button><button class="x" data-pmv="${i}" data-dir="1" title="Descer">↓</button><button class="x" data-pdel="${i}" title="Excluir">×</button></td></tr>`).join("");
     });
   });
   $("#bulkFase").innerHTML=fases().map(x=>`<option>${esc(x)}</option>`).join("")+'<option value="__nova">+ nova fase…</option>';
+  $("#dlUnidades").innerHTML=(db.cfg.unidades||[]).map(u=>`<option value="${esc(u.nome)}">`).join("");
   $("#procBody").innerHTML=h||'<tr><td colspan="6" class="empty">Nada encontrado.</td></tr>';
 }
 function renomearCodigo(old,v){
@@ -1538,15 +1611,16 @@ function codigoLivre(fase,grupo,exc){let n=1,c;const pf=prefixoGrupo(fase,grupo,
 // lista com opção de criar (fase e grupo no editor de processo)
 function miniCombo(inp,opcoes,rotCriar){
   const box=document.createElement("div"); box.className="mcombo"; inp.parentNode.insertBefore(box,inp); box.appendChild(inp);
-  const mn=document.createElement("div"); mn.className="cmenu"; box.appendChild(mn); let sel=-1, its=[];
+  const mn=document.createElement("div"); mn.className="cmenu"; box.appendChild(mn); let sel=-1, its=[], digitando=false;
+  // ao entrar no campo mostra todas as opções; enquanto digita, filtra
   const draw=()=>{const q=inp.value.trim(), nq=norm(q), todas=opcoes(), exato=todas.some(o=>norm(o.v)===nq);
-    its=todas.filter(o=>!nq||exato||norm(o.v).includes(nq)).slice(0,40);
+    its=todas.filter(o=>!digitando||!nq||norm(o.v).includes(nq)).slice(0,60);
     if(q&&!exato) its.push({v:q,novo:true});
     mn.innerHTML=its.map((o,k)=>`<div class="copt${o.novo?" novo":""}${k===sel?" on":""}" data-k="${k}">${o.novo?`＋ ${esc(rotCriar)} “${esc(o.v)}”`:`${esc(o.v)}${o.info?` <span class="muted">${esc(o.info)}</span>`:""}`}</div>`).join("")||`<div class="copt muted">Digite um nome para criar</div>`;
     box.classList.add("open")};
   const pick=k=>{const o=its[k]; if(!o) return; inp.value=o.v; box.classList.remove("open"); inp.dispatchEvent(new Event("change",{bubbles:true}))};
   inp.setAttribute("autocomplete","off");
-  inp.addEventListener("focus",()=>{sel=-1;draw()}); inp.addEventListener("input",()=>{sel=-1;draw()});
+  inp.addEventListener("focus",()=>{sel=-1;digitando=false;draw()}); inp.addEventListener("input",()=>{sel=-1;digitando=true;draw()});
   inp.addEventListener("keydown",e=>{if(!box.classList.contains("open")) return;
     if(e.key==="ArrowDown"){sel=Math.min(its.length-1,sel+1);draw();e.preventDefault()} else if(e.key==="ArrowUp"){sel=Math.max(0,sel-1);draw();e.preventDefault()}
     else if(e.key==="Enter"){if(sel>=0) pick(sel); else box.classList.remove("open"); e.preventDefault()} else if(e.key==="Escape"){box.classList.remove("open");e.stopPropagation()}});
@@ -1565,12 +1639,15 @@ function editarProc(i,novo=false,aoSalvar=null){
     </div>
     <div class="cod-sug"><span>Regra do código</span><select id="peRegra" title="Vale para todo o banco">${Object.entries(REGRAS_COD).map(([k,v])=>`<option value="${k}" ${(db.cfg.regraCod||"auto")===k?"selected":""}>${esc(v)}</option>`).join("")}</select>
       <span id="peSugTxt"></span><button class="btn sm" id="peUsar" type="button" hidden>usar</button><span id="peSugObs" class="muted"></span><span id="peNovos" class="muted"></span></div>
+    <div class="cod-sug" id="peRegraUn"></div>
     <div class="row" style="margin-top:10px">
       <label style="flex:3;min-width:240px">Processo<input id="peNome" value="${esc(p.nome)}"></label>
-      <label style="flex:1;min-width:100px">Unidade de contagem<input id="peUn" value="${esc(p.un)}"></label>
-      <label>min/unid.<input id="peMin" type="number" min="0" step="0.5" value="${p.min}"></label>
+      <label style="flex:1;min-width:130px">Unidade de contagem<input id="peUn" value="${esc(p.un)}" placeholder="ex.: entidade, módulo, m², visita"></label>
+      <label>Tempo por unidade<span class="tval"><input id="peMin" type="number" min="0" step="any" value="${emUn(p.min,tUnDe(p))}"><select id="peTu">${Object.keys(T_UN).map(u=>`<option value="${u}" ${tUnDe(p)===u?"selected":""}>${u}</option>`).join("")}</select></span></label>
       <label>Fonte<select id="peFonte"><option value="H" ${p.fonte==="H"?"selected":""}>Histórico</option><option value="M" ${p.fonte!=="H"?"selected":""}>Manual</option></select></label>
     </div>
+    <label style="margin-top:10px">Etiquetas <span class="muted">· separe por vírgula (ex.: correr, alumínio, P&D)</span><input id="peTags" list="peTagsL" value="${esc(tagsDe(p).join(", "))}" autocomplete="off"></label>
+    <datalist id="peTagsL">${[...new Set(db.processos.flatMap(tagsDe))].map(t=>`<option value="${esc(t)}">`).join("")}</datalist>
     <label style="margin-top:10px">Como executar / passo a passo (editor do Catalog, telas, critérios de pronto)<textarea id="peDesc" style="min-height:120px" placeholder="Ex.: Editor de Módulos › grupo › Novo módulo › aba Dimensionamento… Critério de pronto: inserido no ambiente sem erro, orçamento conferido.">${esc(p.desc||"")}</textarea></label>
     <label style="margin-top:10px">Reconhecimento no XMind — um trecho do caminho por linha (ex.: montagem aplicacao&gt;caixas)<textarea id="peAlias" style="min-height:60px">${esc((p.alias||[]).join("\n"))}</textarea></label>
     <p class="muted" style="margin-top:8px">Usado em: ${usoM.length?`modelos ${esc(usoM.join(", "))}`:"nenhum modelo"} · ${usoE} linha(s) da estimativa atual.</p>`,
@@ -1581,8 +1658,8 @@ function editarProc(i,novo=false,aoSalvar=null){
       if(nf!==p.fase||ng!==(p.grupo||"")){db.processos.splice(db.processos.indexOf(p),1);db.processos.splice(posGrupo(nf,ng),0,p)}
       if(cod!==p.cod) renomearCodigo(p.cod,cod);
       Object.assign(p,{cod,fase:$("#peFase").value.trim()||"Cadastros",grupo:$("#peGrupo").value.trim(),nome:$("#peNome").value.trim()||"Processo",
-        un:$("#peUn").value.trim()||"unid.",min:Math.max(0,+$("#peMin").value||0),fonte:$("#peFonte").value,desc:$("#peDesc").value.trim(),
-        alias:$("#peAlias").value.split(/\n|;/).map(x=>x.trim()).filter(Boolean)});
+        un:$("#peUn").value.trim()||"unid.",tUn:$("#peTu").value,min:Math.round(deUn($("#peMin").value,$("#peTu").value)*1000)/1000,fonte:$("#peFonte").value,desc:$("#peDesc").value.trim(),
+        alias:$("#peAlias").value.split(/\n|;/).map(x=>x.trim()).filter(Boolean)}); setTags(p,$("#peTags").value);
       fecharModal(); if(aoSalvar) aoSalvar(p); persist(); render();
     }},
    {label:"Duplicar",fn:()=>{fecharModal();duplicarProc(db.processos.indexOf(p))}},
@@ -1592,6 +1669,14 @@ function editarProc(i,novo=false,aoSalvar=null){
   miniCombo($("#peFase"),()=>fases().map(f=>({v:f,info:qtdF(f)?qtdF(f)+" processos":""})),"Criar fase");
   miniCombo($("#peGrupo"),()=>{const f=$("#peFase").value.trim(), gs={};db.processos.forEach(x=>{if((x.catalogo||"promob")===cc&&x.fase===f&&x.grupo&&x!==p) gs[x.grupo]=(gs[x.grupo]||0)+1});
     return Object.entries(gs).map(([g,n])=>({v:g,info:n+" processo"+(n>1?"s":"")}))},"Criar grupo");
+  // unidade de contagem: lista com regra de cada unidade; escolher uma unidade sugere a unidade de tempo dela
+  miniCombo($("#peUn"),()=>{sincUnidades();return (db.cfg.unidades||[]).map(u=>({v:u.nome,info:[`tempo em ${u.tempo||"min"}`,descRegra(u)].filter(Boolean).join(" · ")}))},"Criar unidade");
+  const mostraRegra=()=>{const r=regraUn($("#peUn").value.trim()), v=+$("#peMin").value||0, u=$("#peTu").value;
+    $("#peRegraUn").innerHTML=`<span>${r?`Unidade <b>${esc(r.nome)}</b>${descRegra(r)?`: ${esc(descRegra(r))}`:": sem regra de quantidade"}`:`Unidade nova: “${esc($("#peUn").value.trim()||"unid.")}” será criada`}</span>
+      <span class="muted">= ${num(deUn(v,u),1)} min${u!=="h"?` · ${num(deUn(v,u)/60,2)} h`:""}${u!=="dia"?` · ${num(deUn(v,u)/fatT("dia"),3)} dia`:""} (dia = ${num(+db.cfg.hdia||6)} h produtivas)</span> <span class="muted">· regras em Parâmetros › Unidades de medida</span>`};
+  $("#peUn").addEventListener("change",()=>{const r=regraUn($("#peUn").value.trim()); if(r&&r.tempo&&r.tempo!==$("#peTu").value){const min=deUn($("#peMin").value,$("#peTu").value);$("#peTu").value=r.tempo;$("#peMin").value=emUn(min,r.tempo)} mostraRegra()});
+  $("#peTu").addEventListener("change",e=>{const ant=e.target.dataset.ant||tUnDe(p);$("#peMin").value=emUn(deUn($("#peMin").value,ant),e.target.value);e.target.dataset.ant=e.target.value;mostraRegra()});
+  $("#peMin").addEventListener("input",mostraRegra); mostraRegra();
   let manual=!novo;
   const sugere=()=>{
     const f=$("#peFase").value.trim()||"Cadastros", g=$("#peGrupo").value.trim(), sg=codigoLivre(f,g,p), atual=$("#peCod").value.trim().toUpperCase();
@@ -1656,12 +1741,16 @@ async function excluirProc(i,semPerguntar){
 $("#procBody").addEventListener("change",e=>{
   const t=e.target; if(t.dataset.i===undefined) return;
   const p=db.processos[+t.dataset.i], k=t.dataset.k;
-  p[k]=k==="min"?Math.max(0,+t.value||0):t.value.trim(); persist();
+  if(k==="tval") p.min=Math.round(deUn(t.value,tUnDe(p))*1000)/1000;
+  else if(k==="tun"){p.tUn=t.value; persist(); renderProc(); return}
+  else p[k]=k==="min"?Math.max(0,+t.value||0):t.value.trim();
+  persist(); if(k==="un") renderProc();
 });
 $("#procBody").addEventListener("click",async e=>{
   const ds=e.target.dataset;
   if(ds.ped!==undefined) editarProc(+ds.ped);
   else if(ds.pdup!==undefined) duplicarProc(+ds.pdup);
+  else if(ds.ptag!==undefined){const p=db.processos[+ds.ptag], v=await uiPrompt(`Etiquetas de ${p.cod} · ${p.nome} (separadas por vírgula):`,tagsDe(p).join(", ")); if(v===null||v===undefined) return; setTags(p,v); persist(); renderProc(); renderTpl()}
   else if(ds.pcm!==undefined) copiarMoverProc(+ds.pcm);
   else if(ds.pdel!==undefined) excluirProc(+ds.pdel);
   else if(ds.padd!==undefined) novoProc(ds.padd,ds.pg||"");
@@ -1681,6 +1770,9 @@ $("#procBody").addEventListener("click",async e=>{
   }
 });
 $("#pFiltro").oninput=renderProc;
+document.addEventListener("click",e=>{const t=e.target.closest("[data-tagp],[data-tagm]"); if(!t) return;
+  const p=t.dataset.tagp!==undefined, set=p?filtroTagsP:filtroTagsM, k=p?t.dataset.tagp:t.dataset.tagm;
+  if(k==="__limpar") set.clear(); else set.has(k)?set.delete(k):set.add(k); p?renderProc():renderTpl()});
 $("#pCat").onchange=e=>{bancoCat=e.target.value;renderProc();renderTpl()};
 $("#pAdd").onclick=async()=>{
   const f=await uiPrompt("Fase do novo processo:",fases()[3]||"Cadastros"); if(!f) return;
@@ -1868,7 +1960,7 @@ function linhasModelo(m,mi,l,pre,pc,d,ro){
     const ip=pre===""?String(k):pre+"."+k, pad=`style="padding-left:${6+d*20}px"`, a=`data-mi="${mi}"`;
     const mv=ro?"":`<button class="x" ${a} data-idup="${ip}" title="Duplicar">⧉</button><button class="x" ${a} data-icm="${ip}" title="Copiar ou mover para outro grupo ou modelo">⇄</button><button class="x" ${a} data-iup="${ip}" title="Subir">↑</button><button class="x" ${a} data-idn="${ip}" title="Descer">↓</button><button class="x" ${a} data-idel="${ip}" title="Remover">×</button>`;
     if(Array.isArray(it)){const [c,q,det,min,desc]=it, p=proc(c), mm=min??(p?p.min:0);
-      return `<tr class="mdl-p${ro?" ro":""}"><td class="mnum">${esc(pc)}.${k+1}</td><td ${pad}>${c?`${esc(c)} · ${p?esc(p.nome):'<span class="muted">não encontrado</span>'}`:`<span class="pill">avulso</span> ${esc(desc||"")}`}${det?` <span class="muted">— ${esc(det)}</span>`:""}${p&&min!=null&&+min!==+p.min?` <span class="diff">${num(min)} min/unid.</span>`:""}</td>
+      return `<tr class="mdl-p${ro?" ro":""}"><td class="mnum">${esc(pc)}.${k+1}</td><td ${pad}>${c?`${esc(c)} · ${p?esc(p.nome):'<span class="muted">não encontrado</span>'}`:`<span class="pill">avulso</span> ${esc(desc||"")}`}${det?` <span class="muted">— ${esc(det)}</span>`:""}${p&&min!=null&&+min!==+p.min?` <span class="diff">${fmtT(min,tUnDe(p))}/unid.</span>`:""}</td>
         <td class="n">${ro?num(q,0):`<input type="number" min="0" step="1" value="${q}" ${a} data-iq="${ip}">`}</td><td class="n">${hm(mm*q)}</td><td class="acts">${mv}</td></tr>`}
     if(ehGrupo(it)){const f=folhasModelo(it.itens,+it.qtd||1,[],new Set([m.cod])), sel=!ro&&destinoDe(m)===ip;
       return `<tr class="mdl-g${sel?" dest":""}${ro?" ro":""}"><td class="mnum">${ro?esc(it.cod):`<input ${a} data-ig="${ip}" data-gk="cod" value="${esc(it.cod)}" class="gcod" title="Código do grupo (ex.: M1, SP1)">`}</td>
@@ -1888,7 +1980,10 @@ function renderTpl(){
   renderEstTpl();
   const fq=norm(($("#tBusca")||{}).value||""), fqRaw=(($("#tBusca")||{}).value||"").trim();
   renderCatSelects();
-  const casaM=m=>(m.catalogo||"promob")===bancoCat&&(!fq||norm(textoModelo(m)).includes(fq));
+  const qRaw=($("#tBusca")||{}).value||"", doCat=db.modelos.filter(m=>(m.catalogo||"promob")===bancoCat);
+  const casaM=m=>(m.catalogo||"promob")===bancoCat&&temTags(m,filtroTagsM)&&casaBusca(textoModelo(m),tagsDe(m),qRaw);
+  barraTags(doCat,filtroTagsM,"#tTags","data-tagm");
+  $("#tConta").textContent=(fq||filtroTagsM.size)?`${doCat.filter(casaM).length} de ${doCat.length}`:`${doCat.length} modelos`;
   $("#tNovoBox").innerHTML=fqRaw&&!db.modelos.some(m=>norm(m.nome)===fq)?`<div class="card" style="padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="muted">${db.modelos.some(casaM)?"Nenhum modelo com esse nome exato.":"Nenhum modelo encontrado."}</span><button class="btn pri" id="tNovoBtn">＋ Criar modelo “${esc(fqRaw)}”</button></div>`:"";
   $("#tplList").innerHTML=db.modelos.map((m,mi)=>{
     if(!casaM(m)) return "";
@@ -1902,6 +1997,7 @@ function renderTpl(){
         <button class="btn" data-mi="${mi}" data-mdup="${mi}" title="Cria uma cópia logo abaixo">Duplicar</button>
         <button class="btn" data-mdel="${mi}">Excluir</button>
       </div>
+      <div class="tags" style="margin:-4px 0 8px">${tagsDe(m).map(t=>pillTag(t,`data-tagm="${esc(norm(t))}"`)).join("")}<button class="btn sm" data-mi="${mi}" data-mtag="${mi}">🏷 ${tagsDe(m).length?"Editar etiquetas":"Etiquetar"}</button></div>
       ${usadoEm.length?`<p class="muted" style="font-size:12px;margin:-4px 0 8px">Incluído como grupo em: ${usadoEm.map(c=>`<b>${esc(c)}</b>`).join(", ")}. Mudanças aqui valem lá também.</p>`:""}
       <div class="tbl"><table class="mdl"><thead><tr><th style="width:84px">Nº</th><th>Grupo / processo</th><th class="n">Qtd.</th><th class="n">Total</th><th></th></tr></thead><tbody>
       ${linhasModelo(m,mi,m.itens,"",m.cod,0,false)||'<tr><td colspan="5" class="muted">Vazio. Adicione processos, grupos ou modelos existentes abaixo.</td></tr>'}
@@ -1966,6 +2062,7 @@ $("#tplList").addEventListener("click",async e=>{
   else if(ds.idup!==undefined){const x=itemEm(m,ds.idup); if(!x) return; const c=clone(x.it); if(ehGrupo(c)) recodificarGrupos(c,m); x.l.splice(x.k+1,0,c); modDest[m.cod]=""; persist(); renderTpl()}
   else if(ds.icm!==undefined) copiarMoverItem(+ds.mi,ds.icm);
   else if(ds.mdup!==undefined) duplicarModelo(+ds.mi);
+  else if(ds.mtag!==undefined){const v=await uiPrompt(`Etiquetas do modelo ${m.cod} · ${m.nome} (separadas por vírgula):`,tagsDe(m).join(", ")); if(v===null||v===undefined) return; setTags(m,v); persist(); renderTpl()}
   else if(ds.gaqui!==undefined){modDest[m.cod]=ds.gaqui; renderTpl(); const inp=document.querySelector(`.combo[data-ctx="mod"][data-mi="${ds.mi}"] input`); if(inp) inp.focus()}
   else if(ds.gsub!==undefined) novoGrupo(+ds.mi,ds.gsub);
   else if(ds.gnovo!==undefined) novoGrupo(+ds.mi,destinoDe(m));
@@ -2430,7 +2527,14 @@ async function copiar(id){
 }
 
 /* ================= BANCO: XMIND, CALIBRAÇÃO, LOTE ================= */
-const filtrados=()=>{const f=norm($("#pFiltro").value);return db.processos.filter(p=>(p.catalogo||"promob")===bancoCat&&(!f||norm(p.cod+" "+p.grupo+" "+p.nome+" "+p.un).includes(f)))};
+function filtrosProc(){const un=$("#pfUn").value, tu=$("#pfTu").value, fo=$("#pfFonte").value, rg=$("#pfRegra").value;
+  return {ativo:!!(un||tu||fo||rg),ok:p=>(!un||(p.un||"unid.")===un)&&(!tu||tUnDe(p)===tu)&&(!fo||(p.fonte==="H"?"H":"M")===fo)&&(!rg||(rg==="com")===!!descRegra(regraUn(p.un)))}}
+["#pfUn","#pfTu","#pfFonte","#pfRegra"].forEach(id=>$(id).addEventListener("change",renderProc));
+const filtrados=()=>{const q=$("#pFiltro").value, fx=filtrosProc();return db.processos.filter(p=>(p.catalogo||"promob")===bancoCat&&temTags(p,filtroTagsP)&&fx.ok(p)&&casaBusca(p.cod+" "+p.fase+" "+p.grupo+" "+p.nome+" "+p.un+" "+(p.desc||""),tagsDe(p),q))};
+$("#bulkTag").onclick=async()=>{const ps=filtrados(); if(!ps.length) return; const v=((await uiPrompt(`Etiqueta(s) para os ${ps.length} processos na tela (separe por vírgula):`))||"").trim(); if(!v) return;
+  ps.forEach(p=>addTags(p,v.split(/[,;]/))); persist(); renderProc(); renderTpl()};
+$("#bulkUntag").onclick=async()=>{const ps=filtrados(); if(!ps.length) return; const v=norm(((await uiPrompt(`Tirar qual etiqueta dos ${ps.length} processos na tela?`))||"").replace(/^#/,"").trim()); if(!v) return;
+  let n=0; ps.forEach(p=>{const a=tagsDe(p).length;p.tags=tagsDe(p).filter(t=>norm(t)!==v);n+=a-p.tags.length}); persist(); renderProc(); uiAlert(`Etiqueta retirada de ${n} processo${n===1?"":"s"}.`)};
 $("#bulkPctBtn").onclick=async()=>{
   const pct=+$("#bulkPct").value||0, ps=filtrados(); if(!pct||!ps.length) return;
   if(!await uiConfirm(`Ajustar ${pct>0?"+":""}${pct}% o tempo de ${ps.length} processos filtrados?`)) return;
@@ -2760,6 +2864,14 @@ function renderCfg(){
       <td>${c.perfis.length>1?`<button class="x" data-pfdel="${i}" title="Excluir">×</button>`:""}</td></tr>`}).join("")}</tbody></table></div>
     <datalist id="dlPessoas">${pessoasEquipe().map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
     <div class="toolbar" style="margin:8px 0 0"><button class="btn" id="pfAdd">+ Perfil</button><span class="muted">Preço mínimo para a margem-alvo de ${num(+c.margemAlvo||0,0)}%: custo ÷ ${num(1-(+c.margemAlvo||0)/100,2)}</span></div>`;
+  sincUnidades();
+  $("#unBox").innerHTML=`<div class="tbl"><table><thead><tr><th>Unidade</th><th class="n">Processos</th><th>Tempo digitado em</th><th class="n">Qtd. mínima</th><th>Arredondar quantidade</th><th></th></tr></thead><tbody>
+    ${(c.unidades||[]).map((u,i)=>{const n=db.processos.filter(p=>norm(p.un||"")===norm(u.nome)).length;return `<tr><td><input value="${esc(u.nome)}" data-un="${i}" data-uk="nome"></td><td class="n">${n}</td>
+      <td><select data-un="${i}" data-uk="tempo" style="width:auto">${Object.keys(T_UN).map(t=>`<option value="${t}" ${(u.tempo||"min")===t?"selected":""}>${t}</option>`).join("")}</select></td>
+      <td class="n"><input type="number" min="0" step="0.5" value="${u.minimo||""}" placeholder="—" data-un="${i}" data-uk="minimo" style="width:80px"></td>
+      <td><select data-un="${i}" data-uk="arred" style="width:auto"><option value="nao" ${(u.arred||"nao")==="nao"?"selected":""}>não arredondar</option><option value="inteiro" ${u.arred==="inteiro"?"selected":""}>para cima, inteiro</option><option value="meio" ${u.arred==="meio"?"selected":""}>de meio em meio</option></select></td>
+      <td>${n?"":`<button class="x" data-undel="${i}" title="Excluir unidade sem uso">×</button>`}</td></tr>`}).join("")}</tbody></table></div>
+    <div class="toolbar" style="margin:8px 0 0"><button class="btn" id="unAdd">+ Unidade</button><span class="muted">Mudar o “tempo digitado em” de uma unidade pode converter os processos dela (o tempo em minutos não muda).</span></div>`;
   $("#riscosBox").innerHTML=`<div class="tbl"><table><thead><tr><th>Nível</th><th class="n">Reserva %</th><th></th></tr></thead><tbody>
     ${c.riscos.map((x,i)=>`<tr><td><input value="${esc(x.nome)}" data-rk="nome" data-ri="${i}"></td><td class="n"><input type="number" min="0" step="1" value="${x.pct}" data-rk="pct" data-ri="${i}"></td>
       <td>${c.riscos.length>1?`<button class="x" data-ridel="${i}" title="Excluir">×</button>`:""}</td></tr>`).join("")}</tbody></table></div>
@@ -2777,6 +2889,18 @@ $("#catBox").addEventListener("click",async e=>{
     db.catalogos.push({id:"c"+uid(),nome});persist();render();uiAlert(`Catálogo “${nome}” criado. Cadastre os processos no Banco (seletor Catálogo).`)}
   else if(e.target.dataset.ctdel!==undefined){const x=db.catalogos[+e.target.dataset.ctdel];if(await uiConfirm(`Excluir o catálogo “${x.nome}”?`)){db.catalogos.splice(+e.target.dataset.ctdel,1);persist();render()}}
 });
+$("#unBox").addEventListener("change",async e=>{const t=e.target; if(t.dataset.un===undefined) return; const u=db.cfg.unidades[+t.dataset.un], k=t.dataset.uk;
+  if(k==="nome"){const v=t.value.trim(); if(!v||(norm(v)!==norm(u.nome)&&regraUn(v))){uiAlert(v?`Já existe a unidade “${v}”.`:"O nome não pode ficar vazio.");renderCfg();return}
+    db.processos.forEach(p=>{if(norm(p.un||"")===norm(u.nome)) p.un=v}); u.nome=v}
+  else if(k==="tempo"){u.tempo=t.value; const ps=db.processos.filter(p=>norm(p.un||"")===norm(u.nome)&&tUnDe(p)!==t.value);
+    if(ps.length&&await uiConfirm(`Passar também os ${ps.length} processo(s) em “${u.nome}” a mostrar o tempo em ${t.value}? (o tempo em minutos não muda)`,{ok:"Converter",cancel:"Só novos"})) ps.forEach(p=>p.tUn=t.value)}
+  else if(k==="minimo") u.minimo=Math.max(0,+t.value||0);
+  else u[k]=t.value;
+  persist(); renderCfg(); renderProc(); renderEst()});
+$("#unBox").addEventListener("click",async e=>{
+  if(e.target.id==="unAdd"){const nome=((await uiPrompt("Nome da unidade (ex.: visita técnica, m², dia de implantação):"))||"").trim(); if(!nome) return; if(regraUn(nome)) return uiAlert("Essa unidade já existe.");
+    db.cfg.unidades.push({nome,tempo:"min",minimo:0,arred:"nao"}); persist(); renderCfg()}
+  else if(e.target.dataset.undel!==undefined){db.cfg.unidades.splice(+e.target.dataset.undel,1); persist(); renderCfg()}});
 $("#perfisBox").addEventListener("change",e=>{const t=e.target;if(t.dataset.pf===undefined) return;const p=db.cfg.perfis[+t.dataset.pf];p[t.dataset.pk]=t.dataset.pk==="nome"||t.dataset.pk==="resp"?t.value.trim():t.dataset.pk==="tipo"?t.value:Math.max(0,+t.value||0);persist();renderCfg();renderEst()});
 $("#riscosBox").addEventListener("change",e=>{const t=e.target;if(t.dataset.ri===undefined) return;const x=db.cfg.riscos[+t.dataset.ri];x[t.dataset.rk]=t.dataset.rk==="nome"?t.value.trim():Math.max(0,+t.value||0);persist();renderCfg();renderEst()});
 $("#perfisBox").addEventListener("click",async e=>{
@@ -3731,7 +3855,10 @@ $("#bkImp").onclick=()=>pickFile(".json",async f=>{
   persist(); render(); uiAlert(`Backup restaurado: ${novos} estimativas novas ou atualizadas.`);
 });
 Object.entries(CFG).forEach(([id,k])=>$("#"+id).addEventListener("change",e=>{
-  db.cfg[k]=Math.max(0,+e.target.value||0); if(k==="hdia"||k==="equipe") db.cfg[k]=Math.max(1,db.cfg[k]); persist();
+  const diasAnt=k==="hdia"?db.processos.filter(p=>tUnDe(p)==="dia").map(p=>[p,emUn(p.min,"dia")]):[];
+  db.cfg[k]=Math.max(0,+e.target.value||0); if(k==="hdia"||k==="equipe") db.cfg[k]=Math.max(1,db.cfg[k]);
+  diasAnt.forEach(([p,d])=>p.min=Math.round(deUn(d,"dia")*1000)/1000);
+  persist(); if(k==="hdia") renderProc();
 }));
 
 /* ================= UTIL ================= */
