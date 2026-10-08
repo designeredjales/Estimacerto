@@ -125,12 +125,15 @@ span.and{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px}
 .ia-rev{white-space:pre-wrap;font-size:14px;line-height:1.55;background:var(--surface-2);border-radius:8px;padding:12px;margin-top:8px}
 #ppPrev,#escPrev{width:100%;min-height:60vh;border:1px solid var(--line);border-radius:8px;background:#fff}
 @media (max-width:760px){.prop-grid{grid-template-columns:1fr}.g-row,.gh-row{grid-template-columns:190px minmax(380px,1fr)}}
+.eopts{display:flex;flex-direction:column;gap:3px}.eopt{flex-direction:row!important;align-items:flex-start;gap:7px!important;font-size:13px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;cursor:pointer;line-height:1.35}.eopt.on{border-color:var(--accent);background:var(--surface-2)}.eopt input{margin-top:2px;flex-shrink:0}
+.einv{display:flex;flex-direction:column;gap:5px;font-size:13px}.einv label{flex-direction:row;align-items:center;gap:6px}.einvd{display:flex;gap:4px;align-items:center}
 .lblm{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}.chips{display:flex;flex-wrap:wrap;gap:4px}
 .escol{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px}.escol label{flex-direction:row;align-items:center;gap:5px}.escol select{width:auto;padding:3px 5px;font-size:13px}
 .eblk{border:1px solid var(--line);border-radius:6px;padding:6px;margin-bottom:6px;display:flex;flex-direction:column;gap:4px}.eblk.off{opacity:.55}
 .ebh{display:flex;gap:4px;align-items:center}.ebh input:not([type=checkbox]){flex:1;min-width:0;padding:4px 6px;font-weight:600}.eblk textarea{min-height:56px;font-size:13px}
 .sigmini{display:block;width:110px;background:#fff;border-radius:4px;margin-bottom:3px}
 .sgpad{width:100%;max-width:600px;aspect-ratio:600/170;background:#fff;border:1px dashed var(--line);border-radius:6px;touch-action:none;display:block;margin-top:8px}
+.pf-resp{font-size:12px}
 .pf-ovr{color:var(--accent);font-weight:600}.pf-ovr select{border-color:var(--accent)}
 .fxap{margin:0 0 6px;font-size:13px}.simfx{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--surface-2);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:13px}.simfx label{flex-direction:row;align-items:center;gap:6px}
 .ignbar{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin:-6px 0 10px}
@@ -375,7 +378,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
 <section id="esc" class="tab">
   <div class="card">
     <h2>Escopo e briefing da estimativa aberta</h2>
-    <p class="muted">Monte o documento de escopo no nível de detalhe certo para cada cliente: só demanda e valor, com horas, com descrição ou completo com o passo a passo. Escolha os blocos, edite os textos e colete o aceite com assinatura eletrônica. O documento baixado (.html) abre no celular do cliente, que assina com o dedo e devolve o arquivo assinado.</p>
+    <p class="muted">Monte o documento de escopo no nível de detalhe certo para cada cliente: demandas em tópicos, com ou sem horas, descrição, resumo do passo a passo e valores por demanda ou só o total. No Investimento, valor total, desconto e valor por extenso. Escolha os blocos, edite os textos e colete o aceite com assinatura eletrônica. O documento baixado (.html) abre no celular do cliente, que assina com o dedo e devolve o arquivo assinado.</p>
     <div class="row" style="margin-bottom:10px">
       <button class="btn pri" id="escBaixar">Baixar escopo (.html)</button><button class="btn" id="escPrint">Imprimir / PDF</button>
       <button class="btn" id="escAssinar">Coletar assinatura aqui</button><button class="btn" id="escImport">Importar escopo assinado</button>
@@ -422,7 +425,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
   </div>
   <div class="card">
     <h2>Perfis — custo e preço por hora</h2>
-    <p class="muted">Cada demanda usa um perfil: uma pessoa da equipe ou um centro de custo. O preço/hora gera o valor; o custo/hora interno (salário + encargos + estrutura) gera a margem. Em “Decisão automática”, configure faixas de horas: o sistema escolhe sozinho o valor/hora pelo tamanho da estimativa (ex.: até 50 h um valor, de 50 a 100 h outro).</p>
+    <p class="muted">Cada demanda usa um perfil: uma pessoa da equipe ou um centro de custo. O preço/hora gera o valor; o custo/hora interno (salário + encargos + estrutura) gera a margem. Em “Responsável”, defina a pessoa da equipe que responde pelo perfil (num centro de custo, quem coordena): ela preenche o responsável da estimativa e aparece no cronograma e nas tarefas do Zoho Projects. Em “Decisão automática”, configure faixas de horas: o sistema escolhe sozinho o valor/hora pelo tamanho da estimativa (ex.: até 50 h um valor, de 50 a 100 h outro).</p>
     <div id="perfisBox"></div>
   </div>
   <div class="card">
@@ -780,6 +783,9 @@ const temReal=l=>l.real!==undefined&&l.real!==""&&l.real!==null;
 // Perfil vem da estimativa; a demanda só guarda perfil quando é exceção
 const perfilEst=(e=est)=>db.cfg.perfis.find(p=>p.id===e.perfil)||db.cfg.perfis[0];
 const perfilDe=(d,e=est)=>(d.perfil&&db.cfg.perfis.find(p=>p.id===d.perfil))||perfilEst(e);
+// responsável do perfil: pessoa da equipe definida no perfil (perfil do tipo pessoa = ela mesma)
+const respDe=pf=>(pf&&(pf.resp||(pf.tipo!=="centro"?pf.nome:"")))||"";
+const pessoasEquipe=()=>[...new Set([...db.cfg.perfis.filter(p=>p.tipo!=="centro").map(p=>p.nome),...db.cfg.perfis.map(p=>p.resp).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,"pt-BR"));
 const perfilProprio=(d,e=est)=>!!(d.perfil&&db.cfg.perfis.some(p=>p.id===d.perfil)&&d.perfil!==perfilEst(e).id);
 // estimativas antigas: o perfil mais usado nas demandas vira o da estimativa; os demais ficam como exceção
 function migrarPerfil(e){
@@ -926,6 +932,7 @@ function renderEst(){
   renderEstBar();
   if(migrarPerfil(est)) save(K_EST,est);
   {const pe=perfilEst(), exc=est.demandas.filter(d=>perfilProprio(d));
+   $("#pResp").placeholder=respDe(pe)||"Nome";
    $("#pPerfil").innerHTML=db.cfg.perfis.map(x=>`<option value="${esc(x.id)}" ${x.id===pe.id?"selected":""}>${optPerfil(x)}</option>`).join("");
    $("#pPerfilInfo").innerHTML=exc.length?`${exc.length} demanda${exc.length>1?"s":""} com perfil próprio: ${exc.map(d=>`<b>${esc(d.nome)}</b> (${esc(perfilDe(d).nome)})`).join(", ")}. ${est.status!=="fechada"?'<button class="btn sm" id="pPerfilLimpar">Usar o da estimativa em todas</button>':""}`:""}
   $("#pNome").value=est.nome||""; $("#pInicio").value=inicioDe(est); $("#pPrazo").value=est.prazo||""; $("#pResp").value=est.resp||""; $("#pData").value=est.data||"";
@@ -966,7 +973,7 @@ function renderEst(){
       </div>
       <div class="dem-meta">
         <label>Risco<select data-d="${di}" data-dk="risco">${db.cfg.riscos.map(x=>`<option value="${esc(x.id)}" ${riscoDe(d).id===x.id?"selected":""}>${esc(x.nome)} · ${num(x.pct)}%</option>`).join("")}</select></label>
-        <label class="${perfilProprio(d)?"pf-ovr":""}" title="${perfilProprio(d)?"Perfil próprio desta demanda (exceção)":"Segue o perfil da estimativa"}">${perfilProprio(d)?"Perfil próprio":"Perfil"}<select data-d="${di}" data-dk="perfil"><option value="">Da estimativa · ${esc(perfilEst().nome)}</option>${db.cfg.perfis.filter(x=>x.id!==perfilEst().id).map(x=>`<option value="${esc(x.id)}" ${perfilProprio(d)&&d.perfil===x.id?"selected":""}>${optPerfil(x)}</option>`).join("")}</select></label>
+        <label class="${perfilProprio(d)?"pf-ovr":""}" title="${perfilProprio(d)?"Perfil próprio desta demanda (exceção)":"Segue o perfil da estimativa"}">${perfilProprio(d)?"Perfil próprio":"Perfil"}<select data-d="${di}" data-dk="perfil"><option value="">Da estimativa · ${esc(perfilEst().nome)}</option>${db.cfg.perfis.filter(x=>x.id!==perfilEst().id).map(x=>`<option value="${esc(x.id)}" ${perfilProprio(d)&&d.perfil===x.id?"selected":""}>${optPerfil(x)}</option>`).join("")}</select></label>${perfilProprio(d)&&respDe(perfilDe(d))?`<span class="muted pf-resp">responsável: <b>${esc(respDe(perfilDe(d)))}</b></span>`:""}
         ${contaDem(d)&&r.porDemVal[di].valor?`<span class="muted">valor <b>${brl(r.porDemVal[di].valor)}</b> · margem <b class="${r.porDemVal[di].margem<(+db.cfg.margemAlvo||0)?"diff up":"diff down"}">${num(r.porDemVal[di].margem,0)}%</b></span>`:""}
       </div>
       <textarea placeholder="Observações, escopo, premissas…" data-d="${di}" data-dk="obs" style="${d.obs||disc?"":"display:none"}">${esc(d.obs)}</textarea>
@@ -1192,7 +1199,7 @@ dl.addEventListener("click",async e=>{
   }
 });
 $("#pInicio").addEventListener("change",e=>{est.inicio=e.target.value||null;persist();renderEst();renderCron()});
-$("#pPerfil").addEventListener("change",e=>{est.perfil=e.target.value;est.demandas.forEach(d=>{if(d.perfil===est.perfil) delete d.perfil});persist();renderEst();renderArquivo();renderEsc()});
+$("#pPerfil").addEventListener("change",e=>{const ant=respDe(perfilEst());est.perfil=e.target.value;if(!est.resp||est.resp===ant) est.resp=respDe(perfilEst())||est.resp;est.demandas.forEach(d=>{if(d.perfil===est.perfil) delete d.perfil});persist();renderEst();renderArquivo();renderEsc()});
 $("#pPerfilInfo").addEventListener("click",async e=>{if(e.target.id!=="pPerfilLimpar") return;
   if(!await uiConfirm(`Tirar o perfil próprio das demandas e usar “${perfilEst().nome}” em todas?`)) return;
   est.demandas.forEach(d=>delete d.perfil);persist();renderEst();renderArquivo();renderEsc()});
@@ -1208,9 +1215,9 @@ $("#btnPrint").onclick=()=>window.print();
 $("#btnCsv").onclick=()=>{
   const r=calc(), c=db.cfg;
   const rows=[["Projeto",est.nome],["Responsável",est.resp],["Data",est.data],[],
-    ["Demanda","Tipo","Andamento","Ignorada","Risco","Perfil","Fase","Código","Atividade","Detalhe","Unidade","Qtd","min/unid","Total (min)","Total (h)","Real (min)"]];
+    ["Demanda","Tipo","Andamento","Ignorada","Risco","Perfil","Responsável","Fase","Código","Atividade","Detalhe","Unidade","Qtd","min/unid","Total (min)","Total (h)","Real (min)"]];
   est.demandas.forEach(d=>{
-    const dc=[d.nome,d.status,andLabel(d.andamento),d.ignorada?"sim":"",riscoDe(d).nome+" ("+riscoDe(d).pct+"%)",perfilDe(d).nome];
+    const dc=[d.nome,d.status,andLabel(d.andamento),d.ignorada?"sim":"",riscoDe(d).nome+" ("+riscoDe(d).pct+"%)",perfilDe(d).nome,respDe(perfilDe(d))||est.resp||""];
     if(!d.linhas.length) rows.push([...dc,"","",d.obs]);
     d.linhas.forEach(l=>{const p=proc(l.cod);rows.push([...dc,lineFase(l),l.cod,p?p.nome:l.desc,l.det,p?p.un:"",l.qtd,l.min,lineMin(l),(lineMin(l)/60).toFixed(2),l.real??""])});
   });
@@ -2343,15 +2350,17 @@ function renderCfg(){
   Object.entries(EMP).forEach(([id,k])=>$("#"+id).value=db.cfg.empresa[k]||"");
   $("#eFer").value=(db.cfg.feriados||[]).map(fmtD).join("\n");
   const c=db.cfg;
-  $("#perfisBox").innerHTML=`<div class="tbl"><table><thead><tr><th>Perfil</th><th>Tipo</th><th class="n">Custo/h</th><th class="n">Preço/h</th><th class="n">Margem</th><th>Decisão automática</th><th></th></tr></thead><tbody>
+  $("#perfisBox").innerHTML=`<div class="tbl"><table><thead><tr><th>Perfil</th><th>Tipo</th><th>Responsável</th><th class="n">Custo/h</th><th class="n">Preço/h</th><th class="n">Margem</th><th>Decisão automática</th><th></th></tr></thead><tbody>
     ${c.perfis.map((p,i)=>{const fx=faixasOrd(p), ps=fx.length?fx.map(f=>+f.preco):[+p.preco||0], mg=x=>x?(x-p.custo)/x*100:0, mmin=Math.min(...ps.map(mg)), mmax=Math.max(...ps.map(mg));
       return `<tr><td><input value="${esc(p.nome)}" data-pf="${i}" data-pk="nome"></td>
       <td><select data-pf="${i}" data-pk="tipo" style="width:auto"><option value="pessoa" ${p.tipo!=="centro"?"selected":""}>Pessoa</option><option value="centro" ${p.tipo==="centro"?"selected":""}>Centro de custo</option></select></td>
+      <td><input list="dlPessoas" value="${esc(p.resp||"")}" data-pf="${i}" data-pk="resp" placeholder="${esc(p.tipo!=="centro"?p.nome:"Pessoa da equipe")}" style="min-width:130px"></td>
       <td class="n"><input type="number" min="0" step="1" value="${p.custo}" data-pf="${i}" data-pk="custo"></td>
       <td class="n">${fx.length?`<span class="muted">${brl(Math.min(...ps))} a ${brl(Math.max(...ps))}</span>`:`<input type="number" min="0" step="1" value="${p.preco}" data-pf="${i}" data-pk="preco">`}</td>
       <td class="n ${mmin<(+c.margemAlvo||0)?"diff up":"diff down"}">${fx.length&&Math.round(mmin)!==Math.round(mmax)?num(mmin,0)+"–"+num(mmax,0):num(mmin,0)}%</td>
       <td><button class="btn sm${fx.length?" pri":""}" data-pffx="${i}">${fx.length?`${fx.length} faixas · ${p.faixaModo==="escalonada"?"escalonado":"faixa única"}`:"Preço por faixa de horas…"}</button></td>
       <td>${c.perfis.length>1?`<button class="x" data-pfdel="${i}" title="Excluir">×</button>`:""}</td></tr>`}).join("")}</tbody></table></div>
+    <datalist id="dlPessoas">${pessoasEquipe().map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
     <div class="toolbar" style="margin:8px 0 0"><button class="btn" id="pfAdd">+ Perfil</button><span class="muted">Preço mínimo para a margem-alvo de ${num(+c.margemAlvo||0,0)}%: custo ÷ ${num(1-(+c.margemAlvo||0)/100,2)}</span></div>`;
   $("#riscosBox").innerHTML=`<div class="tbl"><table><thead><tr><th>Nível</th><th class="n">Reserva %</th><th></th></tr></thead><tbody>
     ${c.riscos.map((x,i)=>`<tr><td><input value="${esc(x.nome)}" data-rk="nome" data-ri="${i}"></td><td class="n"><input type="number" min="0" step="1" value="${x.pct}" data-rk="pct" data-ri="${i}"></td>
@@ -2370,7 +2379,7 @@ $("#catBox").addEventListener("click",async e=>{
     db.catalogos.push({id:"c"+uid(),nome});persist();render();uiAlert(`Catálogo “${nome}” criado. Cadastre os processos no Banco (seletor Catálogo).`)}
   else if(e.target.dataset.ctdel!==undefined){const x=db.catalogos[+e.target.dataset.ctdel];if(await uiConfirm(`Excluir o catálogo “${x.nome}”?`)){db.catalogos.splice(+e.target.dataset.ctdel,1);persist();render()}}
 });
-$("#perfisBox").addEventListener("change",e=>{const t=e.target;if(t.dataset.pf===undefined) return;const p=db.cfg.perfis[+t.dataset.pf];p[t.dataset.pk]=t.dataset.pk==="nome"?t.value.trim():t.dataset.pk==="tipo"?t.value:Math.max(0,+t.value||0);persist();renderCfg();renderEst()});
+$("#perfisBox").addEventListener("change",e=>{const t=e.target;if(t.dataset.pf===undefined) return;const p=db.cfg.perfis[+t.dataset.pf];p[t.dataset.pk]=t.dataset.pk==="nome"||t.dataset.pk==="resp"?t.value.trim():t.dataset.pk==="tipo"?t.value:Math.max(0,+t.value||0);persist();renderCfg();renderEst()});
 $("#riscosBox").addEventListener("change",e=>{const t=e.target;if(t.dataset.ri===undefined) return;const x=db.cfg.riscos[+t.dataset.ri];x[t.dataset.rk]=t.dataset.rk==="nome"?t.value.trim():Math.max(0,+t.value||0);persist();renderCfg();renderEst()});
 $("#perfisBox").addEventListener("click",async e=>{
   if(e.target.dataset.pffx!==undefined) return editarFaixas(+e.target.dataset.pffx);
@@ -2418,7 +2427,7 @@ function cronograma(e=est,eqForc){
     if(ag.fim){const alvo=Math.max(t0+hd*0.25,hDe(ag.fim)+hd), k=(alvo-t0)/Math.max(t-t0,1e-6);
       segs.forEach(sg=>{sg.ini=t0+(sg.ini-t0)*k;sg.fim=t0+(sg.fim-t0)*k});t=alvo}
     pessoas[pi]=Math.max(pessoas[pi],t);
-    itens.push({di,id:demKey(d),nome:d.nome,pessoa:pi+1,ini:t0,fim:t,h:hTrab,segs,andamento:d.andamento||"nao_iniciada",
+    itens.push({di,id:demKey(d),nome:d.nome,pessoa:pi+1,resp:perfilProprio(d,e)?respDe(perfilDe(d,e)):(e.resp||respDe(perfilEst(e))),ini:t0,fim:t,h:hTrab,segs,andamento:d.andamento||"nao_iniciada",
       fixoIni:!!ag.ini,fixoFim:!!ag.fim,pulou:pular.filter(x=>d.linhas.some(l=>lineFase(l)===x)),ajustado:!!(ag.ini||ag.fim||pular.length||Object.keys(hx).length||Object.keys(gap).length||ag.antes||ag.pessoa)});
   });
   const fimH=Math.max(0,...itens.map(i=>i.fim)), dias=Math.ceil(fimH/hd-1e-9);
@@ -2446,7 +2455,7 @@ function renderCron(){
     <div class="gantt">
       <div class="gh-row"><div class="gn"></div><div class="gt">${sem.map(k=>`<span style="left:${k/tot*100}%">${fmtD(diaUtil(cr.ini,k)).slice(0,5)}</span>`).join("")}</div></div>
       ${cr.itens.map((it,k)=>`<div class="g-row"><div class="gn" title="${esc(it.nome)}"><div class="gnh"><b>${esc(it.nome)}</b><span class="gact"><button class="btn sm" data-crup="${k}" ${k?"":"disabled"} title="Antes">↑</button><button class="btn sm" data-crdn="${k}" ${k<cr.itens.length-1?"":"disabled"} title="Depois">↓</button><button class="btn sm${it.ajustado?" pri":""}" data-cred="${it.di}" title="Ajustar datas e fases">✎</button></span></div>
-        <span class="muted">${cr.eq>1?`pessoa ${it.pessoa} · `:""}${it.fixoIni?"📌 ":""}${fmtD(it.dataIni).slice(0,5)} → ${it.fixoFim?"📌 ":""}${fmtD(it.dataFim).slice(0,5)} · ${num(it.h)} h${it.pulou.length?` · pula ${esc(it.pulou.join(", "))}`:""}</span></div>
+        <span class="muted">${it.resp?`${esc(it.resp)} · `:""}${cr.eq>1?`pessoa ${it.pessoa} · `:""}${it.fixoIni?"📌 ":""}${fmtD(it.dataIni).slice(0,5)} → ${it.fixoFim?"📌 ":""}${fmtD(it.dataFim).slice(0,5)} · ${num(it.h)} h${it.pulou.length?` · pula ${esc(it.pulou.join(", "))}`:""}</span></div>
         <div class="gt">${it.segs.map(sg=>`<i class="gb" data-cred="${it.di}" title="${esc(sg.fase)}: ${num(sg.h)} h — clique para ajustar" style="left:${pct(sg.ini)}%;width:${Math.max(.4,pct(sg.fim-sg.ini))}%;background:${corFase(sg.fase)}"></i>${sg.espera?`<i class="gb gw" title="Espera após ${esc(sg.fase)}: ${sg.espera} dia(s) útil(eis)" style="left:${pct(sg.fim)}%;width:${pct(sg.espera*cr.hd)}%"></i>`:""}`).join("")}</div></div>`).join("")}
     </div>`;
   renderCarga();
@@ -2651,12 +2660,30 @@ $("#btnProposta").onclick=()=>{
 
 /* ================= ESCOPO E BRIEFING ================= */
 const ESC_PRESETS=[
-  {id:"valor",nome:"Demanda + valor",c:{desc:false,passos:false,horas:"nao",valor:"dem",datas:false}},
-  {id:"valorHoras",nome:"Demanda + valor + horas",c:{desc:false,passos:false,horas:"dem",valor:"dem",datas:false}},
-  {id:"descValor",nome:"Demanda + descrição + valor",c:{desc:true,passos:false,horas:"nao",valor:"dem",datas:false}},
-  {id:"descHorasTotal",nome:"Demanda + descrição + horas, só valor total",c:{desc:true,passos:false,horas:"dem",valor:"total",datas:false}},
-  {id:"completo",nome:"Completo (passo a passo e datas)",c:{desc:true,passos:true,horas:"dem",valor:"dem",datas:true}}
+  {id:"tot",nome:"Demanda bullets e valor total",c:{valor:"total"}},
+  {id:"nomes",nome:"Demanda bullets",c:{}},
+  {id:"descHoras",nome:"Demanda bullets c/ descrição e horas s/ valores",c:{desc:true,horas:true}},
+  {id:"resumoTot",nome:"Demanda bullets com uma descrição resumida do passo a passo e valor total",c:{resumo:true,valor:"total"}},
+  {id:"horasTot",nome:"Demanda bullets com horas e valor total no final",c:{horas:true,valor:"total"}},
+  {id:"valorDem",nome:"Demanda bullets c/ valor por demanda e valor total",c:{valor:"dem"}},
+  {id:"resumoDem",nome:"Demanda bullets com uma descrição resumida do passo a passo + valor por demanda e valor total",c:{resumo:true,valor:"dem"}},
+  {id:"horasValorDem",nome:"Demanda bullets com horas/valor por demanda e valor total no final",c:{horas:true,valor:"dem"}}
 ];
+const INV_PADRAO={modo:"total",descTipo:"pct",desc:0,descRot:"Desconto",extenso:true};
+// valor por extenso (reais inteiros)
+function extenso(v){
+  v=Math.round(Math.abs(+v||0)); if(!v) return "zero reais";
+  const U=["","um","dois","três","quatro","cinco","seis","sete","oito","nove","dez","onze","doze","treze","catorze","quinze","dezesseis","dezessete","dezoito","dezenove"],
+    D=["","","vinte","trinta","quarenta","cinquenta","sessenta","setenta","oitenta","noventa"],
+    C=["","cento","duzentos","trezentos","quatrocentos","quinhentos","seiscentos","setecentos","oitocentos","novecentos"];
+  const ate999=n=>{if(n===100) return "cem";const c=Math.floor(n/100),r=n%100,p=[];if(c) p.push(C[c]);if(r<20){if(r) p.push(U[r])}else{p.push(D[Math.floor(r/10)]+(r%10?" e "+U[r%10]:""))}return p.join(" e ")};
+  const g=[["",""],["mil","mil"],["milhão","milhões"],["bilhão","bilhões"]], partes=[];
+  let n=v,k=0; while(n>0){partes.push({k,n:n%1000});n=Math.floor(n/1000);k++}
+  const ts=partes.filter(p=>p.n).reverse().map(p=>({...p,t:p.k===1&&p.n===1?"mil":ate999(p.n)+(p.k?" "+(p.n===1?g[p.k][0]:g[p.k][1]):"")}));
+  let out=""; ts.forEach((p,i)=>{if(!i){out=p.t;return} const ult=i===ts.length-1; out+=(ult&&(p.n<100||p.n%100===0)?" e ":" ")+p.t});
+  const mi=v>=1e6&&v%1e6===0;
+  return out+(mi?" de reais":v===1?" real":" reais");
+}
 function escBlocosPadrao(){
   const p=Object.assign(propPadrao(),est.proposta||{});
   return [
@@ -2668,7 +2695,7 @@ function escBlocosPadrao(){
     {id:"prem",tit:"Premissas",tipo:"texto",on:true,txt:p.premissas},
     {id:"resp",tit:"Responsabilidades do cliente",tipo:"texto",on:false,txt:"Enviar materiais técnicos, fichas e padrões no início.\nIndicar um ponto focal para validações.\nValidar entregas parciais em até 2 dias úteis."},
     {id:"cron",tit:"Cronograma",tipo:"cronograma",on:true},
-    {id:"inv",tit:"Investimento",tipo:"investimento",on:true},
+    {id:"inv",tit:"Investimento",tipo:"investimento",on:true,inv:{...INV_PADRAO}},
     {id:"crit",tit:"Critérios de aceite",tipo:"texto",on:true,txt:"A demanda está entregue quando funciona no ambiente do cliente conforme o escopo.\nAjustes dentro do escopo são feitos sem custo até 15 dias após a entrega."},
     {id:"aceite",tit:"Aceite",tipo:"aceite",on:true}
   ];
@@ -2676,52 +2703,59 @@ function escBlocosPadrao(){
 function escCfg(){
   if(!est.escopo||!est.escopo.blocos){
     const pd=db.cfg.escopoPadrao;
-    est.escopo=Object.assign({alcance:"",titulo:"",preset:"descValor",col:clone(ESC_PRESETS[2].c),aceites:[]},est.escopo||{},pd?clone({preset:pd.preset,col:pd.col,blocos:pd.blocos}):{blocos:escBlocosPadrao()});
+    est.escopo=Object.assign({alcance:"",titulo:"",preset:"tot",col:clone(ESC_PRESETS[0].c),aceites:[]},est.escopo||{},pd?clone({preset:pd.preset,col:pd.col,blocos:pd.blocos}):{blocos:escBlocosPadrao()});
   }
+  const cf=est.escopo, pr=ESC_PRESETS.find(p=>p.id===cf.preset);
+  if(!pr){cf.preset="tot";cf.col=clone(ESC_PRESETS[0].c)} else if(JSON.stringify(cf.col)!==JSON.stringify(pr.c)) cf.col=clone(pr.c);
+  cf.blocos.forEach(b=>{if(b.tipo==="investimento") b.inv=Object.assign({},INV_PADRAO,b.inv||{})});
   est.escopo.aceites=est.escopo.aceites||[];
   return est.escopo;
 }
 const escDem=()=>est.demandas.map((d,i)=>({d,i})).filter(({d})=>contaDem(d)&&d.linhas.length);
 const hDem=d=>d.linhas.reduce((s,l)=>s+lineMin(l),0)*fatorDem(d)/60;
+// resumo do passo a passo: grupos de processos na ordem em que aparecem
+function resumoPassos(d){
+  const gs=[]; d.linhas.forEach(l=>{const pr=proc(l.cod), g=pr?(pr.grupo||pr.fase):(l.desc||"Atividade específica"); if(g&&!gs.includes(g)) gs.push(g)});
+  return gs.join(" → ");
+}
+function invCalc(bruto,inv){
+  inv=Object.assign({},INV_PADRAO,inv||{});
+  const desc=inv.modo==="desconto"?Math.min(bruto,Math.max(0,inv.descTipo==="pct"?bruto*(+inv.desc||0)/100:(+inv.desc||0))):0;
+  return {modo:inv.modo,bruto:Math.round(bruto),desc:Math.round(desc),pct:inv.descTipo==="pct"?(+inv.desc||0):(bruto?desc/bruto*100:0),descTipo:inv.descTipo,descRot:inv.descRot||"Desconto",
+    final:Math.round(bruto-desc),extenso:!!inv.extenso};
+}
 // Modelo de conteúdo: é o que se assina (o código de integridade é o hash deste JSON)
 function escModelo(cf=escCfg()){
-  const r=calc(), cr=cronograma(), c=cf.col, cli=(arq.clientes[est.clienteId]||{}).nome||"";
+  const r=calc(), cr=cronograma(), c=cf.col||{}, cli=(arq.clientes[est.clienteId]||{}).nome||"";
   const um=cf.alcance?escDem().find(({d})=>d.id===cf.alcance):null, lista=um?[um]:escDem();
   const dems=lista.map(({d,i})=>{
     const it=cr.itens.find(x=>x.di===i), ex=d.escopo||{};
-    const grupos={}; if(c.passos) d.linhas.forEach(l=>{const pr=proc(l.cod), g=pr?(pr.grupo||pr.fase):"Atividades específicas"; (grupos[g]=grupos[g]||[]).push((pr?pr.nome:l.desc)+(l.det?` — ${l.det}`:"")+(l.qtd>1?` (${num(l.qtd,0)})`:""))});
-    return {nome:d.nome,desc:c.desc?(ex.briefing||d.obs||""):"",crit:um?(ex.criterios||""):"",passos:Object.entries(grupos).map(([g,ls])=>[g,[...new Set(ls)]]),
-      horas:c.horas==="dem"?Math.round(hDem(d)*10)/10:null,valor:c.valor==="dem"?Math.round(r.porDemVal[i].valor):null,
+    return {nome:d.nome,desc:c.desc?(ex.briefing||d.obs||resumoPassos(d)):(um&&ex.briefing?ex.briefing:""),resumo:c.resumo?resumoPassos(d):"",crit:um?(ex.criterios||""):"",
+      horas:c.horas?Math.round(hDem(d)*10)/10:null,valor:c.valor==="dem"?Math.round(r.porDemVal[i].valor):null,
       ini:it?it.dataIni:null,fim:it?it.dataFim:null};
   });
-  const totH=lista.reduce((s,{d})=>s+hDem(d),0), totV=lista.reduce((s,{i})=>s+r.porDemVal[i].valor,0);
+  const totH=lista.reduce((s,{d})=>s+hDem(d),0), bruto=lista.reduce((s,{i})=>s+r.porDemVal[i].valor,0);
   const datas=dems.filter(x=>x.ini);
   return {titulo:cf.titulo||(um?`Escopo — ${um.d.nome}`:"Escopo de trabalho"),empresa:db.cfg.empresa.nome,cliente:cli,estimativa:est.nome,versao:est.versao||1,
     alcance:um?um.d.nome:"Estimativa inteira",col:c,dems,
-    totalH:c.horas==="nao"?null:Math.round(totH*10)/10,totalV:c.valor==="nao"?null:Math.round(totV),
+    totalH:c.horas?Math.round(totH*10)/10:null,totalV:c.valor?Math.round(bruto):null,bruto:Math.round(bruto),
     periodo:datas.length?{ini:datas.map(x=>x.ini).sort()[0],fim:datas.map(x=>x.fim).sort().pop()}:null,
     condicoes:(Object.assign(propPadrao(),est.proposta||{})).condicoes,
-    blocos:cf.blocos.filter(b=>b.on).map(b=>({tit:b.tit,tipo:b.tipo,txt:b.tipo==="texto"?(b.txt||""):undefined}))};
+    blocos:cf.blocos.filter(b=>b.on).map(b=>({tit:b.tit,tipo:b.tipo,txt:b.tipo==="texto"?(b.txt||""):undefined,inv:b.tipo==="investimento"?invCalc(bruto,b.inv):undefined}))};
 }
 function escopoHTML(cf=escCfg(),aceite=null){
-  const m=escModelo(cf), emp=db.cfg.empresa, e=esc, c=m.col, rasc=est.status!=="fechada";
+  const m=escModelo(cf), emp=db.cfg.empresa, e=esc, rasc=est.status!=="fechada";
   const li=t=>String(t||"").split("\n").map(x=>x.trim()).filter(Boolean);
   const texto=t=>{const ls=li(t);return ls.length>1?`<ul>${ls.map(x=>`<li>${e(x)}</li>`).join("")}</ul>`:ls.length?`<p>${e(ls[0])}</p>`:""};
-  const compacto=!c.desc&&!c.passos;
-  const hC=c.horas==="dem", vC=c.valor==="dem", dC=c.datas;
-  const escopo=compacto
-    ?`<table><thead><tr><th>Demanda</th>${dC?'<th>Período</th>':""}${hC?'<th class="n">Horas</th>':""}${vC?'<th class="n">Valor</th>':""}</tr></thead><tbody>
-      ${m.dems.map(x=>`<tr><td>${e(x.nome)}</td>${dC?`<td>${x.ini?fmtD(x.ini).slice(0,5)+" a "+fmtD(x.fim).slice(0,5):"—"}</td>`:""}${hC?`<td class="n">${num(x.horas)} h</td>`:""}${vC?`<td class="n">${brl(x.valor)}</td>`:""}</tr>`).join("")}
-      ${(m.totalH!=null||m.totalV!=null)?`<tr class="tot"><td>Total</td>${dC?"<td></td>":""}${hC?`<td class="n">${num(m.totalH)} h</td>`:""}${vC?`<td class="n">${brl(m.totalV)}</td>`:""}</tr>`:""}</tbody></table>`
-    :m.dems.map((x,k)=>`<section class="dem"><div class="dh"><h3>${m.dems.length>1?`${k+1}. `:""}${e(x.nome)}</h3><span>${[dC&&x.ini?fmtD(x.ini).slice(0,5)+" a "+fmtD(x.fim).slice(0,5):"",hC?num(x.horas)+" h":"",vC?brl(x.valor):""].filter(Boolean).join(" · ")}</span></div>
-      ${x.desc?texto(x.desc):""}
-      ${x.passos.length?`<div class="cols">${x.passos.map(([g,ls])=>`<div><h4>${e(g)}</h4><ul>${ls.map(y=>`<li>${e(y)}</li>`).join("")}</ul></div>`).join("")}</div>`:""}
-      ${x.crit?`<h4>Critérios de aceite desta demanda</h4>${texto(x.crit)}`:""}</section>`).join("");
-  const totLinha=!compacto&&(m.totalH!=null||m.totalV!=null)?`<p class="totl">Total${m.dems.length>1?` (${m.dems.length} demandas)`:""}: ${[m.totalH!=null?`<b>${num(m.totalH)} h</b>`:"",m.totalV!=null?`<b>${brl(m.totalV)}</b>`:""].filter(Boolean).join(" · ")}</p>`:"";
+  const escopo=`<ul class="dlist">${m.dems.map(x=>{const meta=[x.horas!=null?num(x.horas)+" h":"",x.valor!=null?brl(x.valor):""].filter(Boolean).join(" · ");
+      return `<li><div class="dl"><b>${e(x.nome)}</b>${meta?`<span>${meta}</span>`:""}</div>${x.desc?`<div class="dd">${texto(x.desc)}</div>`:""}${x.resumo?`<p class="dr">${e(x.resumo)}</p>`:""}${x.crit?`<h4>Critérios de aceite desta demanda</h4>${texto(x.crit)}`:""}</li>`}).join("")}</ul>`;
+  const totLinha=(m.totalH!=null||m.totalV!=null)?`<p class="totl">Total${m.dems.length>1?` (${m.dems.length} demandas)`:""}: ${[m.totalH!=null?`<b>${num(m.totalH)} h</b>`:"",m.totalV!=null?`<b>${brl(m.totalV)}</b>`:""].filter(Boolean).join(" · ")}</p>`:"";
   const cron=m.dems.some(x=>x.ini)?`${m.periodo?`<p>Início em <b>${fmtD(m.periodo.ini)}</b> e entrega em <b>${fmtD(m.periodo.fim)}</b>, contados a partir do aceite e do recebimento dos materiais.</p>`:""}
     ${m.dems.length>1?`<table><tbody>${m.dems.map(x=>`<tr><td>${e(x.nome)}</td><td class="n">${x.ini?fmtD(x.ini)+" a "+fmtD(x.fim):"—"}</td></tr>`).join("")}</tbody></table>`:""}`:"<p>A definir no início do projeto.</p>";
-  const inv=m.totalV==null?"":`<table><tbody>${vC&&m.dems.length>1?m.dems.map(x=>`<tr><td>${e(x.nome)}</td><td class="n">${brl(x.valor)}</td></tr>`).join(""):""}
-    <tr class="tot"><td>Investimento total</td><td class="n">${brl(m.totalV)}</td></tr></tbody></table><p><b>Condições:</b> ${e(m.condicoes)}</p>`;
+  const inv=v=>`<table><tbody>${v.modo==="desconto"&&v.desc>0?`<tr><td>Valor total</td><td class="n">${brl(v.bruto)}</td></tr>
+      <tr><td>${e(v.descRot)}${v.descTipo==="pct"?` (${num(v.pct)}%)`:""}</td><td class="n">− ${brl(v.desc)}</td></tr>
+      <tr class="tot"><td>Valor final</td><td class="n">${brl(v.final)}</td></tr>`:`<tr class="tot"><td>Investimento total</td><td class="n">${brl(v.final)}</td></tr>`}</tbody></table>
+    ${v.extenso?`<p class="ext">${e(brl(v.final))} (${e(extenso(v.final))})</p>`:""}<p><b>Condições:</b> ${e(m.condicoes)}</p>`;
   const assinado=aceite?`<div class="assinado"><img src="${e(aceite.png)}" alt="Assinatura"><p><b>${e(aceite.nome)}</b>${aceite.doc?` · ${e(aceite.doc)}`:""}${aceite.cargo?` · ${e(aceite.cargo)}`:""}<br>
       Assinado eletronicamente em ${new Date(aceite.em).toLocaleString("pt-BR")}${aceite.canal?` · ${e(aceite.canal)}`:""}<br>Código da assinatura: <b>${e(aceite.cod)}</b></p></div>`:"";
   const aceiteSec=`<p>Declaro que li e concordo com o escopo, as premissas e as condições descritas neste documento.</p>
@@ -2736,7 +2770,7 @@ function escopoHTML(cf=escCfg(),aceite=null){
     if(b.tipo==="texto") return b.txt.trim()?h+texto(b.txt):"";
     if(b.tipo==="escopo") return h+escopo+totLinha;
     if(b.tipo==="cronograma") return h+cron;
-    if(b.tipo==="investimento") return inv?h+inv:"";
+    if(b.tipo==="investimento") return h+inv(b.inv);
     if(b.tipo==="aceite") return `<section id="aceite">${h}${aceiteSec}</section>`;
     return "";
   }).filter(Boolean).join("").replace(/<h2>\d+ · /g,(()=>{let n=0;return()=>`<h2>${++n} · `})());
@@ -2752,6 +2786,10 @@ function escopoHTML(cf=escCfg(),aceite=null){
 .topo .info{font:12px/1.7 system-ui,sans-serif;color:var(--mut);margin-top:10px}
 h2{font:700 13px/1.4 system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin:34px 0 10px;border-bottom:1px solid var(--line);padding-bottom:6px}
 h3{font-size:18px;margin:0}h4{font:600 12px/1.4 system-ui,sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:10px 0 4px}
+.dlist{list-style:none;padding:0;margin:8px 0}.dlist>li{position:relative;padding:8px 0 8px 20px;border-bottom:1px dashed var(--line)}
+.dlist>li:before{content:"";position:absolute;left:4px;top:17px;width:7px;height:7px;border-radius:50%;background:var(--acc)}
+.dl{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}.dl b{font-size:16px}.dl span{font:600 13px system-ui,sans-serif;color:var(--acc);white-space:nowrap}
+.dd p,.dd ul{margin:4px 0 0}.dr{margin:4px 0 0;font:13px/1.5 system-ui,sans-serif;color:var(--mut)}.ext{font-style:italic;color:var(--mut);margin:8px 0}
 .dem{margin:16px 0 20px}.dh{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap;border-bottom:1px dashed var(--line);padding-bottom:4px;margin-bottom:6px}
 .dh span{font:600 13px system-ui,sans-serif;color:var(--acc);white-space:nowrap}
 ul{margin:4px 0 0;padding-left:18px}li{margin:2px 0}
@@ -2835,23 +2873,27 @@ function renderEsc(){
   const um=cf.alcance?ds.find(({d})=>d.id===cf.alcance):null;
   box.innerHTML=`<label>Abrangência<select id="esAlc"><option value="">Estimativa inteira (${ds.length} demanda${ds.length===1?"":"s"})</option>${ds.map(({d})=>`<option value="${esc(demKey(d))}" ${cf.alcance===d.id?"selected":""}>Só: ${esc(d.nome)}</option>`).join("")}</select></label>
     <label>Título<input id="esTit" value="${esc(cf.titulo)}" placeholder="${esc(um?`Escopo — ${um.d.nome}`:"Escopo de trabalho")}"></label>
-    <div><span class="lblm">Nível de detalhe</span><div class="chips">${ESC_PRESETS.map(p=>`<button class="btn sm${cf.preset===p.id?" pri":""}" data-espre="${p.id}">${esc(p.nome)}</button>`).join("")}</div></div>
-    <div class="escol">
-      <label><input type="checkbox" data-esc="desc" ${c.desc?"checked":""}> Descrição</label>
-      <label><input type="checkbox" data-esc="passos" ${c.passos?"checked":""}> Passo a passo</label>
-      <label><input type="checkbox" data-esc="datas" ${c.datas?"checked":""}> Datas</label>
-      <label>Horas<select data-esc="horas"><option value="dem" ${c.horas==="dem"?"selected":""}>por demanda</option><option value="total" ${c.horas==="total"?"selected":""}>só total</option><option value="nao" ${c.horas==="nao"?"selected":""}>ocultar</option></select></label>
-      <label>Valor<select data-esc="valor"><option value="dem" ${c.valor==="dem"?"selected":""}>por demanda</option><option value="total" ${c.valor==="total"?"selected":""}>só total</option><option value="nao" ${c.valor==="nao"?"selected":""}>ocultar</option></select></label>
-    </div>
+    <div><span class="lblm">Nível de detalhe do escopo</span><div class="eopts">${ESC_PRESETS.map(p=>`<label class="eopt${cf.preset===p.id?" on":""}"><input type="radio" name="esPre" value="${p.id}" ${cf.preset===p.id?"checked":""}><span>${esc(p.nome)}</span></label>`).join("")}</div></div>
     ${um?`<label>Briefing desta demanda <span class="muted">(vazio = observação da demanda)</span><textarea data-esd="briefing" placeholder="${esc(um.d.obs||"O que o cliente pediu, contexto, referências…")}">${esc((um.d.escopo||{}).briefing||"")}</textarea></label>
       <label>Critérios de aceite desta demanda<textarea data-esd="criterios" placeholder="Ex.: portas abrem nas 3 larguras padrão; orçamento confere com a tabela da fábrica">${esc((um.d.escopo||{}).criterios||"")}</textarea></label>`
-     :c.desc?`<p class="muted" style="font-size:12px">A descrição de cada demanda vem do briefing da demanda (escolha “Só: demanda” para editar) ou da observação na estimativa.</p>`:""}
+     :c.desc?`<p class="muted" style="font-size:12px">A descrição vem do briefing da demanda (escolha “Só: demanda” para editar), da observação na estimativa ou, sem nenhum dos dois, do resumo do passo a passo.</p>`:""}
     <div><span class="lblm">Blocos do documento</span>
     ${cf.blocos.map((b,k)=>`<div class="eblk${b.on?"":" off"}"><div class="ebh"><input type="checkbox" data-ebon="${k}" ${b.on?"checked":""} title="Incluir"><input data-ebtit="${k}" value="${esc(b.tit)}">
         <button class="btn sm" data-ebup="${k}" ${k?"":"disabled"}>↑</button><button class="btn sm" data-ebdn="${k}" ${k<cf.blocos.length-1?"":"disabled"}>↓</button>${b.tipo==="texto"?`<button class="x" data-ebdel="${k}" title="Excluir bloco">×</button>`:""}</div>
-      ${b.tipo==="texto"?(b.on?`<textarea data-ebtxt="${k}" placeholder="Uma linha por item (vira lista) ou um parágrafo.">${esc(b.txt||"")}</textarea>`:""):`<span class="muted" style="font-size:12px">${{escopo:"Gerado das demandas, no nível de detalhe escolhido.",cronograma:"Gerado do cronograma (com seus ajustes).",investimento:"Total, valores por demanda e condições de pagamento.",aceite:"Campos de aceite, assinatura desenhada e código de integridade."}[b.tipo]}</span>`}</div>`).join("")}
+      ${b.tipo==="texto"?(b.on?`<textarea data-ebtxt="${k}" placeholder="Uma linha por item (vira lista) ou um parágrafo.">${esc(b.txt||"")}</textarea>`:""):b.tipo==="investimento"&&b.on?invForm(b,k):`<span class="muted" style="font-size:12px">${{escopo:"Gerado das demandas, no nível de detalhe escolhido.",cronograma:"Gerado do cronograma (com seus ajustes).",investimento:"Valor total, desconto opcional, valor por extenso e condições de pagamento.",aceite:"Campos de aceite, assinatura desenhada e código de integridade."}[b.tipo]}</span>`}</div>`).join("")}
     <button class="btn sm" id="esAddB">+ Bloco de texto</button></div>`;
   renderEscPrev(); renderEscAceites();
+}
+function invForm(b,k){
+  const v=Object.assign({},INV_PADRAO,b.inv||{}), r=invCalc(escModelo().bruto,v);
+  return `<div class="einv">
+    <label><input type="radio" name="esInv${k}" data-einv="${k}" data-ik="modo" value="total" ${v.modo!=="desconto"?"checked":""}> O valor total</label>
+    <label><input type="radio" name="esInv${k}" data-einv="${k}" data-ik="modo" value="desconto" ${v.modo==="desconto"?"checked":""}> Valor total + desconto</label>
+    ${v.modo==="desconto"?`<div class="einvd"><input data-einv="${k}" data-ik="descRot" value="${esc(v.descRot)}" title="Nome do desconto" style="flex:1;min-width:110px">
+      <input type="number" min="0" step="0.5" data-einv="${k}" data-ik="desc" value="${v.desc||""}" placeholder="0" style="width:80px">
+      <select data-einv="${k}" data-ik="descTipo" style="width:auto"><option value="pct" ${v.descTipo==="pct"?"selected":""}>%</option><option value="rs" ${v.descTipo==="rs"?"selected":""}>R$</option></select></div>
+      <span class="muted" style="font-size:12px">${brl(r.bruto)} − ${brl(r.desc)} = <b>${brl(r.final)}</b></span>`:""}
+    <label><input type="checkbox" data-einv="${k}" data-ik="extenso" ${v.extenso?"checked":""}> Valor por extenso</label></div>`;
 }
 function renderEscPrev(){const f=$("#escPrev"); if(f) f.srcdoc=escopoHTML()}
 function renderEscAceites(){
@@ -2870,17 +2912,17 @@ let escT=null;
 const escSalvar=(prev=true)=>{persist();if(prev){clearTimeout(escT);escT=setTimeout(renderEscPrev,250)}};
 $("#escForm").addEventListener("click",e=>{
   const t=e.target.closest("button"); if(!t) return; const cf=escCfg(), ds=t.dataset;
-  if(ds.espre){const p=ESC_PRESETS.find(x=>x.id===ds.espre);cf.preset=p.id;cf.col=clone(p.c);escSalvar(false);renderEsc()}
-  else if(ds.ebup!==undefined||ds.ebdn!==undefined){const k=+(ds.ebup??ds.ebdn), j=ds.ebup!==undefined?k-1:k+1;[cf.blocos[k],cf.blocos[j]]=[cf.blocos[j],cf.blocos[k]];escSalvar(false);renderEsc()}
+  if(ds.ebup!==undefined||ds.ebdn!==undefined){const k=+(ds.ebup??ds.ebdn), j=ds.ebup!==undefined?k-1:k+1;[cf.blocos[k],cf.blocos[j]]=[cf.blocos[j],cf.blocos[k]];escSalvar(false);renderEsc()}
   else if(ds.ebdel!==undefined){cf.blocos.splice(+ds.ebdel,1);escSalvar(false);renderEsc()}
   else if(t.id==="esAddB"){cf.blocos.splice(Math.max(0,cf.blocos.findIndex(b=>b.tipo==="aceite")),0,{id:uid(),tit:"Novo bloco",tipo:"texto",on:true,txt:""});escSalvar(false);renderEsc()}
 });
 $("#escForm").addEventListener("change",e=>{
   const t=e.target, cf=escCfg(), ds=t.dataset;
   if(t.id==="esAlc"){cf.alcance=t.value;escSalvar(false);renderEsc();return}
+  if(t.name==="esPre"){const p=ESC_PRESETS.find(x=>x.id===t.value);cf.preset=p.id;cf.col=clone(p.c);escSalvar(false);renderEsc();return}
+  if(ds.einv!==undefined){const b=cf.blocos[+ds.einv];b.inv=Object.assign({},INV_PADRAO,b.inv||{});const ik=ds.ik;
+    b.inv[ik]=ik==="extenso"?t.checked:ik==="desc"?Math.max(0,+t.value||0):t.value;escSalvar(false);renderEsc();return}
   if(t.id==="esTit") cf.titulo=t.value.trim();
-  else if(ds.esc){cf.col[ds.esc]=t.type==="checkbox"?t.checked:t.value;cf.preset=(ESC_PRESETS.find(p=>JSON.stringify(p.c)===JSON.stringify(cf.col))||{id:""}).id;
-    escSalvar(false);renderEsc();return}
   else if(ds.ebon!==undefined){cf.blocos[+ds.ebon].on=t.checked;escSalvar(false);renderEsc();return}
   else if(ds.ebtit!==undefined) cf.blocos[+ds.ebtit].tit=t.value.trim()||"Bloco";
   else if(ds.ebtxt!==undefined) cf.blocos[+ds.ebtxt].txt=t.value;
@@ -2892,7 +2934,7 @@ $("#escBaixar").onclick=()=>download(escopoHTML(),escNomeArq(),"text/html");
 $("#escPrint").onclick=()=>{const f=$("#escPrev");try{f.contentWindow.focus();f.contentWindow.print()}catch(e){uiAlert("Este visualizador não permite imprimir daqui. Baixe o escopo (.html), abra no navegador e use Imprimir › Salvar como PDF.")}};
 $("#escPadrao").onclick=async()=>{const cf=escCfg();db.cfg.escopoPadrao=clone({preset:cf.preset,col:cf.col,blocos:cf.blocos});persist();uiAlert("Blocos e nível de detalhe salvos como padrão para as próximas estimativas.")};
 $("#escReset").onclick=async()=>{if(!await uiConfirm("Voltar os blocos e o nível de detalhe ao padrão de fábrica? Os aceites registrados ficam.")) return;
-  const cf=escCfg();cf.blocos=escBlocosPadrao();cf.preset="descValor";cf.col=clone(ESC_PRESETS[2].c);cf.titulo="";escSalvar(false);renderEsc()};
+  const cf=escCfg();cf.blocos=escBlocosPadrao();cf.preset="tot";cf.col=clone(ESC_PRESETS[0].c);cf.titulo="";escSalvar(false);renderEsc()};
 $("#escAssinar").onclick=()=>{
   const cf=escCfg(), m=escModelo(cf);
   abrirModal("Coletar assinatura",`<p class="muted">Para assinatura presencial (tablet, celular ou na reunião). Registra nome, documento, data e hora e o código de integridade de <b>${esc(m.titulo)}</b> (${esc(m.alcance)}).</p>
@@ -2999,7 +3041,7 @@ $("#btnZProj").onclick=async()=>{
             const p=proc(l.cod), h=lineMin(l)*fatorDem(d)/60;
             await call("create_a_task",{path_variables:{portal_id:portal,project_id:String(pid)},body:{name:`${String(i+1).padStart(2,"0")}. ${p?p.nome:l.desc}${l.det?" — "+l.det:""}`.slice(0,200),
               ...(tlid?{tasklist:{id:String(tlid)}}:{}),
-              description:`Estimado: ${num(h)} h (${num(l.qtd,0)} × ${num(l.min)} min + reserva de risco).${l.cod?` Processo ${l.cod}.`:""}${p&&p.desc?"\n\nComo executar:\n"+p.desc:""}`}});
+              description:`${respDe(perfilDe(d))?`Responsável: ${respDe(perfilDe(d))}. `:""}Estimado: ${num(h)} h (${num(l.qtd,0)} × ${num(l.min)} min + reserva de risco).${l.cod?` Processo ${l.cod}.`:""}${p&&p.desc?"\n\nComo executar:\n"+p.desc:""}`}});
             feitas++; if(feitas%5===0) st(`Criando tarefas… ${feitas}/${nT}`);
           }
         }

@@ -201,7 +201,18 @@ prazo (dias)    = total ÷ (horas produtivas/dia × pessoas)
 ## Escopo e briefing
 
 - **Abrangência:** a estimativa inteira ou uma demanda só, com briefing e critérios de aceite próprios.
-- **Nível de detalhe:** atalhos (demanda + valor; + horas; + descrição; descrição + horas com só o valor total; completo) e controles finos: descrição, passo a passo, datas, horas e valor (por demanda, só total ou ocultar).
+- **Nível de detalhe** (8 opções, demandas em tópicos):
+  - só a lista;
+  - lista e valor total;
+  - descrição e horas, sem valores;
+  - resumo do passo a passo e valor total;
+  - horas e valor total no final;
+  - valor por demanda e total;
+  - resumo do passo a passo, valor por demanda e total;
+  - horas e valor por demanda, com total.
+
+  O resumo do passo a passo lista os grupos de processos em ordem (Cadastro de entidade → Builder → … → Testes).
+- **Investimento:** só o valor total, ou valor total com desconto (em % ou R$, com nome editável) e valor final. O valor por extenso é opcional.
 - **Blocos:** objetivo, briefing, escopo, entregáveis, fora do escopo, premissas, responsabilidades do cliente, cronograma, investimento, critérios de aceite, aceite, além de blocos de texto próprios. Você liga, desliga, renomeia, edita e reordena cada um. **Salvar como padrão** vale para as próximas estimativas.
 - **Aceite com assinatura eletrônica simples:**
   - O .html baixado abre no celular do cliente. Ele preenche nome e CPF/CNPJ, assina com o dedo e baixa o documento assinado.
@@ -226,3 +237,9 @@ prazo (dias)    = total ÷ (horas produtivas/dia × pessoas)
 - Numa demanda específica, troque "Da estimativa" por outro perfil. A demanda passa a mostrar **Perfil próprio** em destaque, e o topo lista as exceções com o botão **Usar o da estimativa em todas**.
 - Ao trocar o perfil da estimativa, as exceções continuam. Uma exceção igual ao novo perfil deixa de ser exceção.
 - Nova estimativa herda o perfil da aberta. Estimativas antigas são migradas sem mudar valores: o perfil mais usado vira o da estimativa e os demais ficam como exceção.
+
+## Responsável no perfil
+
+- Em Parâmetros › Perfis, a coluna **Responsável** define a pessoa da equipe que responde pelo perfil. Num centro de custo, é quem coordena. Num perfil do tipo pessoa, o padrão é a própria pessoa.
+- Ao escolher o perfil da estimativa, o **Responsável** da estimativa é preenchido sozinho, sem sobrescrever um nome digitado à mão.
+- Demandas com perfil próprio mostram o responsável. O cronograma mostra o responsável de cada demanda. O CSV e as tarefas do Zoho Projects levam o nome.
