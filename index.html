@@ -1496,6 +1496,13 @@ $("#btnNovaDem").onclick=()=>{est.demandas.push({nome:"Nova demanda",status:"est
   const ins=document.querySelectorAll("#demList input.nome"); const last=ins[ins.length-1]; last.focus(); last.select()};
 $("#btnClear").onclick=async()=>{if(await uiConfirm("Remover todas as demandas desta estimativa?")){est.demandas=[];persist();renderEst()}};
 $("#btnExemplo").onclick=async()=>{if(await uiConfirm("Substituir as demandas desta estimativa pelo exemplo “Estimativa LT”?")){est.demandas=clone(EXEMPLO.demandas);persist();renderEst()}};
+// Imprimir um documento: fora do claude.ai imprime direto do quadro; dentro do visualizador (que bloqueia a impressão
+// sem avisar) oferece o arquivo pronto para abrir no navegador e imprimir (Ctrl+P › Salvar como PDF).
+async function imprimirDoc(frame,html,nome){
+  const emQuadro=(()=>{try{return window.self!==window.top}catch(e){return true}})();
+  if(!emQuadro){try{frame.contentWindow.focus();frame.contentWindow.print();return}catch(e){}}
+  if(await uiConfirm("O visualizador do claude.ai não deixa abrir a janela de impressão. Baixe o documento, abra o arquivo no navegador e use Ctrl+P › “Salvar como PDF”.",{ok:"Baixar para imprimir",cancel:"Fechar"})) download(html,nome,"text/html");
+}
 // Impressão: o visualizador do claude.ai bloqueia window.print() na página; geramos um relatório próprio (pré-visualização, imprimir pelo quadro ou baixar .html)
 function estimativaHTML(opc={}){
   const r=calc(), e=esc, cli=(arq.clientes[est.clienteId]||{}).nome||"", emp=db.cfg.empresa, fe=r.fech, interno=opc.interno!==false;
@@ -1533,7 +1540,7 @@ $("#btnPrint").onclick=()=>{
   let interno=true; const html=()=>estimativaHTML({interno});
   abrirModal("Imprimir / PDF",`<label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="prInt" checked> incluir dados internos (margem e observações internas)</label>
     <iframe id="prPrev" title="Pré-visualização" style="width:100%;height:65vh;border:1px solid var(--line);border-radius:8px;background:#fff;margin-top:8px"></iframe>`,
-    [{label:"Imprimir / Salvar PDF",pri:true,fn:()=>{const f=$("#prPrev");try{f.contentWindow.focus();f.contentWindow.print()}catch(e){uiAlert("Este visualizador não permite imprimir daqui. Use “Baixar (.html)”, abra o arquivo no navegador e imprima (Ctrl+P › Salvar como PDF).")}}},
+    [{label:"Imprimir / Salvar PDF",pri:true,fn:()=>imprimirDoc($("#prPrev"),html(),`Estimativa - ${(arq.clientes[est.clienteId]||{}).nome||""} - ${est.nome} v${est.versao||1}.html`)},
      {label:"Baixar (.html)",fn:()=>download(html(),`Estimativa - ${(arq.clientes[est.clienteId]||{}).nome||""} - ${est.nome} v${est.versao||1}.html`,"text/html")}]);
   const pv=()=>{$("#prPrev").srcdoc=html()}; pv(); $("#prInt").onchange=e=>{interno=e.target.checked;pv()};
 };
@@ -3322,7 +3329,7 @@ $("#btnProposta").onclick=()=>{
       <label>Próximos passos (um por linha)<textarea id="ppProx">${esc(p.proximos)}</textarea></label>
     </div><iframe id="ppPrev" title="Pré-visualização"></iframe></div>`,
     [{label:"Baixar proposta (.html)",pri:true,fn:()=>{ler();download(propostaHTML(est.proposta),`Proposta - ${(arq.clientes[est.clienteId]||{}).nome||""} - ${est.nome} v${est.versao||1}.html`,"text/html")}},
-     {label:"Imprimir / PDF",fn:()=>{ler();const f=$("#ppPrev");try{f.contentWindow.focus();f.contentWindow.print()}catch(e){uiAlert("Este visualizador não permite imprimir daqui. Baixe a proposta (.html), abra no navegador e use Imprimir › Salvar como PDF.")}}},
+     {label:"Imprimir / PDF",fn:()=>{ler();imprimirDoc($("#ppPrev"),propostaHTML(est.proposta),`Proposta - ${(arq.clientes[est.clienteId]||{}).nome||""} - ${est.nome} v${est.versao||1}.html`)}},
      {label:"Restaurar textos padrão",fn:()=>{delete est.proposta;persist();fecharModal();$("#btnProposta").click()}}]);
   const ler=()=>{est.proposta={titulo:$("#ppTit").value,contexto:$("#ppCtx").value,objetivo:$("#ppObj").value,extenso:$("#ppExt").checked,validade:+$("#ppVal").value||15,
     premissas:$("#ppPrem").value,proximos:$("#ppProx").value,mostrarHoras:$("#ppHoras").checked};persist()};
@@ -3605,7 +3612,7 @@ $("#escForm").addEventListener("change",e=>{
 });
 const escNomeArq=suf=>`${escModelo().titulo} - ${(arq.clientes[est.clienteId]||{}).nome||""} - ${est.nome} v${est.versao||1}${suf||""}.html`;
 $("#escBaixar").onclick=()=>download(escopoHTML(),escNomeArq(),"text/html");
-$("#escPrint").onclick=()=>{const f=$("#escPrev");try{f.contentWindow.focus();f.contentWindow.print()}catch(e){uiAlert("Este visualizador não permite imprimir daqui. Baixe o escopo (.html), abra no navegador e use Imprimir › Salvar como PDF.")}};
+$("#escPrint").onclick=()=>imprimirDoc($("#escPrev"),escopoHTML(),escNomeArq());
 // templates de escopo: nível de detalhe, blocos e textos, título e (opcional) condições de pagamento
 const escTpls=()=>db.cfg.escopoTemplates||(db.cfg.escopoTemplates=[]);
 function renderEscTpl(){const sl=$("#escTpl"); if(!sl) return;
