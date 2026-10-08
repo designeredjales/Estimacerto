@@ -27,6 +27,11 @@ Demandas marcadas como **Em discussão** aparecem na estimativa, mas não somam.
 | Administrativo | Administrativo da demanda |
 
 Ferramentas do banco:
+- **Editor em árvore Fase › Grupo**: “+ processo neste grupo” insere direto no grupo (o código herda o
+  prefixo do grupo, ex.: ENT-09); “+ grupo”, renomear grupo e renomear fase; em cada processo:
+  ✎ editar tudo, ⧉ duplicar, ↑↓ reordenar, × excluir. O editor completo tem código (renomear propaga
+  para modelos, estimativa e vínculos), fase, grupo, nome, unidade, tempo, fonte, **como executar /
+  passo a passo** (aparece como dica na estimativa) e reconhecimento XMind.
 - **Importar XMind no banco**: lê um mapa de estimativa e mostra uma revisão. Caminhos não reconhecidos
   viram processos novos (fase, grupo, nome e tempo médio, com opção de agrupar variantes), e processos
   existentes podem ter o tempo atualizado pela média do mapa. O reconhecimento usa a coluna

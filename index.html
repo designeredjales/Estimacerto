@@ -53,6 +53,10 @@ td:first-child{white-space:nowrap}
 td input,td select{width:100%}
 td input[type=number]{width:72px}
 tr.cat td{background:var(--surface-2);font-weight:600;font-size:13px}
+tr.grp td{background:color-mix(in srgb,var(--surface-2) 45%,transparent);font-size:13px;font-weight:600;padding-left:18px}
+.gh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.gh .sp{flex:1}
+button.btn.sm{padding:3px 8px;font-size:12px}
+td.acts{white-space:nowrap}td.acts .x{font-size:16px}
 .dem-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
 .dem-h input.nome{font-weight:600;font-size:16px;flex:1;min-width:200px}
 .dem.disc{opacity:.85;border-style:dashed}
@@ -207,7 +211,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
       <select id="bulkFase" style="width:auto"></select> <button class="btn" id="bulkFaseBtn">Mover para fase</button>
     </div>
     <div class="tbl"><table>
-      <thead><tr><th style="width:80px">Código</th><th style="width:130px">Fase</th><th style="width:150px">Grupo</th><th>Processo</th><th style="width:100px">Unidade</th><th class="n" style="width:90px">min/unid.</th><th style="width:100px">Fonte</th><th style="width:170px">Reconhecimento XMind</th><th></th></tr></thead>
+      <thead><tr><th style="width:80px">Código</th><th>Processo</th><th style="width:120px">Unidade</th><th class="n" style="width:90px">min/unid.</th><th style="width:90px">Fonte</th><th style="width:150px">Ações</th></tr></thead>
       <tbody id="procBody"></tbody>
     </table></div>
   </div>
@@ -472,7 +476,7 @@ function renderEst(){
     const disc=d.status==="discussao";
     const rows=d.linhas.map((l,li)=>{
       const p=proc(l.cod);
-      const desc=p?esc(p.nome):(l.desc?esc(l.desc):'<span class="muted">processo não encontrado</span>');
+      const desc=p?(p.desc?`<span title="${esc(p.desc)}" style="text-decoration:underline dotted">${esc(p.nome)}</span>`:esc(p.nome)):(l.desc?esc(l.desc):'<span class="muted">processo não encontrado</span>');
       const dif=p&&+l.min!==+p.min?`<div class="diff ${+l.min>p.min?"up":"down"}">padrão ${num(p.min)}</div>`:"";
       return `<tr>
         <td>${p?esc(p.cod):'<span class="pill">avulso</span>'}</td>
@@ -667,53 +671,136 @@ $("#btnXmind").onclick=()=>pickFile(".xmind",async f=>{
 });
 
 /* ================= BANCO DE PROCESSOS ================= */
+// Visão em árvore Fase › Grupo › Processo, com inserção direta no grupo, duplicar, mover e editor completo
+const grupos=fase=>[...new Set(db.processos.filter(p=>p.fase===fase).map(p=>p.grupo||""))];
+const SEMGRUPO="(sem grupo)";
 function renderProc(){
   const f=norm($("#pFiltro").value);
+  const casa=p=>!f||norm(p.cod+" "+p.fase+" "+p.grupo+" "+p.nome+" "+p.un+" "+(p.desc||"")).includes(f);
   let h="";
   fases().forEach(fase=>{
-    const ps=db.processos.map((p,i)=>({p,i})).filter(({p})=>p.fase===fase&&(!f||norm(p.cod+" "+p.grupo+" "+p.nome+" "+p.un).includes(f)));
-    if(!ps.length) return;
-    h+=`<tr class="cat"><td colspan="9">${esc(fase)} <span class="pill">${ps.length}</span></td></tr>`;
-    h+=ps.map(({p,i})=>`<tr>
-      <td><input value="${esc(p.cod)}" data-i="${i}" data-k="cod"></td>
-      <td><input value="${esc(p.fase)}" data-i="${i}" data-k="fase" list="faseList"></td>
-      <td><input value="${esc(p.grupo)}" data-i="${i}" data-k="grupo"></td>
-      <td><input value="${esc(p.nome)}" data-i="${i}" data-k="nome"></td>
-      <td><input value="${esc(p.un)}" data-i="${i}" data-k="un"></td>
-      <td class="n"><input type="number" min="0" step="1" value="${p.min}" data-i="${i}" data-k="min"></td>
-      <td><select data-i="${i}" data-k="fonte"><option value="H" ${p.fonte==="H"?"selected":""}>Histórico</option><option value="M" ${p.fonte!=="H"?"selected":""}>Manual</option></select></td>
-      <td><input value="${esc((p.alias||[]).join("; "))}" data-i="${i}" data-k="alias" placeholder="trecho do caminho; outro" title="Trechos do caminho no XMind que identificam este processo (separe com ;)"></td>
-      <td><button class="x" data-pdel="${i}" title="Excluir">×</button></td></tr>`).join("");
+    const naFase=db.processos.filter(p=>p.fase===fase);
+    if(!naFase.length&&f) return;
+    const vis=naFase.filter(casa); if(f&&!vis.length) return;
+    h+=`<tr class="cat"><td colspan="6"><div class="gh"><span>${esc(fase)}</span><span class="pill">${naFase.length}</span>
+      <span class="sp"></span><button class="btn sm" data-gadd="${esc(fase)}">+ grupo</button><button class="btn sm" data-frn="${esc(fase)}">Renomear fase</button></div></td></tr>`;
+    grupos(fase).forEach(g=>{
+      const ps=db.processos.map((p,i)=>({p,i})).filter(({p})=>p.fase===fase&&(p.grupo||"")===g&&casa(p));
+      if(f&&!ps.length) return;
+      const tot=ps.reduce((s,{p})=>s+(+p.min||0),0);
+      h+=`<tr class="grp"><td colspan="6"><div class="gh"><span>${esc(g||SEMGRUPO)}</span><span class="muted">${ps.length} ${ps.length===1?"processo":"processos"}</span>
+        <span class="sp"></span><button class="btn sm pri" data-padd="${esc(fase)}" data-pg="${esc(g)}">+ processo neste grupo</button>
+        ${g?`<button class="btn sm" data-grn="${esc(fase)}" data-pg="${esc(g)}">Renomear grupo</button>`:""}</div></td></tr>`;
+      h+=ps.map(({p,i})=>`<tr>
+        <td><b>${esc(p.cod)}</b></td>
+        <td><input value="${esc(p.nome)}" data-i="${i}" data-k="nome">${p.desc?`<div class="diff" title="${esc(p.desc)}">${esc(p.desc.split("\n")[0].slice(0,110))}</div>`:""}</td>
+        <td><input value="${esc(p.un)}" data-i="${i}" data-k="un"></td>
+        <td class="n"><input type="number" min="0" step="1" value="${p.min}" data-i="${i}" data-k="min"></td>
+        <td><span class="pill ${p.fonte==="H"?"h":"w"}">${p.fonte==="H"?"Histórico":"Manual"}</span></td>
+        <td class="acts"><button class="x" data-ped="${i}" title="Editar tudo">✎</button><button class="x" data-pdup="${i}" title="Duplicar">⧉</button><button class="x" data-pmv="${i}" data-dir="-1" title="Subir">↑</button><button class="x" data-pmv="${i}" data-dir="1" title="Descer">↓</button><button class="x" data-pdel="${i}" title="Excluir">×</button></td></tr>`).join("");
+    });
   });
-  $("#bulkFase").innerHTML=fases().map(f=>`<option>${esc(f)}</option>`).join("")+'<option value="__nova">+ nova fase…</option>';
-  $("#procBody").innerHTML=(h||'<tr><td colspan="8" class="empty">Nada encontrado.</td></tr>')+`<datalist id="faseList">${fases().map(c=>`<option value="${esc(c)}">`).join("")}</datalist>`;
+  $("#bulkFase").innerHTML=fases().map(x=>`<option>${esc(x)}</option>`).join("")+'<option value="__nova">+ nova fase…</option>';
+  $("#procBody").innerHTML=h||'<tr><td colspan="6" class="empty">Nada encontrado.</td></tr>';
+}
+function renomearCodigo(old,v){
+  db.modelos.forEach(m=>m.itens.forEach(it=>{if(it[0]===old) it[0]=v}));
+  est.demandas.forEach(d=>d.linhas.forEach(l=>{if(l.cod===old) l.cod=v}));
+  Object.keys(db.vinculos).forEach(k=>{if(db.vinculos[k]===old) db.vinculos[k]=v});
+  if(sysProcMod===old) sysProcMod=v;
+}
+// posição de inserção: logo após o último processo do mesmo grupo (ou da fase)
+function posGrupo(fase,grupo){
+  let pos=-1; db.processos.forEach((p,i)=>{if(p.fase===fase&&(p.grupo||"")===grupo) pos=i});
+  if(pos<0) db.processos.forEach((p,i)=>{if(p.fase===fase) pos=i});
+  return pos<0?db.processos.length:pos+1;
+}
+// prefixo do código: o mais usado no grupo (ENT, MDL…), senão derivado da fase
+function prefixoGrupo(fase,grupo){
+  const cont={}; db.processos.filter(p=>p.fase===fase&&(p.grupo||"")===(grupo||"")).forEach(p=>{const m=/^([A-Za-z]+)-/.exec(p.cod);if(m) cont[m[1]]=(cont[m[1]]||0)+1});
+  return Object.entries(cont).sort((a,b)=>b[1]-a[1])[0]?.[0]||prefixo(fase);
+}
+function codigoLivre(fase,grupo){let n=1,c;const pf=prefixoGrupo(fase,grupo);do{c=pf+"-"+String(n++).padStart(2,"0")}while(proc(c));return c}
+function editarProc(i,novo=false){
+  const p=db.processos[i];
+  const usoM=db.modelos.filter(m=>m.itens.some(it=>it[0]===p.cod)).map(m=>m.cod);
+  const usoE=est.demandas.reduce((s,d)=>s+d.linhas.filter(l=>l.cod===p.cod).length,0);
+  abrirModal(novo?"Novo processo":"Editar processo "+p.cod,`
+    <div class="row">
+      <label style="width:110px">Código<input id="peCod" value="${esc(p.cod)}"></label>
+      <label style="flex:1;min-width:160px">Fase<input id="peFase" value="${esc(p.fase)}" list="peFases"></label>
+      <label style="flex:1;min-width:160px">Grupo<input id="peGrupo" value="${esc(p.grupo||"")}" list="peGrupos"></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label style="flex:3;min-width:240px">Processo<input id="peNome" value="${esc(p.nome)}"></label>
+      <label style="flex:1;min-width:100px">Unidade de contagem<input id="peUn" value="${esc(p.un)}"></label>
+      <label>min/unid.<input id="peMin" type="number" min="0" step="0.5" value="${p.min}"></label>
+      <label>Fonte<select id="peFonte"><option value="H" ${p.fonte==="H"?"selected":""}>Histórico</option><option value="M" ${p.fonte!=="H"?"selected":""}>Manual</option></select></label>
+    </div>
+    <label style="margin-top:10px">Como executar / passo a passo (editor do Catalog, telas, critérios de pronto)<textarea id="peDesc" style="min-height:120px" placeholder="Ex.: Editor de Módulos › grupo › Novo módulo › aba Dimensionamento… Critério de pronto: inserido no ambiente sem erro, orçamento conferido.">${esc(p.desc||"")}</textarea></label>
+    <label style="margin-top:10px">Reconhecimento no XMind — um trecho do caminho por linha (ex.: montagem aplicacao&gt;caixas)<textarea id="peAlias" style="min-height:60px">${esc((p.alias||[]).join("\n"))}</textarea></label>
+    <p class="muted" style="margin-top:8px">Usado em: ${usoM.length?`modelos ${esc(usoM.join(", "))}`:"nenhum modelo"} · ${usoE} linha(s) da estimativa atual.</p>
+    <datalist id="peFases">${fases().map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
+    <datalist id="peGrupos">${[...new Set(db.processos.map(x=>x.grupo).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>`,
+  [{label:"Salvar",pri:true,fn:()=>{
+      const cod=$("#peCod").value.trim();
+      if(!cod||(cod!==p.cod&&proc(cod))){alert("Código vazio ou já usado por outro processo.");return}
+      if(cod!==p.cod) renomearCodigo(p.cod,cod);
+      Object.assign(p,{cod,fase:$("#peFase").value.trim()||"Cadastros",grupo:$("#peGrupo").value.trim(),nome:$("#peNome").value.trim()||"Processo",
+        un:$("#peUn").value.trim()||"unid.",min:Math.max(0,+$("#peMin").value||0),fonte:$("#peFonte").value,desc:$("#peDesc").value.trim(),
+        alias:$("#peAlias").value.split(/\n|;/).map(x=>x.trim()).filter(Boolean)});
+      persist(); render(); fecharModal();
+    }},
+   {label:"Duplicar",fn:()=>{fecharModal();duplicarProc(db.processos.indexOf(p))}},
+   {label:novo?"Descartar":"Excluir",fn:()=>{if(excluirProc(db.processos.indexOf(p),novo)) fecharModal()}}]);
+  setTimeout(()=>$(novo?"#peNome":"#peMin").select(),50);
+}
+function novoProc(fase,grupo){
+  const p={cod:codigoLivre(fase,grupo),fase,grupo,nome:"Novo processo",un:"unid.",min:10,fonte:"M",alias:[],desc:""};
+  const pos=posGrupo(fase,grupo); db.processos.splice(pos,0,p); persist(); renderProc(); editarProc(pos,true);
+}
+function duplicarProc(i){
+  const o=db.processos[i], c={...JSON.parse(JSON.stringify(o)),cod:codigoLivre(o.fase,o.grupo||""),nome:o.nome+" (cópia)",alias:[]};
+  db.processos.splice(i+1,0,c); persist(); renderProc(); editarProc(i+1,true);
+}
+function excluirProc(i,semPerguntar){
+  const p=db.processos[i]; if(!p) return true;
+  const usos=db.modelos.filter(m=>m.itens.some(it=>it[0]===p.cod)).map(m=>m.cod);
+  if(!semPerguntar&&!confirm(`Excluir ${p.cod} · ${p.nome}?`+(usos.length?`\nEle é usado nos modelos: ${usos.join(", ")} (será removido deles).`:""))) return false;
+  db.modelos.forEach(m=>m.itens=m.itens.filter(it=>it[0]!==p.cod));
+  db.processos.splice(i,1); persist(); render(); return true;
 }
 $("#procBody").addEventListener("change",e=>{
   const t=e.target; if(t.dataset.i===undefined) return;
-  const p=db.processos[+t.dataset.i], k=t.dataset.k, old=p.cod;
-  if(k==="cod"){
-    const v=t.value.trim(); if(!v||(v!==old&&proc(v))){alert("Código vazio ou já existente.");t.value=old;return}
-    p.cod=v;
-    db.modelos.forEach(m=>m.itens.forEach(it=>{if(it[0]===old) it[0]=v}));
-    est.demandas.forEach(d=>d.linhas.forEach(l=>{if(l.cod===old) l.cod=v}));
-    Object.keys(db.vinculos).forEach(k2=>{if(db.vinculos[k2]===old) db.vinculos[k2]=v});
-  }else if(k==="alias") p.alias=t.value.split(";").map(x=>x.trim()).filter(Boolean);
-  else p[k]=k==="min"?Math.max(0,+t.value||0):t.value.trim();
-  persist(); if(k==="fase") renderProc();
+  const p=db.processos[+t.dataset.i], k=t.dataset.k;
+  p[k]=k==="min"?Math.max(0,+t.value||0):t.value.trim(); persist();
 });
 $("#procBody").addEventListener("click",e=>{
-  const d=e.target.dataset.pdel; if(d===undefined) return;
-  const p=db.processos[+d];
-  const usos=db.modelos.filter(m=>m.itens.some(it=>it[0]===p.cod)).map(m=>m.cod);
-  if(!confirm(`Excluir ${p.cod}?`+(usos.length?`\nEle é usado nos modelos: ${usos.join(", ")} (será removido deles).`:""))) return;
-  db.modelos.forEach(m=>m.itens=m.itens.filter(it=>it[0]!==p.cod));
-  db.processos.splice(+d,1); persist(); renderProc();
+  const ds=e.target.dataset;
+  if(ds.ped!==undefined) editarProc(+ds.ped);
+  else if(ds.pdup!==undefined) duplicarProc(+ds.pdup);
+  else if(ds.pdel!==undefined) excluirProc(+ds.pdel);
+  else if(ds.padd!==undefined) novoProc(ds.padd,ds.pg||"");
+  else if(ds.pmv!==undefined){
+    const i=+ds.pmv, p=db.processos[i], dir=+ds.dir;
+    let j=i+dir; while(j>=0&&j<db.processos.length&&!(db.processos[j].fase===p.fase&&(db.processos[j].grupo||"")===(p.grupo||""))) j+=dir;
+    if(j<0||j>=db.processos.length) return;
+    [db.processos[i],db.processos[j]]=[db.processos[j],db.processos[i]]; persist(); renderProc();
+  }else if(ds.gadd!==undefined){
+    const g=(prompt(`Nome do novo grupo em “${ds.gadd}”:`)||"").trim(); if(g) novoProc(ds.gadd,g);
+  }else if(ds.grn!==undefined){
+    const g=(prompt("Novo nome do grupo:",ds.pg)||"").trim(); if(!g||g===ds.pg) return;
+    db.processos.forEach(p=>{if(p.fase===ds.grn&&p.grupo===ds.pg) p.grupo=g}); persist(); renderProc();
+  }else if(ds.frn!==undefined){
+    const f=(prompt("Novo nome da fase:",ds.frn)||"").trim(); if(!f||f===ds.frn) return;
+    db.processos.forEach(p=>{if(p.fase===ds.frn) p.fase=f}); persist(); render();
+  }
 });
 $("#pFiltro").oninput=renderProc;
 $("#pAdd").onclick=()=>{
-  let n=1, cod; do{cod="NOV-"+String(n++).padStart(2,"0")}while(proc(cod));
-  db.processos.unshift({cod,fase:"Cadastros",grupo:"",nome:"Novo processo",un:"unid.",min:10,fonte:"M",alias:[]});
-  $("#pFiltro").value=""; persist(); renderProc();
+  const f=prompt("Fase do novo processo:",fases()[3]||"Cadastros"); if(!f) return;
+  const g=prompt("Grupo:",grupos(f.trim())[0]||""); if(g===null) return;
+  $("#pFiltro").value=""; novoProc(f.trim(),g.trim());
 };
 $("#dbExport").onclick=()=>download(JSON.stringify(db,null,2),"banco-processos-promob.json","application/json");
 $("#dbImport").onclick=()=>pickFile(".json,.csv",async f=>{
