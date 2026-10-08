@@ -109,19 +109,28 @@ span.and{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px}
 .legenda{display:flex;flex-wrap:wrap;gap:12px;margin:6px 0 10px;font-size:12px}
 .lg{display:inline-flex;align-items:center;gap:5px}.lg i{width:12px;height:10px;border-radius:2px;display:inline-block}
 .gantt{border:1px solid var(--line);border-radius:8px;overflow-x:auto}
-.g-row,.gh-row{display:grid;grid-template-columns:230px minmax(420px,1fr);border-bottom:1px solid var(--line)}
+.g-row,.gh-row{display:grid;grid-template-columns:270px minmax(420px,1fr);border-bottom:1px solid var(--line)}
 .gh-row{background:var(--surface-2);font-size:11px;color:var(--muted)}
 .gn{padding:7px 10px;border-right:1px solid var(--line);font-size:13px;display:flex;flex-direction:column;min-width:0}
 .gn b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gn .muted{font-size:11px}
 .gt{position:relative;min-height:34px}.gh-row .gt{min-height:24px}
 .gt span{position:absolute;top:5px;transform:translateX(2px);white-space:nowrap}
 .gb{position:absolute;top:9px;height:16px;border-radius:3px;opacity:.9}
+.gb[data-cred]{cursor:pointer}.gb.gw{background:repeating-linear-gradient(45deg,var(--line) 0 3px,transparent 3px 6px);opacity:1}
+.gnh{display:flex;align-items:center;gap:6px;min-width:0}.gnh b{flex:1;min-width:0}.gact{display:flex;gap:2px;flex-shrink:0}.gact .btn.sm{padding:1px 6px}
+.agtab{width:100%}.agtab td,.agtab th{padding:6px}.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
 .bar.carga{grid-template-columns:90px 1fr 80px}.capline{font-size:12px;margin-top:6px}
 .prop-grid{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:14px;min-height:60vh}
 .prop-form{display:flex;flex-direction:column;gap:8px}.prop-form textarea{min-height:70px}
 .ia-rev{white-space:pre-wrap;font-size:14px;line-height:1.55;background:var(--surface-2);border-radius:8px;padding:12px;margin-top:8px}
-#ppPrev{width:100%;min-height:60vh;border:1px solid var(--line);border-radius:8px;background:#fff}
-@media (max-width:760px){.prop-grid{grid-template-columns:1fr}.g-row,.gh-row{grid-template-columns:150px minmax(380px,1fr)}}
+#ppPrev,#escPrev{width:100%;min-height:60vh;border:1px solid var(--line);border-radius:8px;background:#fff}
+@media (max-width:760px){.prop-grid{grid-template-columns:1fr}.g-row,.gh-row{grid-template-columns:190px minmax(380px,1fr)}}
+.lblm{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}.chips{display:flex;flex-wrap:wrap;gap:4px}
+.escol{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px}.escol label{flex-direction:row;align-items:center;gap:5px}.escol select{width:auto;padding:3px 5px;font-size:13px}
+.eblk{border:1px solid var(--line);border-radius:6px;padding:6px;margin-bottom:6px;display:flex;flex-direction:column;gap:4px}.eblk.off{opacity:.55}
+.ebh{display:flex;gap:4px;align-items:center}.ebh input:not([type=checkbox]){flex:1;min-width:0;padding:4px 6px;font-weight:600}.eblk textarea{min-height:56px;font-size:13px}
+.sigmini{display:block;width:110px;background:#fff;border-radius:4px;margin-bottom:3px}
+.sgpad{width:100%;max-width:600px;aspect-ratio:600/170;background:#fff;border:1px dashed var(--line);border-radius:6px;touch-action:none;display:block;margin-top:8px}
 .ignbar{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin:-6px 0 10px}
 .estbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed var(--line)}
 .estbar select{width:auto}
@@ -189,6 +198,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
     <button data-tab="proc">Banco de processos</button>
     <button data-tab="tpl">Modelos de demanda</button>
     <button data-tab="cron">Cronograma</button>
+    <button data-tab="esc">Escopo</button>
     <button data-tab="cal">Calibração</button>
     <button data-tab="sys">Leitor de System</button>
     <button data-tab="cfg">Parâmetros</button>
@@ -345,12 +355,34 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
   <div class="card">
     <h2>Cronograma da estimativa aberta</h2>
     <p class="muted">Cada demanda é feita por uma pessoa, fase após fase (P&D → Cadastros → Modulação → Testes…), com as horas já com reserva de risco. Com mais de uma pessoa, as demandas são distribuídas para quem fica livre primeiro. Considera dias úteis, horas produtivas/dia e feriados (Parâmetros).</p>
+    <div class="row" style="align-items:end;margin-bottom:10px"><label>Início previsto<input type="date" id="crIni"></label>
+      <button class="btn" id="crReset">Voltar ao automático</button>
+      <span class="muted" style="font-size:12px">Use ↑ ↓ para reordenar e ✎ (ou clique na barra) para fixar datas, pular fases, ajustar horas e inserir esperas.</span></div>
     <div id="cronOut"></div>
   </div>
   <div class="card">
     <h2>Carga da equipe por semana</h2>
     <p class="muted">Soma as estimativas <b>fechadas</b> (demandas não concluídas), cada uma a partir do seu início previsto, mais a estimativa aberta. Barra acima da capacidade = sobrecarga: renegocie prazo, reforce a equipe ou mude o início.</p>
     <div id="cargaOut"></div>
+  </div>
+</section>
+
+<!-- ================= ESCOPO ================= -->
+<section id="esc" class="tab">
+  <div class="card">
+    <h2>Escopo e briefing da estimativa aberta</h2>
+    <p class="muted">Monte o documento de escopo no nível de detalhe certo para cada cliente: só demanda e valor, com horas, com descrição ou completo com o passo a passo. Escolha os blocos, edite os textos e colete o aceite com assinatura eletrônica. O documento baixado (.html) abre no celular do cliente, que assina com o dedo e devolve o arquivo assinado.</p>
+    <div class="row" style="margin-bottom:10px">
+      <button class="btn pri" id="escBaixar">Baixar escopo (.html)</button><button class="btn" id="escPrint">Imprimir / PDF</button>
+      <button class="btn" id="escAssinar">Coletar assinatura aqui</button><button class="btn" id="escImport">Importar escopo assinado</button>
+      <button class="btn" id="escPadrao">Salvar como padrão</button><button class="btn" id="escReset">Blocos padrão</button>
+    </div>
+    <div class="prop-grid"><div class="prop-form" id="escForm"></div><iframe id="escPrev" title="Pré-visualização do escopo"></iframe></div>
+  </div>
+  <div class="card">
+    <h2>Aceites e assinaturas</h2>
+    <p class="muted">Assinatura eletrônica simples (Lei 14.063/2020): registra nome, CPF/CNPJ, data e hora e a assinatura desenhada, presas a um código de integridade do conteúdo. Se o escopo, as horas ou os valores mudarem depois, o registro mostra “mudou depois”. Para assinatura com certificado ICP-Brasil, use uma plataforma de assinatura.</p>
+    <div id="escAceites"></div>
   </div>
 </section>
 
@@ -1356,7 +1388,7 @@ function novaVersao(id){
   if(id===est.id) persist();
   const fam=src.familia||src.id, v=Math.max(...Object.values(arq.estimativas).filter(e=>(e.familia||e.id)===fam).map(e=>e.versao||1))+1;
   const t=Date.now(), nid=uid();
-  arq.estimativas[nid]={...clone(src),id:nid,familia:fam,versao:v,status:"rascunho",fechadaEm:null,arquivada:false,data:hoje(),criadoEm:t,atualizadoEm:t,demandas:limparExecucao(src.demandas)};
+  arq.estimativas[nid]={...clone(src),id:nid,familia:fam,versao:v,status:"rascunho",fechadaEm:null,arquivada:false,data:hoje(),criadoEm:t,atualizadoEm:t,aprovacao:null,escopo:src.escopo?{...clone(src.escopo),aceites:[]}:undefined,demandas:limparExecucao(src.demandas)};
   Sync.est(nid); save(K_ARQ,arq); abrirEstimativa(nid);
 }
 $("#arqCli").onchange=e=>{arqCliSel=e.target.value;renderArquivo()};
@@ -2248,44 +2280,115 @@ const ehUtil=d=>{const w=d.getDay();return w!==0&&w!==6&&!(db.cfg.feriados||[]).
 function proxUtil(s){const d=dIso(s);while(!ehUtil(d)) d.setDate(d.getDate()+1);return iso(d)}
 function diaUtil(iniIso,k){const d=dIso(proxUtil(iniIso));let n=0;while(n<k){d.setDate(d.getDate()+1);if(ehUtil(d)) n++}return iso(d)}
 const inicioDe=e=>e.inicio||proxUtil(iso(new Date(Date.now()+864e5)));
+const demKey=d=>d.id||(d.id=uid());
+// dias úteis de a (incluso) até b (exclusivo)
+function uteisEntre(a,b){if(!a||!b||b<=a) return 0;const d=dIso(a),fim=dIso(b);let n=0;while(d<fim){if(ehUtil(d)) n++;d.setDate(d.getDate()+1)}return n}
+function ordemCron(e){
+  const ord=e.cronOrdem||[], lst=(e.demandas||[]).map((d,di)=>({d,di}));
+  const pos=x=>{const k=ord.indexOf(x.d.id);return k<0?1e6+x.di:k};
+  return lst.sort((a,b)=>pos(a)-pos(b));
+}
 function cronograma(e=est,eqForc){
-  const c=db.cfg, hd=Math.max(1,+c.hdia||6), eq=Math.max(1,eqForc||+c.equipe||1), ini=inicioDe(e);
-  const pessoas=Array(eq).fill(0), itens=[], ordemF=fases();
-  (e.demandas||[]).forEach((d,di)=>{
+  const c=db.cfg, hd=Math.max(1,+c.hdia||6), eq=Math.max(1,eqForc||+c.equipe||1), ini=proxUtil(inicioDe(e));
+  const pessoas=Array(eq).fill(0), itens=[], ordemF=fases(), hDe=dt=>uteisEntre(ini,proxUtil(dt))*hd;
+  ordemCron(e).forEach(({d,di})=>{
     if(!contaDem(d)||!d.linhas.length) return;
-    const f=fatorDem(d), porF={};
+    const f=fatorDem(d), porF={}, ag=d.agenda||{}, pular=ag.pular||[], hx=ag.horas||{}, gap=ag.espera||{};
     d.linhas.forEach(l=>{const fa=lineFase(l);porF[fa]=(porF[fa]||0)+lineMin(l)/60*f});
-    const ordem=[...ordemF.filter(x=>porF[x]),...Object.keys(porF).filter(x=>!ordemF.includes(x))];
-    const pi=pessoas.indexOf(Math.min(...pessoas)), t0=pessoas[pi]; let t=t0;
-    const segs=ordem.map(fa=>{const sg={fase:fa,h:porF[fa],ini:t,fim:t+porF[fa]};t+=porF[fa];return sg});
-    pessoas[pi]=t;
-    itens.push({di,nome:d.nome,pessoa:pi+1,ini:t0,fim:t,h:t-t0,segs,andamento:d.andamento||"nao_iniciada"});
+    Object.keys(hx).forEach(fa=>{if(porF[fa]!==undefined&&hx[fa]!==""&&hx[fa]!=null) porF[fa]=Math.max(0,+hx[fa]||0)});
+    const ordem=[...ordemF.filter(x=>porF[x]!==undefined),...Object.keys(porF).filter(x=>!ordemF.includes(x))].filter(x=>!pular.includes(x)&&porF[x]>0);
+    if(!ordem.length) return;
+    const pi=ag.pessoa&&ag.pessoa<=eq?ag.pessoa-1:pessoas.indexOf(Math.min(...pessoas));
+    let t0=pessoas[pi]+(+ag.antes||0)*hd;
+    if(ag.ini) t0=hDe(ag.ini);
+    let t=t0;
+    const segs=ordem.map(fa=>{const sg={fase:fa,h:porF[fa],ini:t,fim:t+porF[fa]};t+=porF[fa]+(+gap[fa]||0)*hd;sg.espera=+gap[fa]||0;return sg});
+    const hTrab=segs.reduce((s,x)=>s+x.h,0);
+    t=segs[segs.length-1].fim;
+    if(ag.fim){const alvo=Math.max(t0+hd*0.25,hDe(ag.fim)+hd), k=(alvo-t0)/Math.max(t-t0,1e-6);
+      segs.forEach(sg=>{sg.ini=t0+(sg.ini-t0)*k;sg.fim=t0+(sg.fim-t0)*k});t=alvo}
+    pessoas[pi]=Math.max(pessoas[pi],t);
+    itens.push({di,id:demKey(d),nome:d.nome,pessoa:pi+1,ini:t0,fim:t,h:hTrab,segs,andamento:d.andamento||"nao_iniciada",
+      fixoIni:!!ag.ini,fixoFim:!!ag.fim,pulou:pular.filter(x=>d.linhas.some(l=>lineFase(l)===x)),ajustado:!!(ag.ini||ag.fim||pular.length||Object.keys(hx).length||Object.keys(gap).length||ag.antes||ag.pessoa)});
   });
-  const fimH=Math.max(0,...pessoas), dias=Math.ceil(fimH/hd-1e-9);
+  const fimH=Math.max(0,...itens.map(i=>i.fim)), dias=Math.ceil(fimH/hd-1e-9);
   const dIni=h=>diaUtil(ini,Math.floor(h/hd+1e-9)), dFim=h=>diaUtil(ini,Math.max(0,Math.ceil(h/hd-1e-9)-1));
   itens.forEach(it=>{it.dataIni=dIni(it.ini);it.dataFim=dFim(it.fim)});
-  return {ini:proxUtil(ini),itens,fimH,dias,hd,eq,entrega:itens.length?dFim(fimH):null};
+  return {ini,itens,fimH,dias,hd,eq,entrega:itens.length?dFim(fimH):null};
 }
 function equipeParaPrazo(e,prazo){for(let n=1;n<=20;n++){const c=cronograma(e,n);if(!c.entrega||c.entrega<=prazo) return n}return null}
 const COR_FASE=["#c98a4b","#3b82c4","#2f7a4b","#8e5bb5","#b08a12","#c2543a","#4a8f9c","#7a7a72"];
 const corFase=f=>COR_FASE[Math.max(0,fases().indexOf(f))%COR_FASE.length];
 function renderCron(){
   const cr=cronograma(), box=$("#cronOut"); if(!box) return;
+  if($("#crIni")) $("#crIni").value=est.inicio||"";
   if(!cr.itens.length){box.innerHTML='<p class="empty">Sem demandas contabilizadas na estimativa aberta.</p>';$("#cargaOut").innerHTML="";renderCarga();return}
   const tot=Math.max(cr.dias,1), prazo=est.prazo, atrasa=prazo&&cr.entrega>prazo, nec=atrasa?equipeParaPrazo(est,prazo):null;
   const sem=[];for(let k=0;k<tot;k+=5) sem.push(k);
   const legenda=[...new Set(cr.itens.flatMap(i=>i.segs.map(s=>s.fase)))].map(f=>`<span class="lg"><i style="background:${corFase(f)}"></i>${esc(f)}</span>`).join("");
+  const nAj=cr.itens.filter(i=>i.ajustado).length, pct=h=>h/cr.hd/tot*100;
   box.innerHTML=`<div class="kpi" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:12px">
       <div><span>Início</span><b>${fmtD(cr.ini)}</b></div><div><span>Entrega prevista</span><b class="${atrasa?"diff up":""}">${fmtD(cr.entrega)}</b></div>
       <div><span>Dias úteis</span><b>${cr.dias}</b></div><div><span>Equipe</span><b>${cr.eq} pessoa${cr.eq>1?"s":""} · ${cr.hd} h/dia</b></div></div>
     ${prazo?`<p class="msg ${atrasa?"err":"ok"}">${atrasa?`Passa do prazo do cliente (${fmtD(prazo)}). ${nec?`Com <b>${nec} pessoas</b> a entrega cabe no prazo.`:"Nem com 20 pessoas cabe: renegocie o prazo ou reduza o escopo."}`:`Dentro do prazo do cliente (${fmtD(prazo)}).`}</p>`:""}
-    <div class="legenda">${legenda}</div>
+    ${nAj?`<p class="muted">${nAj} demanda${nAj>1?"s":""} com ajuste manual (✎). As horas da estimativa e do orçamento não mudam: os ajustes valem só para o cronograma, a proposta, o escopo e o Zoho Projects.</p>`:""}
+    <div class="legenda">${legenda}<span class="lg"><i style="background:repeating-linear-gradient(45deg,var(--line) 0 3px,transparent 3px 6px)"></i>espera</span></div>
     <div class="gantt">
       <div class="gh-row"><div class="gn"></div><div class="gt">${sem.map(k=>`<span style="left:${k/tot*100}%">${fmtD(diaUtil(cr.ini,k)).slice(0,5)}</span>`).join("")}</div></div>
-      ${cr.itens.map(it=>`<div class="g-row"><div class="gn" title="${esc(it.nome)}"><b>${esc(it.nome)}</b><span class="muted">${cr.eq>1?`pessoa ${it.pessoa} · `:""}${fmtD(it.dataIni).slice(0,5)} → ${fmtD(it.dataFim).slice(0,5)} · ${num(it.h)} h</span></div>
-        <div class="gt">${it.segs.map(sg=>`<i class="gb" title="${esc(sg.fase)}: ${num(sg.h)} h" style="left:${sg.ini/cr.hd/tot*100}%;width:${Math.max(.4,(sg.fim-sg.ini)/cr.hd/tot*100)}%;background:${corFase(sg.fase)}"></i>`).join("")}</div></div>`).join("")}
+      ${cr.itens.map((it,k)=>`<div class="g-row"><div class="gn" title="${esc(it.nome)}"><div class="gnh"><b>${esc(it.nome)}</b><span class="gact"><button class="btn sm" data-crup="${k}" ${k?"":"disabled"} title="Antes">↑</button><button class="btn sm" data-crdn="${k}" ${k<cr.itens.length-1?"":"disabled"} title="Depois">↓</button><button class="btn sm${it.ajustado?" pri":""}" data-cred="${it.di}" title="Ajustar datas e fases">✎</button></span></div>
+        <span class="muted">${cr.eq>1?`pessoa ${it.pessoa} · `:""}${it.fixoIni?"📌 ":""}${fmtD(it.dataIni).slice(0,5)} → ${it.fixoFim?"📌 ":""}${fmtD(it.dataFim).slice(0,5)} · ${num(it.h)} h${it.pulou.length?` · pula ${esc(it.pulou.join(", "))}`:""}</span></div>
+        <div class="gt">${it.segs.map(sg=>`<i class="gb" data-cred="${it.di}" title="${esc(sg.fase)}: ${num(sg.h)} h — clique para ajustar" style="left:${pct(sg.ini)}%;width:${Math.max(.4,pct(sg.fim-sg.ini))}%;background:${corFase(sg.fase)}"></i>${sg.espera?`<i class="gb gw" title="Espera após ${esc(sg.fase)}: ${sg.espera} dia(s) útil(eis)" style="left:${pct(sg.fim)}%;width:${pct(sg.espera*cr.hd)}%"></i>`:""}`).join("")}</div></div>`).join("")}
     </div>`;
   renderCarga();
+}
+$("#cronOut").addEventListener("click",e=>{
+  const b=e.target.closest("[data-crup],[data-crdn],[data-cred]"); if(!b) return;
+  if(b.dataset.cred!==undefined) return editarAgenda(+b.dataset.cred);
+  const ids=cronograma().itens.map(i=>i.id), k=+(b.dataset.crup??b.dataset.crdn), j=b.dataset.crup!==undefined?k-1:k+1;
+  if(j<0||j>=ids.length) return;
+  [ids[k],ids[j]]=[ids[j],ids[k]];
+  est.cronOrdem=[...ids,...(est.cronOrdem||[]).filter(x=>!ids.includes(x))];
+  persist();renderCron();
+});
+$("#crIni").addEventListener("change",e=>{est.inicio=e.target.value||"";persist();render()});
+$("#crReset").onclick=async()=>{
+  if(!await uiConfirm("Voltar o cronograma para o cálculo automático? Remove datas fixas, fases puladas, horas ajustadas, esperas e a ordem manual de todas as demandas.")) return;
+  est.demandas.forEach(d=>delete d.agenda); delete est.cronOrdem; persist(); renderCron();
+};
+function editarAgenda(di){
+  const d=est.demandas[di]; if(!d) return;
+  const ag=clone(d.agenda||{}), f=fatorDem(d), porF={};
+  d.linhas.forEach(l=>{const fa=lineFase(l);porF[fa]=(porF[fa]||0)+lineMin(l)/60*f});
+  const fs=[...fases().filter(x=>porF[x]!==undefined),...Object.keys(porF).filter(x=>!fases().includes(x))];
+  const it=cronograma().itens.find(x=>x.di===di), eq=Math.max(1,+db.cfg.equipe||1);
+  abrirModal(`Cronograma · ${esc(d.nome)}`,`
+    <p class="muted">Ajustes valem só para o cronograma (e para proposta, escopo e Zoho Projects). As horas e o valor da estimativa não mudam.${it?` Hoje: ${fmtD(it.dataIni)} → ${fmtD(it.dataFim)}.`:""}</p>
+    <div class="row">
+      <label>Início fixo<input type="date" id="agIni" value="${esc(ag.ini||"")}"></label>
+      <label>Entrega fixa<input type="date" id="agFim" value="${esc(ag.fim||"")}"></label>
+      <label>Esperar antes (dias úteis)<input type="number" min="0" step="1" id="agAntes" value="${ag.antes||""}" placeholder="0"></label>
+      ${eq>1?`<label>Pessoa<select id="agPes"><option value="">Automático</option>${Array.from({length:eq},(_,k)=>`<option value="${k+1}" ${ag.pessoa==k+1?"selected":""}>Pessoa ${k+1}</option>`).join("")}</select></label>`:""}
+    </div>
+    <p class="muted" style="font-size:12px">Em branco = automático. Início fixo ignora a fila da pessoa; entrega fixa estica ou comprime as barras até a data escolhida (as horas continuam as mesmas).</p>
+    <table class="agtab"><thead><tr><th>Incluir</th><th>Fase</th><th class="n">Horas estimadas</th><th class="n">Horas no cronograma</th><th class="n">Espera depois (dias úteis)</th></tr></thead><tbody>
+    ${fs.map(fa=>`<tr data-fa="${esc(fa)}"><td><input type="checkbox" class="agOn" ${(ag.pular||[]).includes(fa)?"":"checked"}></td><td><i class="sw" style="background:${corFase(fa)}"></i>${esc(fa)}</td>
+      <td class="n">${num(porF[fa])} h</td><td class="n"><input type="number" min="0" step="0.5" class="agH" value="${ag.horas&&ag.horas[fa]!=null?ag.horas[fa]:""}" placeholder="${num(porF[fa])}" style="width:80px"></td>
+      <td class="n"><input type="number" min="0" step="1" class="agE" value="${ag.espera&&ag.espera[fa]?ag.espera[fa]:""}" placeholder="0" style="width:70px"></td></tr>`).join("")}
+    </tbody></table>
+    <p class="muted" style="font-size:12px">Desmarque para pular a fase no cronograma (ex.: P&D já resolvido, testes feitos pelo cliente). Use “espera” para validação do cliente, entrega de material ou fila de fábrica.</p>`,
+    [{label:"Salvar ajustes",pri:true,fn:()=>{
+      const n={};
+      const ini=$("#agIni").value, fim=$("#agFim").value, antes=+$("#agAntes").value||0, pes=$("#agPes")?+$("#agPes").value||0:0;
+      if(ini) n.ini=ini; if(fim) n.fim=fim; if(antes) n.antes=antes; if(pes) n.pessoa=pes;
+      if(ini&&fim&&fim<ini){uiAlert("A entrega fixa não pode ser antes do início fixo.");return false}
+      $("#mBody").querySelectorAll("tr[data-fa]").forEach(tr=>{const fa=tr.dataset.fa;
+        if(!tr.querySelector(".agOn").checked)(n.pular=n.pular||[]).push(fa);
+        const h=tr.querySelector(".agH").value; if(h!=="")(n.horas=n.horas||{})[fa]=Math.max(0,+h||0);
+        const w=+tr.querySelector(".agE").value||0; if(w>0)(n.espera=n.espera||{})[fa]=w;});
+      if(n.pular&&n.pular.length===fs.length){uiAlert("Mantenha ao menos uma fase. Para tirar a demanda do cronograma, use “Ignorar” na estimativa.");return false}
+      if(Object.keys(n).length) d.agenda=n; else delete d.agenda;
+      persist();fecharModal();renderCron();}},
+     {label:"Automático",fn:()=>{delete d.agenda;persist();fecharModal();renderCron()}}]);
 }
 function renderCarga(){
   const box=$("#cargaOut"); if(!box) return;
@@ -2294,13 +2397,14 @@ function renderCarga(){
   const lista=todasEstimativas().filter(e=>e.status==="fechada"||e.id===est.id);
   lista.forEach(e=>{
     const ef={...e,demandas:(e.demandas||[]).map(d=>d.andamento==="concluida"?{...d,ignorada:true}:d)}, cr=cronograma(ef);
-    cr.itens.forEach(it=>{
-      for(let h=Math.floor(it.ini/hd)*hd;h<it.fim;h+=hd){
-        const a=Math.max(h,it.ini), b=Math.min(h+hd,it.fim); if(b<=a) continue;
+    cr.itens.forEach(it=>it.segs.forEach(sg=>{
+      const dens=sg.h/Math.max(sg.fim-sg.ini,1e-6);
+      for(let h=Math.floor(sg.ini/hd)*hd;h<sg.fim;h+=hd){
+        const a=Math.max(h,sg.ini), b=Math.min(h+hd,sg.fim); if(b<=a) continue;
         const sm=segunda(diaUtil(cr.ini,Math.floor(h/hd+1e-9)));
-        const o=semanas[sm]||(semanas[sm]={h:0,ests:new Set()}); o.h+=b-a; o.ests.add(e.nome+" v"+(e.versao||1)+(e.id===est.id&&e.status!=="fechada"?" (simulação)":""));
+        const o=semanas[sm]||(semanas[sm]={h:0,ests:new Set()}); o.h+=(b-a)*dens; o.ests.add(e.nome+" v"+(e.versao||1)+(e.id===est.id&&e.status!=="fechada"?" (simulação)":""));
       }
-    });
+    }));
   });
   const ks=Object.keys(semanas).sort().slice(0,16);
   if(!ks.length){box.innerHTML='<p class="empty">Sem carga planejada.</p>';return}
@@ -2434,6 +2538,301 @@ $("#btnProposta").onclick=()=>{
   const prev=()=>{ler();$("#ppPrev").srcdoc=propostaHTML(est.proposta)};
   prev(); $("#mBody").querySelectorAll(".prop-form input,.prop-form textarea").forEach(el=>el.addEventListener("change",prev));
 };
+
+/* ================= ESCOPO E BRIEFING ================= */
+const ESC_PRESETS=[
+  {id:"valor",nome:"Demanda + valor",c:{desc:false,passos:false,horas:"nao",valor:"dem",datas:false}},
+  {id:"valorHoras",nome:"Demanda + valor + horas",c:{desc:false,passos:false,horas:"dem",valor:"dem",datas:false}},
+  {id:"descValor",nome:"Demanda + descrição + valor",c:{desc:true,passos:false,horas:"nao",valor:"dem",datas:false}},
+  {id:"descHorasTotal",nome:"Demanda + descrição + horas, só valor total",c:{desc:true,passos:false,horas:"dem",valor:"total",datas:false}},
+  {id:"completo",nome:"Completo (passo a passo e datas)",c:{desc:true,passos:true,horas:"dem",valor:"dem",datas:true}}
+];
+function escBlocosPadrao(){
+  const p=Object.assign(propPadrao(),est.proposta||{});
+  return [
+    {id:"obj",tit:"Objetivo",tipo:"texto",on:true,txt:p.objetivo},
+    {id:"brief",tit:"Briefing do cliente",tipo:"texto",on:false,txt:""},
+    {id:"escopo",tit:"Escopo",tipo:"escopo",on:true},
+    {id:"entreg",tit:"Entregáveis",tipo:"texto",on:true,txt:"Cada demanda listada no escopo, entregue e validada.\nRelatório de entrega com os itens criados e alterados."},
+    {id:"fora",tit:"Fora do escopo",tipo:"texto",on:true,txt:"Itens não listados neste documento.\nAlterações pedidas após o aceite (orçadas à parte)."},
+    {id:"prem",tit:"Premissas",tipo:"texto",on:true,txt:p.premissas},
+    {id:"resp",tit:"Responsabilidades do cliente",tipo:"texto",on:false,txt:"Enviar materiais técnicos, fichas e padrões no início.\nIndicar um ponto focal para validações.\nValidar entregas parciais em até 2 dias úteis."},
+    {id:"cron",tit:"Cronograma",tipo:"cronograma",on:true},
+    {id:"inv",tit:"Investimento",tipo:"investimento",on:true},
+    {id:"crit",tit:"Critérios de aceite",tipo:"texto",on:true,txt:"A demanda está entregue quando funciona no ambiente do cliente conforme o escopo.\nAjustes dentro do escopo são feitos sem custo até 15 dias após a entrega."},
+    {id:"aceite",tit:"Aceite",tipo:"aceite",on:true}
+  ];
+}
+function escCfg(){
+  if(!est.escopo||!est.escopo.blocos){
+    const pd=db.cfg.escopoPadrao;
+    est.escopo=Object.assign({alcance:"",titulo:"",preset:"descValor",col:clone(ESC_PRESETS[2].c),aceites:[]},est.escopo||{},pd?clone({preset:pd.preset,col:pd.col,blocos:pd.blocos}):{blocos:escBlocosPadrao()});
+  }
+  est.escopo.aceites=est.escopo.aceites||[];
+  return est.escopo;
+}
+const escDem=()=>est.demandas.map((d,i)=>({d,i})).filter(({d})=>contaDem(d)&&d.linhas.length);
+const hDem=d=>d.linhas.reduce((s,l)=>s+lineMin(l),0)*fatorDem(d)/60;
+// Modelo de conteúdo: é o que se assina (o código de integridade é o hash deste JSON)
+function escModelo(cf=escCfg()){
+  const r=calc(), cr=cronograma(), c=cf.col, cli=(arq.clientes[est.clienteId]||{}).nome||"";
+  const um=cf.alcance?escDem().find(({d})=>d.id===cf.alcance):null, lista=um?[um]:escDem();
+  const dems=lista.map(({d,i})=>{
+    const it=cr.itens.find(x=>x.di===i), ex=d.escopo||{};
+    const grupos={}; if(c.passos) d.linhas.forEach(l=>{const pr=proc(l.cod), g=pr?(pr.grupo||pr.fase):"Atividades específicas"; (grupos[g]=grupos[g]||[]).push((pr?pr.nome:l.desc)+(l.det?` — ${l.det}`:"")+(l.qtd>1?` (${num(l.qtd,0)})`:""))});
+    return {nome:d.nome,desc:c.desc?(ex.briefing||d.obs||""):"",crit:um?(ex.criterios||""):"",passos:Object.entries(grupos).map(([g,ls])=>[g,[...new Set(ls)]]),
+      horas:c.horas==="dem"?Math.round(hDem(d)*10)/10:null,valor:c.valor==="dem"?Math.round(r.porDemVal[i].valor):null,
+      ini:it?it.dataIni:null,fim:it?it.dataFim:null};
+  });
+  const totH=lista.reduce((s,{d})=>s+hDem(d),0), totV=lista.reduce((s,{i})=>s+r.porDemVal[i].valor,0);
+  const datas=dems.filter(x=>x.ini);
+  return {titulo:cf.titulo||(um?`Escopo — ${um.d.nome}`:"Escopo de trabalho"),empresa:db.cfg.empresa.nome,cliente:cli,estimativa:est.nome,versao:est.versao||1,
+    alcance:um?um.d.nome:"Estimativa inteira",col:c,dems,
+    totalH:c.horas==="nao"?null:Math.round(totH*10)/10,totalV:c.valor==="nao"?null:Math.round(totV),
+    periodo:datas.length?{ini:datas.map(x=>x.ini).sort()[0],fim:datas.map(x=>x.fim).sort().pop()}:null,
+    condicoes:(Object.assign(propPadrao(),est.proposta||{})).condicoes,
+    blocos:cf.blocos.filter(b=>b.on).map(b=>({tit:b.tit,tipo:b.tipo,txt:b.tipo==="texto"?(b.txt||""):undefined}))};
+}
+function escopoHTML(cf=escCfg(),aceite=null){
+  const m=escModelo(cf), emp=db.cfg.empresa, e=esc, c=m.col, rasc=est.status!=="fechada";
+  const li=t=>String(t||"").split("\n").map(x=>x.trim()).filter(Boolean);
+  const texto=t=>{const ls=li(t);return ls.length>1?`<ul>${ls.map(x=>`<li>${e(x)}</li>`).join("")}</ul>`:ls.length?`<p>${e(ls[0])}</p>`:""};
+  const compacto=!c.desc&&!c.passos;
+  const hC=c.horas==="dem", vC=c.valor==="dem", dC=c.datas;
+  const escopo=compacto
+    ?`<table><thead><tr><th>Demanda</th>${dC?'<th>Período</th>':""}${hC?'<th class="n">Horas</th>':""}${vC?'<th class="n">Valor</th>':""}</tr></thead><tbody>
+      ${m.dems.map(x=>`<tr><td>${e(x.nome)}</td>${dC?`<td>${x.ini?fmtD(x.ini).slice(0,5)+" a "+fmtD(x.fim).slice(0,5):"—"}</td>`:""}${hC?`<td class="n">${num(x.horas)} h</td>`:""}${vC?`<td class="n">${brl(x.valor)}</td>`:""}</tr>`).join("")}
+      ${(m.totalH!=null||m.totalV!=null)?`<tr class="tot"><td>Total</td>${dC?"<td></td>":""}${hC?`<td class="n">${num(m.totalH)} h</td>`:""}${vC?`<td class="n">${brl(m.totalV)}</td>`:""}</tr>`:""}</tbody></table>`
+    :m.dems.map((x,k)=>`<section class="dem"><div class="dh"><h3>${m.dems.length>1?`${k+1}. `:""}${e(x.nome)}</h3><span>${[dC&&x.ini?fmtD(x.ini).slice(0,5)+" a "+fmtD(x.fim).slice(0,5):"",hC?num(x.horas)+" h":"",vC?brl(x.valor):""].filter(Boolean).join(" · ")}</span></div>
+      ${x.desc?texto(x.desc):""}
+      ${x.passos.length?`<div class="cols">${x.passos.map(([g,ls])=>`<div><h4>${e(g)}</h4><ul>${ls.map(y=>`<li>${e(y)}</li>`).join("")}</ul></div>`).join("")}</div>`:""}
+      ${x.crit?`<h4>Critérios de aceite desta demanda</h4>${texto(x.crit)}`:""}</section>`).join("");
+  const totLinha=!compacto&&(m.totalH!=null||m.totalV!=null)?`<p class="totl">Total${m.dems.length>1?` (${m.dems.length} demandas)`:""}: ${[m.totalH!=null?`<b>${num(m.totalH)} h</b>`:"",m.totalV!=null?`<b>${brl(m.totalV)}</b>`:""].filter(Boolean).join(" · ")}</p>`:"";
+  const cron=m.dems.some(x=>x.ini)?`${m.periodo?`<p>Início em <b>${fmtD(m.periodo.ini)}</b> e entrega em <b>${fmtD(m.periodo.fim)}</b>, contados a partir do aceite e do recebimento dos materiais.</p>`:""}
+    ${m.dems.length>1?`<table><tbody>${m.dems.map(x=>`<tr><td>${e(x.nome)}</td><td class="n">${x.ini?fmtD(x.ini)+" a "+fmtD(x.fim):"—"}</td></tr>`).join("")}</tbody></table>`:""}`:"<p>A definir no início do projeto.</p>";
+  const inv=m.totalV==null?"":`<table><tbody>${vC&&m.dems.length>1?m.dems.map(x=>`<tr><td>${e(x.nome)}</td><td class="n">${brl(x.valor)}</td></tr>`).join(""):""}
+    <tr class="tot"><td>Investimento total</td><td class="n">${brl(m.totalV)}</td></tr></tbody></table><p><b>Condições:</b> ${e(m.condicoes)}</p>`;
+  const assinado=aceite?`<div class="assinado"><img src="${e(aceite.png)}" alt="Assinatura"><p><b>${e(aceite.nome)}</b>${aceite.doc?` · ${e(aceite.doc)}`:""}${aceite.cargo?` · ${e(aceite.cargo)}`:""}<br>
+      Assinado eletronicamente em ${new Date(aceite.em).toLocaleString("pt-BR")}${aceite.canal?` · ${e(aceite.canal)}`:""}<br>Código da assinatura: <b>${e(aceite.cod)}</b></p></div>`:"";
+  const aceiteSec=`<p>Declaro que li e concordo com o escopo, as premissas e as condições descritas neste documento.</p>
+    ${assinado||`<div id="aBox" class="abox">
+      <div class="acampos"><label>Nome completo<input id="aNome"></label><label>CPF / CNPJ<input id="aDoc"></label><label>Cargo / empresa<input id="aCargo" value="${e(m.cliente)}"></label></div>
+      <label class="lbl">Assinatura (desenhe com o dedo ou o mouse)</label><canvas id="aPad" width="600" height="170"></canvas>
+      <div class="abts"><button type="button" id="aLimpar">Limpar</button><label><input type="checkbox" id="aOk"> Li e aceito este escopo</label><button type="button" id="aAssinar" class="pri">Assinar eletronicamente</button></div>
+      <p id="aMsg" class="amsg"></p></div>`}
+    <div class="assin"><div>De acordo — ${e(m.cliente)}<br><br>________________________________<br>Nome / data</div><div>${e(emp.nome)}<br><br>________________________________<br>${e(emp.assinatura||"")}</div></div>`;
+  const corpo=m.blocos.map((b,k)=>{
+    const h=`<h2>${k+1} · ${e(b.tit)}</h2>`;
+    if(b.tipo==="texto") return b.txt.trim()?h+texto(b.txt):"";
+    if(b.tipo==="escopo") return h+escopo+totLinha;
+    if(b.tipo==="cronograma") return h+cron;
+    if(b.tipo==="investimento") return inv?h+inv:"";
+    if(b.tipo==="aceite") return `<section id="aceite">${h}${aceiteSec}</section>`;
+    return "";
+  }).filter(Boolean).join("").replace(/<h2>\d+ · /g,(()=>{let n=0;return()=>`<h2>${++n} · `})());
+  const dados={titulo:m.titulo,cliente:m.cliente,estimativa:`${m.estimativa} v${m.versao}`,alcance:m.alcance,txt:JSON.stringify(m),wa:String(emp.whatsapp||"").replace(/\D/g,""),email:emp.email||""};
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(m.titulo)} — ${e(m.cliente)}</title>
+<style>
+:root{--ink:#1d1c1a;--mut:#6b6862;--acc:#9a5b1e;--line:#e3dfd7;--soft:#f5f2ec}
+*{box-sizing:border-box}body{margin:0;font:15px/1.6 Georgia,"Times New Roman",serif;color:var(--ink);background:#fff}
+.pg{max-width:820px;margin:0 auto;padding:40px 32px}
+.topo{border-left:6px solid var(--acc);background:var(--soft);padding:24px 28px;margin-bottom:8px}
+.topo .emp{font:600 13px/1.4 system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--acc)}
+.topo h1{font-size:30px;line-height:1.2;margin:8px 0 4px}.topo .cli{font-size:18px;color:var(--mut)}
+.topo .info{font:12px/1.7 system-ui,sans-serif;color:var(--mut);margin-top:10px}
+h2{font:700 13px/1.4 system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin:34px 0 10px;border-bottom:1px solid var(--line);padding-bottom:6px}
+h3{font-size:18px;margin:0}h4{font:600 12px/1.4 system-ui,sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:10px 0 4px}
+.dem{margin:16px 0 20px}.dh{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap;border-bottom:1px dashed var(--line);padding-bottom:4px;margin-bottom:6px}
+.dh span{font:600 13px system-ui,sans-serif;color:var(--acc);white-space:nowrap}
+ul{margin:4px 0 0;padding-left:18px}li{margin:2px 0}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:4px 24px}
+table{width:100%;border-collapse:collapse;font-family:system-ui,sans-serif;font-size:14px}td,th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
+.n{text-align:right;white-space:nowrap}.tot td{font-weight:700;border-top:2px solid var(--ink)}.totl{font-family:system-ui,sans-serif;text-align:right}
+.abox{border:1px solid var(--line);border-radius:8px;padding:14px;background:var(--soft);font-family:system-ui,sans-serif}
+.acampos{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.acampos label,.lbl{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:3px;margin-top:6px}
+.abox input:not([type]){font:15px system-ui;padding:8px;border:1px solid #cfc9bd;border-radius:6px}
+canvas{width:100%;max-width:600px;height:auto;aspect-ratio:600/170;background:#fff;border:1px dashed #b9b1a3;border-radius:6px;touch-action:none;display:block;margin-top:4px}
+.abts{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:14px}
+.abts button,.bt{font:600 14px system-ui;padding:9px 14px;border-radius:6px;border:1px solid #cfc9bd;background:#fff;cursor:pointer;color:var(--ink);text-decoration:none;display:inline-block}
+.abts .pri,.bt.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.amsg{font-size:13px;color:#b4541a;margin:8px 0 0}
+.assinado{display:flex;gap:16px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;padding:12px;font:13px/1.6 system-ui,sans-serif}
+.assinado img{width:240px;max-width:100%;border-bottom:1px solid var(--ink)}
+.acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.assin{display:grid;grid-template-columns:1fr 1fr;gap:24px;font:13px/1.5 system-ui;color:var(--mut);margin-top:22px}
+.rod{margin-top:36px;padding-top:10px;border-top:1px solid var(--line);font:11px/1.6 system-ui,sans-serif;color:var(--mut)}
+.rasc{position:fixed;top:12px;right:12px;font:700 12px system-ui;background:#b4541a;color:#fff;padding:4px 10px;border-radius:4px}
+@media print{.abox,.acoes{display:none}.dem{page-break-inside:avoid}.rasc{position:absolute}#aceite{page-break-inside:avoid}}
+@media (max-width:560px){.pg{padding:20px 16px}.assin{grid-template-columns:1fr}}
+</style></head><body>${rasc&&!aceite?'<div class="rasc">RASCUNHO</div>':""}
+<div class="pg"><div class="topo"><div class="emp">${e(emp.nome)}</div><h1>${e(m.titulo)}</h1><div class="cli">${e(m.cliente)} · ${e(m.estimativa)} v${m.versao}</div>
+<div class="info">${m.alcance!=="Estimativa inteira"?`Demanda: ${e(m.alcance)} · `:""}Emitido em ${fmtD(hoje())}${emp.contato?` · ${e(emp.contato)}`:""}</div></div>
+${corpo}
+<div class="rod">Código de integridade do documento: <b id="codDoc">${aceite?e(aceite.docHash):"…"}</b>. Qualquer alteração no conteúdo muda este código.${aceite?"":" Assinatura eletrônica simples: registra nome, documento, data e hora e vincula a assinatura ao código acima."}</div>
+</div>
+<script type="application/json" id="escDados">${JSON.stringify(dados).replace(/</g,"\\u003c")}<\/script>
+${aceite?`<script type="application/json" id="aceiteDados">${JSON.stringify({...aceite}).replace(/</g,"\\u003c")}<\/script>`:`<script>${ESC_SCRIPT}<\/script>`}
+</body></html>`;
+}
+// Script embutido no documento (roda no navegador do cliente, inclusive offline)
+const ESC_SCRIPT=`(function(){
+var D=JSON.parse(document.getElementById("escDados").textContent);
+function fnv(s){var h1=0x811c9dc5,h2=0x01000193^s.length;for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);h1=Math.imul(h1^c,16777619)>>>0;h2=Math.imul(h2^c,2246822519)>>>0}return("0000000"+h1.toString(16)).slice(-8)+("0000000"+h2.toString(16)).slice(-8)+("0000000"+(h1^h2).toString(16)).slice(-8)+("0000000"+Math.imul(h1,h2>>>1).toString(16)).slice(-8)}
+function hash(s){try{if(window.crypto&&crypto.subtle)return crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)).then(function(b){return Array.from(new Uint8Array(b)).map(function(x){return("0"+x.toString(16)).slice(-2)}).join("")}).catch(function(){return fnv(s)})}catch(e){}return Promise.resolve(fnv(s))}
+var fmt=function(h){return h.slice(0,16).toUpperCase().replace(/(.{4})(?=.)/g,"$1-")};
+var docHash="";hash(D.txt).then(function(h){docHash=fmt(h);var el=document.getElementById("codDoc");if(el)el.textContent=docHash});
+var pad=document.getElementById("aPad");if(!pad)return;
+var ctx=pad.getContext("2d"),des=false,tem=false;ctx.lineWidth=2.4;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle="#1d1c1a";
+function pt(ev){var r=pad.getBoundingClientRect();return{x:(ev.clientX-r.left)*pad.width/r.width,y:(ev.clientY-r.top)*pad.height/r.height}}
+pad.addEventListener("pointerdown",function(ev){des=true;tem=true;pad.setPointerCapture(ev.pointerId);var p=pt(ev);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+.1,p.y+.1);ctx.stroke()});
+pad.addEventListener("pointermove",function(ev){if(!des)return;var p=pt(ev);ctx.lineTo(p.x,p.y);ctx.stroke()});
+["pointerup","pointercancel","pointerleave"].forEach(function(t){pad.addEventListener(t,function(){des=false})});
+document.getElementById("aLimpar").onclick=function(){ctx.clearRect(0,0,pad.width,pad.height);tem=false};
+var msg=function(t){document.getElementById("aMsg").textContent=t};
+document.getElementById("aAssinar").onclick=function(){
+  var nome=document.getElementById("aNome").value.trim(),doc=document.getElementById("aDoc").value.trim(),cargo=document.getElementById("aCargo").value.trim();
+  if(nome.length<3)return msg("Informe o nome completo.");if(!doc)return msg("Informe o CPF ou CNPJ.");if(!tem)return msg("Desenhe a assinatura no quadro.");if(!document.getElementById("aOk").checked)return msg("Marque “Li e aceito este escopo”.");
+  var em=new Date().toISOString(),png=pad.toDataURL("image/png");
+  hash(D.txt).then(function(h){docHash=fmt(h);return hash(D.txt+"|"+nome+"|"+doc+"|"+em+"|"+png)}).then(function(h2){
+    var A={nome:nome,doc:doc,cargo:cargo,em:em,png:png,cod:fmt(h2),docHash:docHash,titulo:D.titulo,alcance:D.alcance,estimativa:D.estimativa,canal:"Documento assinado pelo cliente"};
+    var box=document.getElementById("aBox"),div=document.createElement("div");
+    div.innerHTML='<div class="assinado"><img alt="Assinatura"><p><b></b><br>Assinado eletronicamente em '+new Date(em).toLocaleString("pt-BR")+'<br>Código da assinatura: <b>'+A.cod+'</b></p></div>';
+    div.querySelector("img").src=png;div.querySelector("p b").textContent=nome+" · "+doc+(cargo?" · "+cargo:"");
+    box.replaceWith(div);
+    var j=document.createElement("script");j.type="application/json";j.id="aceiteDados";j.textContent=JSON.stringify(A).replace(/</g,"\\\\u003c");document.body.appendChild(j);
+    var me=document.querySelector("script:not([type])");if(me)me.remove();
+    var html="<!doctype html>\\n"+document.documentElement.outerHTML;
+    var txt="Aceite do escopo “"+D.titulo+"” ("+D.cliente+" · "+D.estimativa+"). Assinado por "+nome+" ("+doc+") em "+new Date(em).toLocaleString("pt-BR")+". Código da assinatura "+A.cod+" · documento "+docHash+". Segue o arquivo assinado.";
+    var ac=document.createElement("div");ac.className="acoes";
+    var b=document.createElement("a");b.className="bt pri";b.textContent="Baixar documento assinado";b.download=(D.titulo+" - assinado.html").replace(/[\\\\/:*?"<>|]/g,"-");b.href=URL.createObjectURL(new Blob([html],{type:"text/html"}));ac.appendChild(b);
+    if(D.wa){var w=document.createElement("a");w.className="bt";w.textContent="Avisar pelo WhatsApp";w.target="_blank";w.href="https://wa.me/"+D.wa+"?text="+encodeURIComponent(txt);ac.appendChild(w)}
+    if(D.email){var m=document.createElement("a");m.className="bt";m.textContent="Enviar por e-mail";m.href="mailto:"+D.email+"?subject="+encodeURIComponent("Aceite — "+D.titulo)+"&body="+encodeURIComponent(txt);ac.appendChild(m)}
+    var p=document.createElement("p");p.className="amsg";p.style.color="#2f7a4b";p.textContent="Assinado. Baixe o documento assinado e envie o arquivo de volta (anexo do e-mail ou WhatsApp).";
+    div.appendChild(ac);div.appendChild(p);
+  });
+};
+})();`;
+async function escHash(s){
+  try{const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
+  catch(e){let h1=0x811c9dc5,h2=0x01000193^s.length;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);h1=Math.imul(h1^c,16777619)>>>0;h2=Math.imul(h2^c,2246822519)>>>0}
+    return [h1,h2,(h1^h2)>>>0,Math.imul(h1,h2>>>1)>>>0].map(x=>x.toString(16).padStart(8,"0")).join("")}
+}
+const escFmt=h=>h.slice(0,16).toUpperCase().replace(/(.{4})(?=.)/g,"$1-");
+function renderEsc(){
+  const box=$("#escForm"); if(!box) return;
+  const cf=escCfg(), c=cf.col, ds=escDem();
+  if(cf.alcance&&!ds.some(({d})=>d.id===cf.alcance)) cf.alcance="";
+  const um=cf.alcance?ds.find(({d})=>d.id===cf.alcance):null;
+  box.innerHTML=`<label>Abrangência<select id="esAlc"><option value="">Estimativa inteira (${ds.length} demanda${ds.length===1?"":"s"})</option>${ds.map(({d})=>`<option value="${esc(demKey(d))}" ${cf.alcance===d.id?"selected":""}>Só: ${esc(d.nome)}</option>`).join("")}</select></label>
+    <label>Título<input id="esTit" value="${esc(cf.titulo)}" placeholder="${esc(um?`Escopo — ${um.d.nome}`:"Escopo de trabalho")}"></label>
+    <div><span class="lblm">Nível de detalhe</span><div class="chips">${ESC_PRESETS.map(p=>`<button class="btn sm${cf.preset===p.id?" pri":""}" data-espre="${p.id}">${esc(p.nome)}</button>`).join("")}</div></div>
+    <div class="escol">
+      <label><input type="checkbox" data-esc="desc" ${c.desc?"checked":""}> Descrição</label>
+      <label><input type="checkbox" data-esc="passos" ${c.passos?"checked":""}> Passo a passo</label>
+      <label><input type="checkbox" data-esc="datas" ${c.datas?"checked":""}> Datas</label>
+      <label>Horas<select data-esc="horas"><option value="dem" ${c.horas==="dem"?"selected":""}>por demanda</option><option value="total" ${c.horas==="total"?"selected":""}>só total</option><option value="nao" ${c.horas==="nao"?"selected":""}>ocultar</option></select></label>
+      <label>Valor<select data-esc="valor"><option value="dem" ${c.valor==="dem"?"selected":""}>por demanda</option><option value="total" ${c.valor==="total"?"selected":""}>só total</option><option value="nao" ${c.valor==="nao"?"selected":""}>ocultar</option></select></label>
+    </div>
+    ${um?`<label>Briefing desta demanda <span class="muted">(vazio = observação da demanda)</span><textarea data-esd="briefing" placeholder="${esc(um.d.obs||"O que o cliente pediu, contexto, referências…")}">${esc((um.d.escopo||{}).briefing||"")}</textarea></label>
+      <label>Critérios de aceite desta demanda<textarea data-esd="criterios" placeholder="Ex.: portas abrem nas 3 larguras padrão; orçamento confere com a tabela da fábrica">${esc((um.d.escopo||{}).criterios||"")}</textarea></label>`
+     :c.desc?`<p class="muted" style="font-size:12px">A descrição de cada demanda vem do briefing da demanda (escolha “Só: demanda” para editar) ou da observação na estimativa.</p>`:""}
+    <div><span class="lblm">Blocos do documento</span>
+    ${cf.blocos.map((b,k)=>`<div class="eblk${b.on?"":" off"}"><div class="ebh"><input type="checkbox" data-ebon="${k}" ${b.on?"checked":""} title="Incluir"><input data-ebtit="${k}" value="${esc(b.tit)}">
+        <button class="btn sm" data-ebup="${k}" ${k?"":"disabled"}>↑</button><button class="btn sm" data-ebdn="${k}" ${k<cf.blocos.length-1?"":"disabled"}>↓</button>${b.tipo==="texto"?`<button class="x" data-ebdel="${k}" title="Excluir bloco">×</button>`:""}</div>
+      ${b.tipo==="texto"?(b.on?`<textarea data-ebtxt="${k}" placeholder="Uma linha por item (vira lista) ou um parágrafo.">${esc(b.txt||"")}</textarea>`:""):`<span class="muted" style="font-size:12px">${{escopo:"Gerado das demandas, no nível de detalhe escolhido.",cronograma:"Gerado do cronograma (com seus ajustes).",investimento:"Total, valores por demanda e condições de pagamento.",aceite:"Campos de aceite, assinatura desenhada e código de integridade."}[b.tipo]}</span>`}</div>`).join("")}
+    <button class="btn sm" id="esAddB">+ Bloco de texto</button></div>`;
+  renderEscPrev(); renderEscAceites();
+}
+function renderEscPrev(){const f=$("#escPrev"); if(f) f.srcdoc=escopoHTML()}
+function renderEscAceites(){
+  const box=$("#escAceites"); if(!box) return; const ac=escCfg().aceites;
+  box.innerHTML=ac.length?`<table><thead><tr><th>Quem</th><th>Abrangência</th><th>Quando · canal</th><th>Códigos</th><th></th></tr></thead><tbody>${ac.map((a,k)=>`<tr>
+      <td><img src="${esc(a.png)}" alt="" class="sigmini"><b>${esc(a.nome)}</b><br><span class="muted">${esc(a.doc||"")}${a.cargo?" · "+esc(a.cargo):""}</span></td><td>${esc(a.alcance||"")}</td>
+      <td>${new Date(a.em).toLocaleString("pt-BR")}<br><span class="muted">${esc(a.canal||"")}</span></td>
+      <td class="muted" style="font-size:12px">assinatura ${esc(a.cod)}<br>documento ${esc(a.docHash)} <span data-esver="${k}">…</span></td>
+      <td class="acts"><button class="btn sm" data-esbx="${k}">Baixar assinado</button><button class="x" data-esdel="${k}" title="Remover registro">×</button></td></tr>`).join("")}</tbody></table>`
+    :'<p class="empty">Nenhum aceite registrado nesta estimativa.</p>';
+  // confere se o documento assinado ainda bate com o conteúdo atual
+  ac.forEach(async(a,k)=>{const cf=escCfg(), atual=escFmt(await escHash(JSON.stringify(escModelo({...cf,alcance:a.alcanceId??cf.alcance,...(a.cfg||{})})))), el=box.querySelector(`[data-esver="${k}"]`);
+    if(el) el.innerHTML=atual===a.docHash?'<span class="pill h">confere</span>':'<span class="pill st-r" title="O escopo, as horas ou os valores mudaram depois da assinatura">mudou depois</span>'});
+}
+let escT=null;
+const escSalvar=(prev=true)=>{persist();if(prev){clearTimeout(escT);escT=setTimeout(renderEscPrev,250)}};
+$("#escForm").addEventListener("click",e=>{
+  const t=e.target.closest("button"); if(!t) return; const cf=escCfg(), ds=t.dataset;
+  if(ds.espre){const p=ESC_PRESETS.find(x=>x.id===ds.espre);cf.preset=p.id;cf.col=clone(p.c);escSalvar(false);renderEsc()}
+  else if(ds.ebup!==undefined||ds.ebdn!==undefined){const k=+(ds.ebup??ds.ebdn), j=ds.ebup!==undefined?k-1:k+1;[cf.blocos[k],cf.blocos[j]]=[cf.blocos[j],cf.blocos[k]];escSalvar(false);renderEsc()}
+  else if(ds.ebdel!==undefined){cf.blocos.splice(+ds.ebdel,1);escSalvar(false);renderEsc()}
+  else if(t.id==="esAddB"){cf.blocos.splice(Math.max(0,cf.blocos.findIndex(b=>b.tipo==="aceite")),0,{id:uid(),tit:"Novo bloco",tipo:"texto",on:true,txt:""});escSalvar(false);renderEsc()}
+});
+$("#escForm").addEventListener("change",e=>{
+  const t=e.target, cf=escCfg(), ds=t.dataset;
+  if(t.id==="esAlc"){cf.alcance=t.value;escSalvar(false);renderEsc();return}
+  if(t.id==="esTit") cf.titulo=t.value.trim();
+  else if(ds.esc){cf.col[ds.esc]=t.type==="checkbox"?t.checked:t.value;cf.preset=(ESC_PRESETS.find(p=>JSON.stringify(p.c)===JSON.stringify(cf.col))||{id:""}).id;
+    escSalvar(false);renderEsc();return}
+  else if(ds.ebon!==undefined){cf.blocos[+ds.ebon].on=t.checked;escSalvar(false);renderEsc();return}
+  else if(ds.ebtit!==undefined) cf.blocos[+ds.ebtit].tit=t.value.trim()||"Bloco";
+  else if(ds.ebtxt!==undefined) cf.blocos[+ds.ebtxt].txt=t.value;
+  else if(ds.esd){const d=est.demandas.find(x=>x.id===cf.alcance); if(d){d.escopo=d.escopo||{};d.escopo[ds.esd]=t.value}}
+  escSalvar();
+});
+const escNomeArq=suf=>`${escModelo().titulo} - ${(arq.clientes[est.clienteId]||{}).nome||""} - ${est.nome} v${est.versao||1}${suf||""}.html`;
+$("#escBaixar").onclick=()=>download(escopoHTML(),escNomeArq(),"text/html");
+$("#escPrint").onclick=()=>{const f=$("#escPrev");try{f.contentWindow.focus();f.contentWindow.print()}catch(e){uiAlert("Este visualizador não permite imprimir daqui. Baixe o escopo (.html), abra no navegador e use Imprimir › Salvar como PDF.")}};
+$("#escPadrao").onclick=async()=>{const cf=escCfg();db.cfg.escopoPadrao=clone({preset:cf.preset,col:cf.col,blocos:cf.blocos});persist();uiAlert("Blocos e nível de detalhe salvos como padrão para as próximas estimativas.")};
+$("#escReset").onclick=async()=>{if(!await uiConfirm("Voltar os blocos e o nível de detalhe ao padrão de fábrica? Os aceites registrados ficam.")) return;
+  const cf=escCfg();cf.blocos=escBlocosPadrao();cf.preset="descValor";cf.col=clone(ESC_PRESETS[2].c);cf.titulo="";escSalvar(false);renderEsc()};
+$("#escAssinar").onclick=()=>{
+  const cf=escCfg(), m=escModelo(cf);
+  abrirModal("Coletar assinatura",`<p class="muted">Para assinatura presencial (tablet, celular ou na reunião). Registra nome, documento, data e hora e o código de integridade de <b>${esc(m.titulo)}</b> (${esc(m.alcance)}).</p>
+    <div class="row"><label style="flex:1">Nome completo<input id="sgNome"></label><label>CPF / CNPJ<input id="sgDoc"></label><label>Cargo / empresa<input id="sgCargo" value="${esc(m.cliente)}"></label></div>
+    <canvas id="sgPad" width="600" height="170" class="sgpad"></canvas>
+    <label style="flex-direction:row;align-items:center;gap:6px;margin-top:8px"><input type="checkbox" id="sgOk"> O cliente leu e aceita este escopo</label>`,
+    [{label:"Registrar assinatura",pri:true,fn:async()=>{
+      const nome=$("#sgNome").value.trim(), doc=$("#sgDoc").value.trim(), cargo=$("#sgCargo").value.trim();
+      if(nome.length<3||!doc) return uiAlert("Informe nome completo e CPF/CNPJ.");
+      if(!pad.tem) return uiAlert("Falta a assinatura desenhada.");
+      if(!$("#sgOk").checked) return uiAlert("Confirme que o cliente leu e aceita o escopo.");
+      if(!est.inicio){est.inicio=cronograma().ini}
+      const em=new Date().toISOString(), png=$("#sgPad").toDataURL("image/png"), txt=JSON.stringify(m);
+      const docHash=escFmt(await escHash(txt)), cod=escFmt(await escHash(txt+"|"+nome+"|"+doc+"|"+em+"|"+png));
+      cf.aceites.push({id:uid(),nome,doc,cargo,em,png,cod,docHash,titulo:m.titulo,alcance:m.alcance,alcanceId:cf.alcance,cfg:{col:clone(cf.col),blocos:clone(cf.blocos),titulo:cf.titulo},canal:"Presencial (no EstimaCerto)"});
+      if(!cf.alcance&&!est.aprovacao) est.aprovacao={nome,canal:"Assinatura do escopo",em:Date.now()};
+      persist();fecharModal();renderEsc();renderEst();renderArquivo();uiAlert("Assinatura registrada. Use “Baixar assinado” para enviar a via do cliente.");}}]);
+  const pad=padAssinatura($("#sgPad"));
+};
+function padAssinatura(cv){
+  const ctx=cv.getContext("2d"), st={tem:false}; let des=false;
+  ctx.lineWidth=2.4;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle="#1d1c1a";ctx.fillStyle="#fff";
+  const pt=ev=>{const r=cv.getBoundingClientRect();return{x:(ev.clientX-r.left)*cv.width/r.width,y:(ev.clientY-r.top)*cv.height/r.height}};
+  cv.addEventListener("pointerdown",ev=>{des=true;st.tem=true;cv.setPointerCapture(ev.pointerId);const p=pt(ev);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+.1,p.y+.1);ctx.stroke()});
+  cv.addEventListener("pointermove",ev=>{if(!des) return;const p=pt(ev);ctx.lineTo(p.x,p.y);ctx.stroke()});
+  ["pointerup","pointercancel","pointerleave"].forEach(t=>cv.addEventListener(t,()=>des=false));
+  $("#mFoot").insertAdjacentHTML("afterbegin",'<button class="btn" id="sgLimpar">Limpar assinatura</button>');
+  $("#sgLimpar").onclick=()=>{ctx.clearRect(0,0,cv.width,cv.height);st.tem=false};
+  return st;
+}
+$("#escImport").onclick=()=>pickFile(".html,.htm,text/html",async f=>{
+  const txt=await f.text(), doc=new DOMParser().parseFromString(txt,"text/html"), j=doc.getElementById("aceiteDados"), dd=doc.getElementById("escDados");
+  if(!j||!dd) throw new Error("o arquivo não tem assinatura do EstimaCerto. Peça ao cliente o arquivo baixado depois de assinar.");
+  const A=JSON.parse(j.textContent), D=JSON.parse(dd.textContent), cf=escCfg();
+  const conf=escFmt(await escHash(D.txt))===A.docHash, conf2=escFmt(await escHash(D.txt+"|"+A.nome+"|"+A.doc+"|"+A.em+"|"+A.png))===A.cod;
+  if(!conf||!conf2) return uiAlert("Atenção: os códigos não conferem — o arquivo foi alterado depois da assinatura. O aceite não foi registrado.");
+  if(cf.aceites.some(a=>a.cod===A.cod)) return uiAlert("Este aceite já está registrado.");
+  const alc=escDem().find(({d})=>d.nome===A.alcance);
+  cf.aceites.push({...A,id:uid(),alcanceId:alc?alc.d.id:"",canal:A.canal||"Documento assinado pelo cliente",arquivo:txt.length<400000?txt:undefined});
+  if(A.alcance==="Estimativa inteira"&&!est.aprovacao) est.aprovacao={nome:A.nome,canal:"Escopo assinado pelo cliente",em:Date.parse(A.em)||Date.now()};
+  persist();renderEsc();renderEst();renderArquivo();
+  uiAlert(`Aceite de ${A.nome} registrado (${new Date(A.em).toLocaleString("pt-BR")}). Códigos conferem com o arquivo assinado.${A.estimativa&&A.estimativa!==`${est.nome} v${est.versao||1}`?` Observação: o arquivo é da estimativa “${A.estimativa}”.`:""}`);
+});
+$("#escAceites").addEventListener("click",async e=>{
+  const t=e.target.closest("button"); if(!t) return; const cf=escCfg();
+  if(t.dataset.esbx!==undefined){const a=cf.aceites[+t.dataset.esbx];
+    if(a.arquivo) return download(a.arquivo,`${a.titulo} - assinado por ${a.nome}.html`,"text/html");
+    download(escopoHTML({...cf,alcance:a.alcanceId??"",...(a.cfg||{})},a),`${a.titulo} - assinado por ${a.nome}.html`,"text/html")}
+  else if(t.dataset.esdel!==undefined){if(await uiConfirm("Remover este registro de aceite?",{ok:"Remover",cancel:"Manter"})){cf.aceites.splice(+t.dataset.esdel,1);persist();renderEscAceites()}}
+});
 
 /* ================= ZOHO PROJECTS ================= */
 const ZP="Zoho Projects";
@@ -2765,7 +3164,7 @@ function pickFile(accept,cb){
     try{await cb(f)}catch(err){uiAlert("Não foi possível importar: "+err.message)}};
   inp.click();
 }
-function render(){renderEst();renderArquivo();renderProc();renderTpl();renderCron();renderCal();renderBench();renderSys();renderCfg()}
+function render(){renderEst();renderArquivo();renderProc();renderTpl();renderCron();renderEsc();renderCal();renderBench();renderSys();renderCfg()}
 render();
 Sync.init();
 </script>

@@ -190,3 +190,21 @@ total           = Σ por demanda: horas × (1 + reserva do nível de risco% + ge
 valor / custo   = Σ por demanda: horas com reserva × preço/hora | custo/hora do perfil
 prazo (dias)    = total ÷ (horas produtivas/dia × pessoas)
 ```
+
+## Cronograma ajustável
+
+- **↑ ↓** reordenam as demandas na fila; **✎** (ou clique na barra) abre o ajuste da demanda.
+- Por demanda: **início fixo**, **entrega fixa** (estica ou comprime as barras), **esperar antes** (dias úteis) e **pessoa** (com equipe maior que 1).
+- Por fase: **incluir/pular**, **horas no cronograma** e **espera depois** (validação do cliente, material, fila de fábrica), mostrada como barra hachurada.
+- Os ajustes valem para o cronograma, a carga semanal, a proposta, o escopo e o Zoho Projects. Horas e valores da estimativa não mudam. **Voltar ao automático** limpa tudo.
+
+## Escopo e briefing
+
+- **Abrangência:** a estimativa inteira ou uma demanda só, com briefing e critérios de aceite próprios.
+- **Nível de detalhe:** atalhos (demanda + valor; + horas; + descrição; descrição + horas com só o valor total; completo) e controles finos: descrição, passo a passo, datas, horas e valor (por demanda, só total ou ocultar).
+- **Blocos:** objetivo, briefing, escopo, entregáveis, fora do escopo, premissas, responsabilidades do cliente, cronograma, investimento, critérios de aceite, aceite, além de blocos de texto próprios. Você liga, desliga, renomeia, edita e reordena cada um. **Salvar como padrão** vale para as próximas estimativas.
+- **Aceite com assinatura eletrônica simples:**
+  - O .html baixado abre no celular do cliente. Ele preenche nome e CPF/CNPJ, assina com o dedo e baixa o documento assinado.
+  - **Importar escopo assinado** confere os códigos de integridade, recusa arquivo adulterado e registra o aceite. Quando o escopo é da estimativa inteira, registra também a aprovação.
+  - **Coletar assinatura aqui** serve para a assinatura presencial.
+  - Cada aceite mostra **confere** ou **mudou depois**, se o conteúdo mudar após a assinatura. Nova versão não herda aceites nem aprovação.
