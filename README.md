@@ -322,29 +322,26 @@ prazo (dias)    = total ÷ (horas produtivas/dia × pessoas)
 - **Filtros do Banco:** unidade de contagem, unidade de tempo (min, h, dia), fonte (Histórico/Manual) e "unidade com regra". As ações em lote valem para o que está filtrado.
 - Na estimativa, as buscas de processo e de modelo também entendem `#etiqueta`.
 
-## Tempo em min, h ou dia · unidades de medida com regra
+## Unidades de medida (Parâmetros)
 
-- O tempo-padrão de cada processo pode ser digitado em **min, h ou dia** (dia = horas produtivas/dia dos Parâmetros). Internamente fica em minutos. Se as horas/dia mudam, processos em "dia" continuam valendo o mesmo número de dias.
-- **Parâmetros › Unidades de medida:** para cada unidade de contagem (entidade, módulo, m², visita…):
-  - em que unidade o tempo é digitado;
-  - **quantidade mínima**;
-  - **arredondamento** (para cima inteiro ou de meio em meio).
+| Sigla | Tipo | Equivale a | Regra padrão |
+|---|---|---|---|
+| unid | valor (R$ por unidade) | — | — |
+| min | tempo | 1 min | — |
+| hr | tempo | 60 min | — |
+| dia | tempo | 8 h (editável) | — |
+| pct10 / pct50 / pct100 | tempo | 10 / 50 / 100 h | pacote inteiro |
 
-  Ex.: "visita técnica · dia · mínimo 1 · meio em meio".
-- **Na estimativa,** a linha mostra o tempo na unidade do processo e, quando a regra muda a quantidade, "cobra X". Totais, escopo, proposta e Zoho já usam a quantidade cobrada.
-- **No editor de processo,** a unidade é uma lista com a regra de cada uma e a opção "＋ Criar unidade". Escolher a unidade já sugere a unidade de tempo dela.
+- **Cadastro de novas medidas:** sigla, nome, tipo (tempo ou valor), quanto equivale (ex.: `40h`), quantidade mínima e arredondamento. Ex.: `sem` · Semana · 40h.
+- **Regra da medida:** vale na estimativa sobre o total na própria medida. Ex.: 23 h em pct10 cobra 3 pacotes = 30 h. Em `unid`, a regra vale sobre a quantidade.
+- **Medida de valor (`unid`):** o item entra no valor da estimativa (escopo, proposta) sem horas, e vai ao Zoho Invoice como item próprio. Não tem custo interno: a margem desse item é 100%.
+- **Unidade de contagem** (entidade, desenho, módulo…) é só o rótulo do que se conta no processo; fica em campo livre.
 
-## Conversão inteligente direto na célula
+## Célula: número + unidade de medida
 
-- **Tempo** (Banco, editor de processo, estimativa e linha nova):
-  - formatos: `30m` · `1,5h` · `1h30` · `0,5d` · `2un`;
-  - `2un` vale na estimativa e significa 2× o tempo-padrão do processo;
-  - número sem unidade vale na unidade atual da célula;
-  - a unidade digitada passa a ser a de exibição.
-- **Quantidade:**
-  - `3` ou `3un`;
-  - uma duração vira unidades pelo tempo de cada uma: com 45m por unidade, `3h` vira 4.
+- **Tempo ou valor por unidade** é um **número** (o multiplicador) com a **unidade de medida** numa lista ao lado (min, hr, dia, pct10, unid…). Vale no Banco, no editor de processo e nas linhas da estimativa.
+- **Trocar a medida na lista** mantém o número: 2 + hr = 2 horas; 1 + pct10 = 10 h.
+- **O número aceita atalhos e ajusta a lista sozinho:** `30m`, `1,5h`, `1h30`, `0,5d`, `2pct10`, `R$ 1.500`. Na estimativa, `2x` = 2× o tempo-padrão do processo.
+- **Quantidade:** `3` ou `3un`; uma duração (`3h`) vira unidades pelo tempo de cada uma.
 - **Real** (calibração): aceita `45m`, `1h30`, `0,5d`; número sozinho = minutos.
-- **Linhas avulsas:**
-  - têm unidade de contagem editável, e as regras da unidade valem para elas;
-  - aceitam a duração direto na quantidade: `2h` vira 1 × 2h.
+- **Linhas avulsas:** têm unidade de contagem editável e aceitam a duração direto na quantidade (`2h` → 1 × 2h) ou um valor (`R$ 800`).
