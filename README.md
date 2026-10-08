@@ -333,3 +333,18 @@ prazo (dias)    = total ÷ (horas produtivas/dia × pessoas)
   Ex.: "visita técnica · dia · mínimo 1 · meio em meio".
 - **Na estimativa,** a linha mostra o tempo na unidade do processo e, quando a regra muda a quantidade, "cobra X". Totais, escopo, proposta e Zoho já usam a quantidade cobrada.
 - **No editor de processo,** a unidade é uma lista com a regra de cada uma e a opção "＋ Criar unidade". Escolher a unidade já sugere a unidade de tempo dela.
+
+## Conversão inteligente direto na célula
+
+- **Tempo** (Banco, editor de processo, estimativa e linha nova):
+  - formatos: `30m` · `1,5h` · `1h30` · `0,5d` · `2un`;
+  - `2un` vale na estimativa e significa 2× o tempo-padrão do processo;
+  - número sem unidade vale na unidade atual da célula;
+  - a unidade digitada passa a ser a de exibição.
+- **Quantidade:**
+  - `3` ou `3un`;
+  - uma duração vira unidades pelo tempo de cada uma: com 45m por unidade, `3h` vira 4.
+- **Real** (calibração): aceita `45m`, `1h30`, `0,5d`; número sozinho = minutos.
+- **Linhas avulsas:**
+  - têm unidade de contagem editável, e as regras da unidade valem para elas;
+  - aceitam a duração direto na quantidade: `2h` vira 1 × 2h.
