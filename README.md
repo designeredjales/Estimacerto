@@ -51,6 +51,12 @@ Duas formas de ler a biblioteca (ex.: `D:\Setor\...\Promob Studio Start Projetto
 2. **Importar lista**: dentro da pasta System, rode `tree /f /a > estrutura.txt` (ou
    `dir /s /b > lista.txt`) e importe o `.txt`. Conta arquivos por pasta e extensão, sem ler conteúdo.
 
+**Árvore da biblioteca**: mostra pastas, arquivos e grupos XML como no Editor de Módulos do Catalog,
+com a contagem de módulos em cada grupo (grupos ocultos em cinza). Escolha qual elemento XML é o
+“módulo” (a ferramenta sugere `<Module>` quando existe). O ＋ de cada grupo adiciona a quantidade à
+estimativa (demanda “Módulos do System”), usando o processo escolhido; com retrato salvo, a árvore
+mostra a diferença por grupo.
+
 Cada métrica pode ser vinculada a um processo do banco; os vínculos ficam salvos, e existem sugestões
 por pasta (ex.: Atributos → CFG-03, Materiais → MAT-02). Com **Salvar retrato** antes da customização e
 uma nova leitura depois, a **diferença** mostra o que foi produzido e vira uma demanda para comparar

@@ -78,6 +78,22 @@ tr.cat td{background:var(--surface-2);font-weight:600;font-size:13px}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
 .diff{font-size:12px;color:var(--muted)}
 .diff.up{color:var(--warn)}.diff.down{color:var(--ok)}
+.tree{font-size:14px;border:1px solid var(--line);border-radius:8px;padding:8px;max-height:70vh;overflow:auto;background:var(--surface)}
+.tree details>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:3px 4px;border-radius:4px}
+.tree details>summary::-webkit-details-marker{display:none}
+.tree details>summary::before{content:"+";display:inline-block;width:13px;height:13px;line-height:11px;text-align:center;border:1px solid var(--muted);font-size:11px;color:var(--muted);flex:none}
+.tree details[open]>summary::before{content:"−"}
+.tree summary:hover,.tree .tleaf:hover{background:var(--surface-2)}
+.tree .tk{margin-left:9px;padding-left:12px;border-left:1px dotted var(--line)}
+.tree .tleaf{display:flex;align-items:center;gap:6px;padding:3px 4px 3px 23px;border-radius:4px}
+.tree i{display:inline-block;width:16px;height:12px;border-radius:2px;flex:none;position:relative}
+.tree i::before{content:"";position:absolute;left:0;top:-3px;width:7px;height:4px;border-radius:2px 2px 0 0;background:inherit}
+.tree .ic-pasta{background:#e8b53a}.tree .ic-oculto{background:#9a9890}.tree .ic-arq{background:#7a9cc6;width:11px;height:14px}
+.tree .ic-arq::before{display:none}
+.tree .tl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tree .tid{font-size:11px;white-space:nowrap}
+.tree .pill{margin-left:auto}
+.tree .tadd{font-size:15px}
 hr{border:0;border-top:1px solid var(--line);margin:14px 0}
 @media print{
   nav,.toolbar,.noprint,.addrow,button{display:none!important}
@@ -745,17 +761,33 @@ const SUGESTOES=[
 ];
 const sugestao=k=>{const pasta=k.split(":")[1]||"";for(const [rx,cod] of SUGESTOES) if(rx.test(pasta)&&proc(cod)) return cod;return ""};
 
-function novoScan(raiz,origem){return {raiz,origem,quando:new Date().toLocaleString("pt-BR"),arquivos:0,bytes:0,xmlLidos:0,xmlErro:0,m:{}}}
+function novoScan(raiz,origem){return {raiz,origem,quando:new Date().toLocaleString("pt-BR"),arquivos:0,bytes:0,xmlLidos:0,xmlErro:0,m:{},
+  tree:{label:raiz,kind:"pasta",children:[],idx:{}},tags:{}}}
+// Árvore: pastas › arquivos › elementos XML com ID ou nome (grupos, subgrupos, módulos)
+function noPasta(sc,parts){
+  let n=sc.tree;
+  for(const p of parts){
+    if(!n.idx[p]){const c={label:p,kind:"pasta",children:[],idx:{}};n.idx[p]=c;n.children.push(c)}
+    n=n.idx[p];
+  }
+  return n;
+}
 function addArquivo(sc,parts,size){
+  // devolve o nó do arquivo na árvore
   // parts: caminho relativo à pasta System, sem o nome da raiz
   const add=(k,v=1)=>sc.m[k]=(sc.m[k]||0)+v, nome=parts[parts.length-1], ext=extOf(nome);
   sc.arquivos++; sc.bytes+=size||0;
+  const arq={label:nome,kind:"arquivo",children:[]}; noPasta(sc,parts.slice(0,-1)).children.push(arq);
   add("ext:"+ext);
   add("pasta:"+(parts.length>1?parts[0]:"(raiz)"));
   if(parts.length>2) add("pasta:"+parts[0]+"/"+parts[1]);
+  return arq;
 }
 const parser=new DOMParser();
-function lerXml(sc,parts,txt){
+const ROTULO=["Description","Descricao","Descrição","Name","Nome","Text","Caption","Title","Label"];
+const attr=(el,nomes)=>{for(const n of nomes){for(const v of [n,n.toLowerCase(),n.toUpperCase()]) if(el.hasAttribute(v)) return el.getAttribute(v)}return null};
+const ehOculto=el=>{const v=attr(el,["Visible","Visivel","Visível"]);const h=attr(el,["Hidden","Invisible","Oculto"]);return (v!==null&&/^(false|0|n|nao|não)$/i.test(v))||(h!==null&&/^(true|1|s|sim|y)$/i.test(h))};
+function lerXml(sc,parts,txt,arq){
   const add=(k,v=1)=>sc.m[k]=(sc.m[k]||0)+v;
   const doc=parser.parseFromString(txt,"application/xml");
   if(doc.getElementsByTagName("parsererror").length){sc.xmlErro++;return}
@@ -765,6 +797,17 @@ function lerXml(sc,parts,txt){
     add("tag:"+el.localName);
     if(el.hasAttribute("ID")||el.hasAttribute("Id")||el.hasAttribute("id")) add("cad:"+pasta+" › "+el.localName);
   }
+  if(!arq) return;
+  (function walk(el,pai){
+    for(const c of el.children){
+      const id=attr(c,["ID"]), rot=attr(c,ROTULO);
+      if(id!==null||rot!==null){
+        const n={label:(rot||id||c.localName).trim()||c.localName,id,tag:c.localName,kind:"xml",oculto:ehOculto(c),children:[]};
+        sc.tags[c.localName]=(sc.tags[c.localName]||0)+1;
+        pai.children.push(n); walk(c,n);
+      }else walk(c,pai);
+    }
+  })(doc,arq);
 }
 $("#sysPick").onclick=()=>{$("#sysDir").value="";$("#sysDir").click()};
 $("#sysDir").onchange=async()=>{
@@ -773,16 +816,16 @@ $("#sysDir").onchange=async()=>{
   const sc=novoScan(raiz,"pasta");
   for(let i=0;i<files.length;i++){
     const f=files[i], parts=(f.webkitRelativePath||f.name).split("/").slice(1), ext=extOf(f.name);
-    addArquivo(sc,parts,f.size);
+    const arq=addArquivo(sc,parts,f.size);
     if(!BIN_EXT.has(ext)&&f.size<16e6){
       try{
         const head=(await f.slice(0,512).text()).replace(/^\ufeff/,"").trimStart();
-        if(head.startsWith("<")) lerXml(sc,parts,await f.text());
+        if(head.startsWith("<")) lerXml(sc,parts,await f.text(),arq);
       }catch(err){sc.xmlErro++}
     }
     if(i%100===0){info.textContent=`Lendo ${i+1}/${files.length}…`;await new Promise(r=>setTimeout(r))}
   }
-  info.textContent=""; sysScan=sc; renderSys();
+  info.textContent=""; sysScan=sc; sysTag=adivinhaTag(sc); renderSys();
 };
 // Importa a lista gerada no Windows: "tree /f /a > estrutura.txt" ou "dir /s /b > lista.txt"
 function parseListagem(txt,nomeArq){
@@ -826,8 +869,64 @@ $("#sysTree").onclick=()=>pickFile(".txt",async f=>{
   if(/^\xff\xfe|\u0000/.test(txt.slice(0,4))) txt=new TextDecoder("utf-16le").decode(buf);
   const sc=parseListagem(txt,f.name);
   if(!sc.arquivos) throw new Error("nenhum arquivo reconhecido. Gere com: tree /f /a > estrutura.txt  (ou dir /s /b > lista.txt)");
-  sysScan=sc; renderSys();
+  sysScan=sc; sysTag=""; renderSys();
 });
+
+/* ---------- Árvore de módulos ---------- */
+let sysTag="", sysProcMod="MDL-14", nodeRef=[];
+function adivinhaTag(sc){
+  const t=Object.entries(sc.tags).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+  return t.find(x=>/m[oó]dul/i.test(x))||t.find(x=>/^item$/i.test(x))||"";
+}
+// conta módulos (elementos com a tag escolhida) ou, sem tag, arquivos
+function contar(n){
+  let mods=0, arqs=n.kind==="arquivo"?1:0;
+  for(const c of n.children){const r=contar(c);mods+=r.mods+(c.kind==="xml"&&c.tag===sysTag?1:0);arqs+=r.arqs}
+  if(n.kind==="xml"&&!n.children.length) arqs=0;
+  n.mods=mods; n.arqs=arqs; return {mods,arqs};
+}
+const qtdNo=n=>sysTag?n.mods:n.arqs;
+const unidade=()=>sysTag?"módulos":"arquivos";
+// filhos exibidos: esconde as folhas-módulo e arquivos sem conteúdo útil quando há leitura XML
+function filhosVisiveis(n){
+  // arquivo com um único grupo raiz aparece direto como o grupo (como no Editor de Módulos)
+  const ch=n.children.map(c=>c.kind==="arquivo"&&c.children.length===1&&c.children[0].kind==="xml"&&c.children[0].tag!==sysTag?c.children[0]:c);
+  return ch.filter(c=>{
+    if(c.kind==="xml"&&c.tag===sysTag&&!c.children.some(g=>!(g.kind==="xml"&&g.tag===sysTag)&&qtdNo(g)>0)) return false;
+    return qtdNo(c)>0||c.kind!=="xml";
+  });
+}
+function mapaRetrato(n,path,out){out[path]=qtdNo(n);filhosVisiveis(n).forEach(c=>mapaRetrato(c,path+" › "+c.label,out));return out}
+function linhaNo(n,path,snapTm){
+  const i=nodeRef.push({n,path})-1, q=qtdNo(n), base=snapTm?snapTm[path]:undefined, d=base===undefined?null:q-base;
+  const kids=filhosVisiveis(n), cls=n.kind==="arquivo"?"ic-arq":n.oculto?"ic-oculto":"ic-pasta";
+  const info=`<span class="tl">${esc(n.label)}</span>${n.kind==="xml"&&n.id&&n.id!==n.label?`<span class="muted tid">${esc(n.id)}</span>`:""}
+    <span class="pill ${q?"h":""}">${num(q,0)} ${unidade()}</span>${d?`<span class="diff ${d>0?"up":"down"}">${d>0?"+":""}${num(d,0)}</span>`:""}
+    ${q?`<button class="x tadd" data-tadd="${i}" title="Adicionar à estimativa">＋</button>`:""}`;
+  return kids.length
+    ?`<details data-ti="${i}"><summary><i class="${cls}"></i>${info}</summary><div class="tk"></div></details>`
+    :`<div class="tleaf"><i class="${cls}"></i>${info}</div>`;
+}
+function abrirNo(det){
+  const box=det.querySelector(":scope>.tk"); if(box.dataset.ok) return;
+  const {n,path}=nodeRef[+det.dataset.ti], snap=load(K_SNAP,null), tm=snap&&snap.tm&&snap.tag===sysTag?snap.tm:null;
+  box.innerHTML=filhosVisiveis(n).map(c=>linhaNo(c,path+" › "+c.label,tm)).join(""); box.dataset.ok=1;
+}
+function renderArvore(){
+  const s=sysScan; if(!s) return "";
+  contar(s.tree); nodeRef=[];
+  const snap=load(K_SNAP,null), tm=snap&&snap.tm&&snap.tag===sysTag?snap.tm:null;
+  const tagOpts='<option value="">arquivos (sem leitura de módulos)</option>'+Object.entries(s.tags).sort((a,b)=>b[1]-a[1]).map(([t,q])=>`<option value="${esc(t)}" ${t===sysTag?"selected":""}>&lt;${esc(t)}&gt; · ${num(q,0)}</option>`).join("");
+  const procOpts=db.processos.map(p=>`<option value="${esc(p.cod)}" ${p.cod===sysProcMod?"selected":""}>${esc(p.cod)} · ${esc(p.nome)}</option>`).join("");
+  return `<h3 style="margin:18px 0 6px">Árvore da biblioteca</h3>
+    <div class="row" style="margin-bottom:8px">
+      <label>Contar como módulo<select id="sysTagSel">${tagOpts}</select></label>
+      <label style="flex:1;min-width:220px">Processo ao adicionar (＋)<select id="sysProcSel">${procOpts}</select></label>
+      <button class="btn" id="sysExpand">Expandir 2 níveis</button>
+    </div>
+    <p class="muted" style="margin:0 0 8px">${s.tags&&Object.keys(s.tags).length?"Escolha qual elemento XML é o “módulo” (a ferramenta sugere um). ":""}Cinza = grupo oculto. ${tm?"Números em laranja/verde = diferença vs. retrato. ":""}O ＋ adiciona o grupo à estimativa, com a quantidade de ${unidade()}${$("#sysUseDiff").checked&&tm?" (diferença)":""}.</p>
+    <div class="tree">${linhaNo(s.tree,s.tree.label,tm)}</div>`;
+}
 function renderSys(){
   const snap=load(K_SNAP,null);
   $("#sysSnap").disabled=!sysScan; $("#sysToEst").disabled=!sysScan; $("#sysAceitar").disabled=!sysScan;
@@ -845,6 +944,7 @@ function renderSys(){
       </tbody></table></div>`;
   };
   $("#sysOut").innerHTML=`<p class="muted">Origem <b>${esc(s.raiz)}</b> (${s.origem==="lista"?"lista de arquivos — sem leitura de conteúdo":"pasta lida no navegador"}) · ${esc(s.quando)} · ${num(s.arquivos,0)} arquivos${s.bytes?` · ${num(s.bytes/1048576)} MB`:""}${s.origem!=="lista"?` · ${num(s.xmlLidos,0)} arquivos XML lidos${s.xmlErro?` · ${s.xmlErro} ilegíveis`:""}`:""}${snap?` · retrato de base: ${esc(snap.quando)}`:""}</p>`
+    +renderArvore()
     +sec("cad:","Cadastros identificados (elementos com ID, por pasta)",120,"É a métrica mais próxima de “itens cadastrados” em cada editor. Vincule as que representam trabalho.")
     +sec("pasta:","Arquivos por pasta",80)+sec("ext:","Arquivos por extensão",40)
     +(s.origem!=="lista"?sec("tag:","Todos os elementos XML (detalhe técnico)",60):"");
@@ -855,11 +955,38 @@ $("#sysAceitar").onclick=()=>{
   persist(); renderSys(); alert(n+" vínculos sugeridos aplicados. Revise antes de gerar a demanda.");
 };
 $("#sysOut").addEventListener("change",e=>{
+  if(e.target.id==="sysTagSel"){sysTag=e.target.value;renderSys();return}
+  if(e.target.id==="sysProcSel"){sysProcMod=e.target.value;return}
   const k=e.target.dataset.vinc; if(k===undefined) return;
   if(e.target.value) db.vinculos[k]=e.target.value; else delete db.vinculos[k];
   persist();
 });
-$("#sysSnap").onclick=()=>{if(!sysScan) return; save(K_SNAP,sysScan); alert("Retrato salvo como linha de base."); renderSys()};
+$("#sysSnap").onclick=()=>{
+  if(!sysScan) return; contar(sysScan.tree);
+  const {tree,tags,...resto}=sysScan;
+  save(K_SNAP,{...resto,tag:sysTag,tm:mapaRetrato(tree,tree.label,{})});
+  alert("Retrato salvo como linha de base."); renderSys();
+};
+$("#sysOut").addEventListener("toggle",e=>{if(e.target.matches("details[data-ti]")&&e.target.open) abrirNo(e.target)},true);
+$("#sysOut").addEventListener("click",e=>{
+  const t=e.target;
+  if(t.id==="sysExpand"){
+    const top=document.querySelector("#sysOut .tree>details"); if(!top) return;
+    top.open=true; abrirNo(top); top.querySelectorAll(":scope>.tk>details").forEach(d=>{d.open=true;abrirNo(d)});
+  }else if(t.dataset.tadd!==undefined){
+    e.preventDefault();
+    const {n,path}=nodeRef[+t.dataset.tadd], p=proc(sysProcMod); if(!p) return;
+    const snap=load(K_SNAP,null), useDiff=$("#sysUseDiff").checked&&snap&&snap.tm&&snap.tag===sysTag;
+    const q=useDiff?qtdNo(n)-(snap.tm[path]||0):qtdNo(n);
+    if(q<=0){alert("Quantidade zero"+(useDiff?" na diferença vs. retrato.":"."));return}
+    const nome="Módulos do System — "+sysScan.raiz;
+    let d=est.demandas.find(x=>x.nome===nome);
+    if(!d){d={nome,status:"estimar",obs:`Gerado pela árvore do Leitor de System (${sysScan.quando}).`,linhas:[]};est.demandas.push(d)}
+    d.linhas.push({cod:p.cod,det:path.split(" › ").slice(1).join(" › ")||path,qtd:q,min:p.min});
+    persist(); renderEst();
+    t.textContent="✓"; setTimeout(()=>{t.textContent="＋"},1200);
+  }
+});
 $("#sysToEst").onclick=()=>{
   if(!sysScan) return;
   const useDiff=$("#sysUseDiff").checked, snap=load(K_SNAP,null);
