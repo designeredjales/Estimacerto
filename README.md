@@ -23,6 +23,13 @@ No topo da aba Estimativa:
   modelos e templates ficam no banco de dados do artefato (recupera em qualquer aparelho). Aberto como
   arquivo local, fica no navegador.
 
+## Status e demandas ignoradas
+
+Cada demanda tem um **status de andamento** (Não iniciada · Em andamento · Aguardando cliente ·
+Bloqueada · Concluída), editável mesmo com a estimativa fechada; o painel mostra o andamento em % das
+horas e o Arquivo mostra o % concluído. **Ignorar** tira a demanda dos totais, do Toggl e do Zoho
+sem excluí-la; as ignoradas ficam ocultas, com “Mostrar ignoradas” e “Reativar”.
+
 ## Estrutura
 
 **Estimativa → Demandas → Linhas.** Uma estimativa tem várias demandas (ex.: *Prateleira deslizante*,

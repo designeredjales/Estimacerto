@@ -81,6 +81,16 @@ td.acts{white-space:nowrap}td.acts .x{font-size:16px}
 .range{display:flex;justify-content:space-between;font-size:13px;margin-top:10px;color:var(--muted)}
 .range b{color:var(--text)}
 .empty{padding:20px;text-align:center;color:var(--muted)}
+select.and{width:auto;font-size:13px;font-weight:600;border-radius:99px;padding:4px 10px}
+span.and{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px}
+.and-nao_iniciada{background:var(--surface-2);color:var(--muted)}
+.and-andamento{background:color-mix(in srgb,#3b82c4 18%,transparent);color:#3b82c4}
+.and-aguardando{background:color-mix(in srgb,#b08a12 20%,transparent);color:#b08a12}
+.and-bloqueada{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.and-concluida{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.dem.ign{opacity:.65;border-style:dashed;padding:10px 16px}
+.dem.ign .dem-h{margin:0}.nome-ign{font-weight:600;flex:1;text-decoration:line-through}
+.ignbar{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin:-6px 0 10px}
 .estbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed var(--line)}
 .estbar select{width:auto}
 .pill.st-r{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
@@ -209,6 +219,9 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
         <hr>
         <h3 style="margin-bottom:6px">Por demanda</h3>
         <div id="barsDem"></div>
+        <hr>
+        <h3 style="margin-bottom:6px">Andamento (horas)</h3>
+        <div id="andBox"></div>
         <hr>
         <h3 style="margin-bottom:6px">Por fase</h3>
         <div id="barsFase"></div>
@@ -559,22 +572,27 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
 
 /* ================= CÁLCULO ================= */
 const lineMin=l=>(+l.qtd||0)*(+l.min||0);
+// demanda entra nos totais, no Toggl e no Zoho só se não estiver em discussão nem ignorada
+const contaDem=d=>d.status!=="discussao"&&!d.ignorada;
+const ANDAMENTO=[["nao_iniciada","Não iniciada"],["andamento","Em andamento"],["aguardando","Aguardando cliente"],["bloqueada","Bloqueada"],["concluida","Concluída"]];
+const andLabel=v=>(ANDAMENTO.find(a=>a[0]===v)||ANDAMENTO[0])[1];
+let mostrarIgn=false;
 const lineFase=l=>(proc(l.cod)||{}).fase||l.fase||"Outros";
 function calc(e=est){
-  const c=db.cfg, porDem=[], porFase={};
+  const c=db.cfg, porDem=[], porFase={}, porAnd={};
   let base=0, real=0, estComReal=0;
   (e.demandas||[]).forEach(d=>{
     const t=d.linhas.reduce((s,l)=>s+lineMin(l),0);
     porDem.push(t);
-    if(d.status==="discussao") return;
-    base+=t;
+    if(!contaDem(d)) return;
+    base+=t; porAnd[d.andamento||"nao_iniciada"]=(porAnd[d.andamento||"nao_iniciada"]||0)+t;
     d.linhas.forEach(l=>{
       porFase[lineFase(l)]=(porFase[lineFase(l)]||0)+lineMin(l);
       if(l.real!==undefined&&l.real!==""&&l.real!==null){real+=+l.real;estComReal+=lineMin(l)}
     });
   });
   const res=base*(c.cont+c.gest)/100, total=base+res;
-  return {base,res,total,porDem,porFase,real,estComReal,
+  return {base,res,total,porDem,porFase,porAnd,real,estComReal,
     dias:total/60/(c.hdia*c.equipe), valor:total/60*c.valor, min:total*c.oti, max:total*c.pes};
 }
 
@@ -610,6 +628,10 @@ function renderEst(){
   const popts=procOptions(""), topts=tplOptions();
   $("#demList").innerHTML=est.demandas.map((d,di)=>{
     const disc=d.status==="discussao";
+    if(d.ignorada&&!mostrarIgn) return "";
+    if(d.ignorada) return `<div class="card dem ign"><div class="dem-h"><span class="nome-ign">${esc(d.nome)}</span>
+      <span class="pill w">ignorada · não entra nos totais, Toggl e Zoho</span><span class="pill">${hm(r.porDem[di])}</span>
+      <button class="btn sm" data-dign="${di}">Reativar</button><button class="x noprint" data-deld="${di}" title="Excluir demanda">×</button></div></div>`;
     const rows=d.linhas.map((l,li)=>{
       const p=proc(l.cod);
       const desc=p?(p.desc?`<span title="${esc(p.desc)}" style="text-decoration:underline dotted">${esc(p.nome)}</span>`:esc(p.nome)):(l.desc?esc(l.desc):'<span class="muted">processo não encontrado</span>');
@@ -631,7 +653,9 @@ function renderEst(){
           <option value="estimar" ${!disc?"selected":""}>Estimar</option>
           <option value="discussao" ${disc?"selected":""}>Em discussão (não soma)</option>
         </select>
+        <select data-d="${di}" data-dk="andamento" class="and and-${d.andamento||"nao_iniciada"}" title="Status de andamento">${ANDAMENTO.map(([k,l])=>`<option value="${k}" ${(d.andamento||"nao_iniciada")===k?"selected":""}>${l}</option>`).join("")}</select>
         <span class="pill">${hm(r.porDem[di])}</span>
+        <button class="btn sm noprint" data-dign="${di}" title="Tirar dos totais, Toggl e Zoho sem excluir">Ignorar</button>
         <button class="x noprint" data-up="${di}" title="Subir">↑</button>
         <button class="x noprint" data-deld="${di}" title="Excluir demanda">×</button>
       </div>
@@ -652,9 +676,11 @@ function renderEst(){
       <div class="sub"><span class="muted">${d.linhas.length} linhas</span><span>Subtotal <b>${hm(r.porDem[di])}</b> (${hrs(r.porDem[di])})${disc?' <span class="pill w">não contabilizada</span>':""}</span></div>
     </div>`;
   }).join("")||'<div class="card empty">Nenhuma demanda. Crie uma, importe um XMind ou carregue o exemplo.</div>';
+  const nIgn=est.demandas.filter(d=>d.ignorada).length;
+  if(nIgn) $("#demList").insertAdjacentHTML("afterbegin",`<div class="ignbar noprint"><span class="muted">${nIgn} demanda${nIgn>1?"s":""} ignorada${nIgn>1?"s":""} (fora dos totais)</span><button class="btn sm" data-mostraign="1">${mostrarIgn?"Ocultar ignoradas":"Mostrar ignoradas"}</button></div>`);
 
   if(est.status==="fechada"){
-    $("#demList").querySelectorAll("input,select,textarea,button").forEach(el=>{if(el.dataset.k!=="real") el.disabled=true});
+    $("#demList").querySelectorAll("input,select,textarea,button").forEach(el=>{if(el.dataset.k!=="real"&&el.dataset.dk!=="andamento"&&!el.dataset.mostraign) el.disabled=true});
     $("#demList").querySelectorAll(".addrow").forEach(el=>el.style.display="none");
   }
   const c=db.cfg;
@@ -666,7 +692,8 @@ function renderEst(){
   $("#rMin").textContent=hrs(r.min); $("#rMax").textContent=hrs(r.max);
   $("#realBox").innerHTML=r.estComReal?`<p class="muted" style="margin:10px 0 0">Calibração: nas linhas com realizado, estimado <b>${hm(r.estComReal)}</b> × real <b>${hm(r.real)}</b> → desvio <b class="${r.real>r.estComReal?"diff up":"diff down"}">${r.real>=r.estComReal?"+":""}${num((r.real/r.estComReal-1)*100,0)}%</b></p>`:"";
   const bars=(arr)=>{const mx=Math.max(1,...arr.map(a=>a[1]));return arr.map(([k,v,x])=>`<div class="bar"><span title="${esc(k)}">${esc(k)}</span><i style="width:${v/mx*100}%;${x?"opacity:.35":""}"></i><span class="n" style="text-align:right">${hrs(v)}</span></div>`).join("")};
-  $("#barsDem").innerHTML=bars(est.demandas.map((d,i)=>[d.nome,r.porDem[i],d.status==="discussao"]).filter(a=>a[1]>0));
+  $("#barsDem").innerHTML=bars(est.demandas.map((d,i)=>[d.nome,r.porDem[i],!contaDem(d)]).filter((a,i)=>a[1]>0&&!est.demandas[i].ignorada));
+  $("#andBox").innerHTML=r.base?ANDAMENTO.filter(([k])=>r.porAnd[k]).map(([k,l])=>`<div class="bar"><span><span class="and and-${k}">${esc(l)}</span></span><i style="width:${r.porAnd[k]/r.base*100}%"></i><span class="n" style="text-align:right">${num(r.porAnd[k]/r.base*100,0)}%</span></div>`).join(""):"";
   $("#barsFase").innerHTML=bars(Object.entries(r.porFase).sort((a,b)=>b[1]-a[1]));
   $("#memo").textContent=r.base?`Memória: ${hrs(r.base)} estimadas + ${c.cont}% contingência${c.gest?` + ${c.gest}% gestão`:""} = ${hrs(r.total)} ÷ (${c.hdia} h/dia × ${c.equipe} pessoa${c.equipe>1?"s":""}) · ${brl(c.valor)}/h.`:"";
 }
@@ -713,6 +740,10 @@ dl.addEventListener("click",async e=>{
     const [di,li]=ds.dell.split(":").map(Number); est.demandas[di].linhas.splice(li,1); persist(); renderEst();
   }else if(ds.deld!==undefined){
     if(await uiConfirm(`Excluir a demanda “${est.demandas[+ds.deld].nome}”?`)){est.demandas.splice(+ds.deld,1);persist();renderEst()}
+  }else if(ds.dign!==undefined){
+    const d=est.demandas[+ds.dign]; d.ignorada=!d.ignorada; persist(); renderEst();
+  }else if(ds.mostraign!==undefined){
+    mostrarIgn=!mostrarIgn; renderEst();
   }else if(ds.dmod!==undefined){
     const d=est.demandas[+ds.dmod], nome=(await uiPrompt("Nome do modelo:",d.nome)||"").trim(); if(!nome) return;
     let n=db.modelos.length+1, cod; do{cod="MD-"+String(n++).padStart(2,"0")}while(db.modelos.some(m=>m.cod===cod));
@@ -736,10 +767,11 @@ $("#btnPrint").onclick=()=>window.print();
 $("#btnCsv").onclick=()=>{
   const r=calc(), c=db.cfg;
   const rows=[["Projeto",est.nome],["Responsável",est.resp],["Data",est.data],[],
-    ["Demanda","Status","Fase","Código","Atividade","Detalhe","Unidade","Qtd","min/unid","Total (min)","Total (h)","Real (min)"]];
+    ["Demanda","Tipo","Andamento","Ignorada","Fase","Código","Atividade","Detalhe","Unidade","Qtd","min/unid","Total (min)","Total (h)","Real (min)"]];
   est.demandas.forEach(d=>{
-    if(!d.linhas.length) rows.push([d.nome,d.status,"","",d.obs]);
-    d.linhas.forEach(l=>{const p=proc(l.cod);rows.push([d.nome,d.status,lineFase(l),l.cod,p?p.nome:l.desc,l.det,p?p.un:"",l.qtd,l.min,lineMin(l),(lineMin(l)/60).toFixed(2),l.real??""])});
+    const dc=[d.nome,d.status,andLabel(d.andamento),d.ignorada?"sim":""];
+    if(!d.linhas.length) rows.push([...dc,"","",d.obs]);
+    d.linhas.forEach(l=>{const p=proc(l.cod);rows.push([...dc,lineFase(l),l.cod,p?p.nome:l.desc,l.det,p?p.un:"",l.qtd,l.min,lineMin(l),(lineMin(l)/60).toFixed(2),l.real??""])});
   });
   rows.push([],["Horas estimadas",(r.base/60).toFixed(2)],["Contingência %",c.cont],["Gestão extra %",c.gest],["Total horas",(r.total/60).toFixed(2)],["Prazo dias úteis",r.dias.toFixed(1)],["Valor/hora",c.valor],["Investimento",r.valor.toFixed(2)]);
   download("﻿"+toCsv(rows),(est.nome||"estimativa")+".csv","text/csv");
@@ -998,9 +1030,9 @@ function renderArquivo(){
   let mes="", h="";
   lista.forEach(e=>{
     const m=mesFmt(dataDe(e)); if(m!==mes){mes=m;h+=`<tr class="mes"><td colspan="6">${esc(m)}</td></tr>`}
-    const r=calc(e), st=e.arquivada?'<span class="pill st-a">arquivada</span>':e.status==="fechada"?'<span class="pill st-f">fechada</span>':'<span class="pill st-r">rascunho</span>';
+    const r=calc(e), pc=r.base?Math.round((r.porAnd.concluida||0)/r.base*100):0, st=e.arquivada?'<span class="pill st-a">arquivada</span>':e.status==="fechada"?'<span class="pill st-f">fechada</span>':'<span class="pill st-r">rascunho</span>';
     h+=`<tr class="${e.id===est.id?"cur":""}"><td><b>${esc(e.nome||"(sem nome)")}</b> <span class="pill">v${e.versao||1}</span>${e.id===est.id?' <span class="muted">· aberta</span>':""}</td>
-      <td>${st}</td><td class="n">${hrs(r.total)}</td><td class="n">${brl(r.valor)}</td>
+      <td>${st}${pc?` <span class="muted">${pc}% concluído</span>`:""}</td><td class="n">${hrs(r.total)}</td><td class="n">${brl(r.valor)}</td>
       <td class="muted" title="Atualizada em ${new Date(e.atualizadoEm||0).toLocaleString("pt-BR")}">${e.data?new Date(e.data+"T12:00:00").toLocaleDateString("pt-BR"):""}</td>
       <td class="acts">${e.id!==est.id?`<button class="btn sm pri" data-aab="${e.id}">Abrir</button>`:""}<button class="btn sm" data-aren="${e.id}">Renomear</button><button class="btn sm" data-aver="${e.id}">Nova versão</button><button class="btn sm" data-aarq="${e.id}">${e.arquivada?"Desarquivar":"Arquivar"}</button><button class="x" data-adel="${e.id}" title="Excluir">×</button></td></tr>`;
   });
@@ -1559,7 +1591,7 @@ $("#dbCalib").onclick=()=>{
 // Cliente = projeto/cliente da estimativa · Projeto = demanda · Task = cada passo (linha), com tempo estimado
 function estruturaToggl(){
   const c=db.cfg, cli=(est.nome||"Estimativa").trim();
-  return est.demandas.filter(d=>d.status!=="discussao"&&d.linhas.length).map(d=>{
+  return est.demandas.filter(d=>contaDem(d)&&d.linhas.length).map(d=>{
     d.toggl=`${cli} · ${d.nome}`.slice(0,255);
     const tasks=d.linhas.map((l,i)=>{
       const p=proc(l.cod), nome=p?p.nome:(l.desc||"Atividade");
@@ -1694,7 +1726,7 @@ const zCall=(tool,input)=>zMcp.callTool(ZS,tool,input,{cache:false}).then(zPay);
 const zHead=()=>({"X-com-zoho-invoice-organizationid":zOrg});
 function linhasOrcamento(modo){
   const c=db.cfg, fator=1+(c.cont+c.gest)/100, h=v=>Math.round(v/60*fator*100)/100;
-  const dems=est.demandas.filter(d=>d.status!=="discussao"&&d.linhas.length);
+  const dems=est.demandas.filter(d=>contaDem(d)&&d.linhas.length);
   const resumo=d=>d.linhas.map(l=>{const p=proc(l.cod);return `${l.qtd}× ${p?p.nome:l.desc}${l.det?" ("+l.det+")":""}`}).join("; ").slice(0,1900);
   if(modo==="unica"){const tot=dems.reduce((s,d)=>s+d.linhas.reduce((a,l)=>a+lineMin(l),0),0);
     return [{name:("Customização de biblioteca Promob — "+(est.nome||"")).slice(0,100),description:("Demandas: "+dems.map(d=>d.nome).join("; ")).slice(0,1900),quantity:h(tot),rate:c.valor}]}
