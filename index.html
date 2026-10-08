@@ -75,6 +75,17 @@ tr.cat td{background:var(--surface-2);font-weight:600;font-size:13px}
 .range{display:flex;justify-content:space-between;font-size:13px;margin-top:10px;color:var(--muted)}
 .range b{color:var(--text)}
 .empty{padding:20px;text-align:center;color:var(--muted)}
+dialog#modal{border:1px solid var(--line);border-radius:12px;padding:0;background:var(--surface);color:var(--text);width:min(980px,calc(100vw - 24px));max-height:calc(100vh - 32px)}
+dialog#modal::backdrop{background:rgba(0,0,0,.45)}
+.mbox{display:flex;flex-direction:column;max-height:calc(100vh - 34px)}
+.mhead{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.mhead h2{margin:0;flex:1}
+#mBody{padding:14px 16px;overflow:auto}
+#mFoot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:12px 16px;border-top:1px solid var(--line)}
+#mBody textarea.code{font:12px/1.4 ui-monospace,Consolas,monospace;min-height:220px;white-space:pre}
+.msg{padding:8px 10px;border-radius:6px;background:var(--surface-2);font-size:13px;margin:8px 0}
+.msg.err{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.msg.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
 .diff{font-size:12px;color:var(--muted)}
 .diff.up{color:var(--warn)}.diff.down{color:var(--ok)}
@@ -90,6 +101,10 @@ tr.cat td{background:var(--surface-2);font-weight:600;font-size:13px}
 .tree i::before{content:"";position:absolute;left:0;top:-3px;width:7px;height:4px;border-radius:2px 2px 0 0;background:inherit}
 .tree .ic-pasta{background:#e8b53a}.tree .ic-oculto{background:#9a9890}.tree .ic-arq{background:#7a9cc6;width:11px;height:14px}
 .tree .ic-arq::before{display:none}
+.tree .ic-ent{background:none;border:1.5px solid var(--accent);width:10px;height:10px;border-radius:2px}
+.tree .ic-ent::before{display:none}
+.tree .tent{gap:10px;font-size:13px}
+.tree .tent .eab{min-width:60px;white-space:nowrap}
 .tree .tl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .tree .tid{font-size:11px;white-space:nowrap}
 .tree .pill{margin-left:auto}
@@ -136,6 +151,8 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
           <button class="btn" id="btnLoadEst">Abrir (.json)</button>
           <button class="btn" id="btnExemplo">Carregar exemplo</button>
           <button class="btn" id="btnClear">Limpar</button>
+          <button class="btn" id="btnToggl">Toggl</button>
+          <button class="btn" id="btnZoho">Orçamento Zoho Invoice</button>
         </div>
       </div>
       <div id="demList"></div>
@@ -182,8 +199,15 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
       <button class="btn" id="dbImport">Importar banco (.json / .csv)</button>
       <button class="btn" id="dbReset">Restaurar padrão</button>
     </div>
+    <div class="toolbar">
+      <button class="btn pri" id="dbXmind">Importar XMind no banco</button>
+      <button class="btn" id="dbCalib">Calibrar pelo realizado</button>
+      <span class="muted">Em lote, nos processos filtrados:</span>
+      <input type="number" id="bulkPct" value="10" step="1" style="width:70px" title="%"> <button class="btn" id="bulkPctBtn">Ajustar tempo %</button>
+      <select id="bulkFase" style="width:auto"></select> <button class="btn" id="bulkFaseBtn">Mover para fase</button>
+    </div>
     <div class="tbl"><table>
-      <thead><tr><th style="width:80px">Código</th><th style="width:130px">Fase</th><th style="width:150px">Grupo</th><th>Processo</th><th style="width:100px">Unidade</th><th class="n" style="width:90px">min/unid.</th><th style="width:100px">Fonte</th><th></th></tr></thead>
+      <thead><tr><th style="width:80px">Código</th><th style="width:130px">Fase</th><th style="width:150px">Grupo</th><th>Processo</th><th style="width:100px">Unidade</th><th class="n" style="width:90px">min/unid.</th><th style="width:100px">Fonte</th><th style="width:170px">Reconhecimento XMind</th><th></th></tr></thead>
       <tbody id="procBody"></tbody>
     </table></div>
   </div>
@@ -242,6 +266,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
 </main>
 
 <input type="file" id="fileIn" hidden>
+<dialog id="modal"><div class="mbox"><div class="mhead"><h2 id="mTit"></h2><button class="x" id="mClose" title="Fechar">×</button></div><div id="mBody"></div><div id="mFoot"></div></div></dialog>
 
 <script>
 /* =====================================================================
@@ -614,8 +639,8 @@ function xmindToDemandas(sheet){
           const clean=path.filter(x=>!isFiller(x)&&!RX_NUM.test(x));
           const p=matchProc(clean), last=clean[clean.length-1]||"";
           const fase=clean[0]||"";
-          if(p) d.linhas.push({cod:p.cod,det:last,qtd:q,min});
-          else d.linhas.push({cod:"",desc:clean.slice(1).join(" › ")||last,fase,det:"",qtd:q,min});
+          if(p){const a=norm(p.nome),b=norm(last);d.linhas.push({cod:p.cod,det:(a.startsWith(b)||b.startsWith(a))?"":last,qtd:q,min,path:clean})}
+          else d.linhas.push({cod:"",desc:clean.slice(1).join(" › ")||last,fase,det:"",qtd:q,min,path:clean});
         }else walk(c,[...path,ct]);
       });
       if(!kids(t).length&&!isFiller(ti)&&path.length===1&&ti!==d.nome) notes.push(ti);
@@ -648,7 +673,7 @@ function renderProc(){
   fases().forEach(fase=>{
     const ps=db.processos.map((p,i)=>({p,i})).filter(({p})=>p.fase===fase&&(!f||norm(p.cod+" "+p.grupo+" "+p.nome+" "+p.un).includes(f)));
     if(!ps.length) return;
-    h+=`<tr class="cat"><td colspan="8">${esc(fase)} <span class="pill">${ps.length}</span></td></tr>`;
+    h+=`<tr class="cat"><td colspan="9">${esc(fase)} <span class="pill">${ps.length}</span></td></tr>`;
     h+=ps.map(({p,i})=>`<tr>
       <td><input value="${esc(p.cod)}" data-i="${i}" data-k="cod"></td>
       <td><input value="${esc(p.fase)}" data-i="${i}" data-k="fase" list="faseList"></td>
@@ -657,8 +682,10 @@ function renderProc(){
       <td><input value="${esc(p.un)}" data-i="${i}" data-k="un"></td>
       <td class="n"><input type="number" min="0" step="1" value="${p.min}" data-i="${i}" data-k="min"></td>
       <td><select data-i="${i}" data-k="fonte"><option value="H" ${p.fonte==="H"?"selected":""}>Histórico</option><option value="M" ${p.fonte!=="H"?"selected":""}>Manual</option></select></td>
+      <td><input value="${esc((p.alias||[]).join("; "))}" data-i="${i}" data-k="alias" placeholder="trecho do caminho; outro" title="Trechos do caminho no XMind que identificam este processo (separe com ;)"></td>
       <td><button class="x" data-pdel="${i}" title="Excluir">×</button></td></tr>`).join("");
   });
+  $("#bulkFase").innerHTML=fases().map(f=>`<option>${esc(f)}</option>`).join("")+'<option value="__nova">+ nova fase…</option>';
   $("#procBody").innerHTML=(h||'<tr><td colspan="8" class="empty">Nada encontrado.</td></tr>')+`<datalist id="faseList">${fases().map(c=>`<option value="${esc(c)}">`).join("")}</datalist>`;
 }
 $("#procBody").addEventListener("change",e=>{
@@ -670,7 +697,8 @@ $("#procBody").addEventListener("change",e=>{
     db.modelos.forEach(m=>m.itens.forEach(it=>{if(it[0]===old) it[0]=v}));
     est.demandas.forEach(d=>d.linhas.forEach(l=>{if(l.cod===old) l.cod=v}));
     Object.keys(db.vinculos).forEach(k2=>{if(db.vinculos[k2]===old) db.vinculos[k2]=v});
-  }else p[k]=k==="min"?Math.max(0,+t.value||0):t.value.trim();
+  }else if(k==="alias") p.alias=t.value.split(";").map(x=>x.trim()).filter(Boolean);
+  else p[k]=k==="min"?Math.max(0,+t.value||0):t.value.trim();
   persist(); if(k==="fase") renderProc();
 });
 $("#procBody").addEventListener("click",e=>{
@@ -786,6 +814,8 @@ function addArquivo(sc,parts,size){
 const parser=new DOMParser();
 const ROTULO=["Description","Descricao","Descrição","Name","Nome","Text","Caption","Title","Label"];
 const attr=(el,nomes)=>{for(const n of nomes){for(const v of [n,n.toLowerCase(),n.toUpperCase()]) if(el.hasAttribute(v)) return el.getAttribute(v)}return null};
+const ABREV=["Abbreviation","Abreviatura","Abrev","Abbrev","ShortName","Sigla"], DESCR=["Description","Descricao","Descrição"];
+const textoFilho=(el,nomes)=>{for(const c of el.children){if(nomes.some(n=>n.toLowerCase()===c.localName.toLowerCase())&&!c.children.length) return c.textContent.trim()}return null};
 const ehOculto=el=>{const v=attr(el,["Visible","Visivel","Visível"]);const h=attr(el,["Hidden","Invisible","Oculto"]);return (v!==null&&/^(false|0|n|nao|não)$/i.test(v))||(h!==null&&/^(true|1|s|sim|y)$/i.test(h))};
 function lerXml(sc,parts,txt,arq){
   const add=(k,v=1)=>sc.m[k]=(sc.m[k]||0)+v;
@@ -802,7 +832,8 @@ function lerXml(sc,parts,txt,arq){
     for(const c of el.children){
       const id=attr(c,["ID"]), rot=attr(c,ROTULO);
       if(id!==null||rot!==null){
-        const n={label:(rot||id||c.localName).trim()||c.localName,id,tag:c.localName,kind:"xml",oculto:ehOculto(c),children:[]};
+        const n={label:(rot||id||c.localName).trim()||c.localName,id,tag:c.localName,kind:"xml",oculto:ehOculto(c),children:[],
+          abrev:attr(c,ABREV)??textoFilho(c,ABREV),desc:attr(c,DESCR)??textoFilho(c,DESCR)};
         sc.tags[c.localName]=(sc.tags[c.localName]||0)+1;
         pai.children.push(n); walk(c,n);
       }else walk(c,pai);
@@ -886,22 +917,32 @@ function contar(n){
   n.mods=mods; n.arqs=arqs; return {mods,arqs};
 }
 const qtdNo=n=>sysTag?n.mods:n.arqs;
-const unidade=()=>sysTag?"módulos":"arquivos";
+const unidade=(q=2)=>sysTag?(q===1?"módulo":"módulos"):(q===1?"arquivo":"arquivos");
 // filhos exibidos: esconde as folhas-módulo e arquivos sem conteúdo útil quando há leitura XML
 function filhosVisiveis(n){
   // arquivo com um único grupo raiz aparece direto como o grupo (como no Editor de Módulos)
   const ch=n.children.map(c=>c.kind==="arquivo"&&c.children.length===1&&c.children[0].kind==="xml"&&c.children[0].tag!==sysTag?c.children[0]:c);
-  return ch.filter(c=>{
-    if(c.kind==="xml"&&c.tag===sysTag&&!c.children.some(g=>!(g.kind==="xml"&&g.tag===sysTag)&&qtdNo(g)>0)) return false;
-    return qtdNo(c)>0||c.kind!=="xml";
-  });
+  return ch.filter(c=>ehEntidade(c)||qtdNo(c)>0||c.kind!=="xml");
 }
-function mapaRetrato(n,path,out){out[path]=qtdNo(n);filhosVisiveis(n).forEach(c=>mapaRetrato(c,path+" › "+c.label,out));return out}
+const ehEntidade=n=>n.kind==="xml"&&sysTag&&n.tag===sysTag;
+function mapaRetrato(n,path,out){if(ehEntidade(n)) return out;out[path]=qtdNo(n);filhosVisiveis(n).forEach(c=>mapaRetrato(c,path+" › "+c.label,out));return out}
+// linha de uma entidade (módulo): ID · Abreviatura · Descrição
+function linhaEntidade(n){
+  return `<div class="tleaf tent"><i class="ic-ent"></i><span class="muted tid">${esc(n.id||"—")}</span>
+    <b class="eab">${esc(n.abrev||"")}</b><span class="tl">${esc(n.desc||n.label)}</span>${n.oculto?'<span class="pill">oculto</span>':""}</div>`;
+}
+function entidades(n,path,out=[]){
+  n.children.forEach(c=>{const p=c.kind==="arquivo"?path:path+" › "+c.label;
+    if(ehEntidade(c)) out.push({grupo:path,id:c.id||"",abrev:c.abrev||"",desc:c.desc||c.label,oculto:c.oculto});
+    entidades(c,ehEntidade(c)?path:p,out)});
+  return out;
+}
 function linhaNo(n,path,snapTm){
+  if(ehEntidade(n)) return linhaEntidade(n);
   const i=nodeRef.push({n,path})-1, q=qtdNo(n), base=snapTm?snapTm[path]:undefined, d=base===undefined?null:q-base;
   const kids=filhosVisiveis(n), cls=n.kind==="arquivo"?"ic-arq":n.oculto?"ic-oculto":"ic-pasta";
   const info=`<span class="tl">${esc(n.label)}</span>${n.kind==="xml"&&n.id&&n.id!==n.label?`<span class="muted tid">${esc(n.id)}</span>`:""}
-    <span class="pill ${q?"h":""}">${num(q,0)} ${unidade()}</span>${d?`<span class="diff ${d>0?"up":"down"}">${d>0?"+":""}${num(d,0)}</span>`:""}
+    <span class="pill ${q?"h":""}">${num(q,0)} ${unidade(q)}</span>${d?`<span class="diff ${d>0?"up":"down"}">${d>0?"+":""}${num(d,0)}</span>`:""}
     ${q?`<button class="x tadd" data-tadd="${i}" title="Adicionar à estimativa">＋</button>`:""}`;
   return kids.length
     ?`<details data-ti="${i}"><summary><i class="${cls}"></i>${info}</summary><div class="tk"></div></details>`
@@ -923,6 +964,7 @@ function renderArvore(){
       <label>Contar como módulo<select id="sysTagSel">${tagOpts}</select></label>
       <label style="flex:1;min-width:220px">Processo ao adicionar (＋)<select id="sysProcSel">${procOpts}</select></label>
       <button class="btn" id="sysExpand">Expandir 2 níveis</button>
+      ${sysTag?'<button class="btn" id="sysEntCsv">Exportar entidades (CSV)</button>':""}
     </div>
     <p class="muted" style="margin:0 0 8px">${s.tags&&Object.keys(s.tags).length?"Escolha qual elemento XML é o “módulo” (a ferramenta sugere um). ":""}Cinza = grupo oculto. ${tm?"Números em laranja/verde = diferença vs. retrato. ":""}O ＋ adiciona o grupo à estimativa, com a quantidade de ${unidade()}${$("#sysUseDiff").checked&&tm?" (diferença)":""}.</p>
     <div class="tree">${linhaNo(s.tree,s.tree.label,tm)}</div>`;
@@ -970,6 +1012,11 @@ $("#sysSnap").onclick=()=>{
 $("#sysOut").addEventListener("toggle",e=>{if(e.target.matches("details[data-ti]")&&e.target.open) abrirNo(e.target)},true);
 $("#sysOut").addEventListener("click",e=>{
   const t=e.target;
+  if(t.id==="sysEntCsv"){
+    const es=entidades(sysScan.tree,sysScan.tree.label);
+    download("\ufeff"+toCsv([["Grupo","ID","Abreviatura","Descrição","Oculto"],...es.map(e=>[e.grupo,e.id,e.abrev,e.desc,e.oculto?"sim":""])]),"entidades-"+sysScan.raiz+".csv","text/csv");
+    return;
+  }
   if(t.id==="sysExpand"){
     const top=document.querySelector("#sysOut .tree>details"); if(!top) return;
     top.open=true; abrirNo(top); top.querySelectorAll(":scope>.tk>details").forEach(d=>{d.open=true;abrirNo(d)});
@@ -1000,6 +1047,318 @@ $("#sysToEst").onclick=()=>{
   if(!linhas.length){alert("Nenhuma métrica vinculada com quantidade > 0.");return}
   est.demandas.push({nome:(useDiff?"Produzido no System":"Inventário do System")+" — "+sysScan.raiz,status:"estimar",obs:`Gerado pelo Leitor de System em ${sysScan.quando}${useDiff?" (diferença vs. retrato de "+snap.quando+")":""}.`,linhas});
   persist(); document.querySelector('nav button[data-tab="est"]').click();
+};
+
+
+/* ================= MODAL ================= */
+function abrirModal(titulo,corpo,botoes=[]){
+  $("#mTit").textContent=titulo; $("#mBody").innerHTML=corpo;
+  $("#mFoot").innerHTML="";
+  botoes.forEach(b=>{const el=document.createElement("button");el.className="btn"+(b.pri?" pri":"");el.textContent=b.label;el.onclick=b.fn;if(b.id) el.id=b.id;$("#mFoot").appendChild(el)});
+  const fechar=document.createElement("button");fechar.className="btn";fechar.textContent="Fechar";fechar.onclick=fecharModal;$("#mFoot").appendChild(fechar);
+  const m=$("#modal"); if(!m.open) m.showModal();
+}
+function fecharModal(){const m=$("#modal"); if(m.open) m.close()}
+$("#mClose").onclick=fecharModal;
+async function copiar(id){
+  const t=document.getElementById(id); t.select();
+  try{await navigator.clipboard.writeText(t.value)}catch(e){try{document.execCommand("copy")}catch(_){}}
+}
+
+/* ================= BANCO: XMIND, CALIBRAÇÃO, LOTE ================= */
+const filtrados=()=>{const f=norm($("#pFiltro").value);return db.processos.filter(p=>!f||norm(p.cod+" "+p.grupo+" "+p.nome+" "+p.un).includes(f))};
+$("#bulkPctBtn").onclick=()=>{
+  const pct=+$("#bulkPct").value||0, ps=filtrados(); if(!pct||!ps.length) return;
+  if(!confirm(`Ajustar ${pct>0?"+":""}${pct}% o tempo de ${ps.length} processos filtrados?`)) return;
+  ps.forEach(p=>p.min=Math.max(0,Math.round(p.min*(1+pct/100)*10)/10)); persist(); renderProc();
+};
+$("#bulkFaseBtn").onclick=()=>{
+  let fase=$("#bulkFase").value, ps=filtrados(); if(!ps.length) return;
+  if(fase==="__nova"){fase=(prompt("Nome da nova fase:")||"").trim(); if(!fase) return}
+  if(!confirm(`Mover ${ps.length} processos filtrados para a fase “${fase}”?`)) return;
+  ps.forEach(p=>p.fase=fase); persist(); renderProc();
+};
+const prefixo=f=>(norm(f).replace(/[^a-z]/g,"").slice(0,3)||"nov").toUpperCase();
+function novoCodigo(fase,usados){let n=1,c;const pf=prefixo(fase);do{c=pf+"-"+String(n++).padStart(2,"0")}while(proc(c)||usados.has(c));usados.add(c);return c}
+let xmPend=null;
+function montarRevisaoXmind(agrupar){
+  const linhas=xmPend.linhas, usados=new Set(), atual=new Map(), novos=new Map();
+  linhas.forEach(l=>{
+    if(l.cod){
+      const a=atual.get(l.cod)||{cod:l.cod,qtd:0,tot:0,n:0}; a.qtd+=l.qtd; a.tot+=l.qtd*l.min; a.n++; atual.set(l.cod,a);
+    }else{
+      const path=l.path||[l.desc], base=agrupar&&path.length>=3?path.slice(0,-1):path, k=norm(base.join(">"));
+      const nv=novos.get(k)||{path:base,qtd:0,tot:0,n:0,vars:new Set()}; nv.qtd+=l.qtd; nv.tot+=l.qtd*l.min; nv.n++;
+      if(base!==path) nv.vars.add(path[path.length-1]); novos.set(k,nv);
+    }
+  });
+  const faseDe=x=>fases().find(f=>norm(f)===norm(x))||x;
+  xmPend.atual=[...atual.values()].map(a=>({...a,min:Math.round(a.tot/a.qtd*10)/10,p:proc(a.cod)})).filter(a=>a.p);
+  xmPend.novos=[...novos.values()].map(nv=>{
+    const fase=faseDe(nv.path[0]||"Cadastros");
+    return {fase,grupo:nv.path.length>2?nv.path[1]:"",nome:(nv.path.length>2?nv.path.slice(2):nv.path.slice(1)).join(" › ")||nv.path[0],
+      min:Math.round(nv.tot/nv.qtd*10)/10,alias:[nv.path.join(">")],cod:novoCodigo(fase,usados),vars:[...nv.vars],n:nv.n};
+  });
+  const rA=xmPend.atual.map((a,i)=>`<tr><td><input type="checkbox" data-xa="${i}" ${Math.abs(a.min-a.p.min)>=0.1?"checked":""}></td><td>${esc(a.cod)}</td><td>${esc(a.p.nome)}</td><td class="n">${num(a.p.min)}</td><td class="n"><b>${num(a.min)}</b></td><td class="n">${a.n}</td></tr>`).join("");
+  const rN=xmPend.novos.map((n,i)=>`<tr><td><input type="checkbox" data-xn="${i}" checked></td>
+    <td><input value="${esc(n.cod)}" data-xnk="cod" data-xi="${i}" style="width:80px"></td>
+    <td><input value="${esc(n.fase)}" data-xnk="fase" data-xi="${i}" list="faseList"></td>
+    <td><input value="${esc(n.grupo)}" data-xnk="grupo" data-xi="${i}"></td>
+    <td><input value="${esc(n.nome)}" data-xnk="nome" data-xi="${i}">${n.vars.length?`<div class="diff">variantes: ${esc(n.vars.join(", "))}</div>`:""}</td>
+    <td class="n"><input type="number" min="0" value="${n.min}" data-xnk="min" data-xi="${i}"></td></tr>`).join("");
+  $("#mBody").innerHTML=`<p class="muted">Arquivo <b>${esc(xmPend.nome)}</b>: ${linhas.length} linhas com tempo. Marque o que entra no banco. Os tempos sugeridos são a média ponderada pela quantidade.</p>
+    <label style="flex-direction:row;gap:6px;align-items:center;margin:6px 0"><input type="checkbox" id="xmAgr" ${agrupar?"checked":""}> Agrupar variantes: o último nível do caminho vira detalhe (ex.: Caixas › Banheiro / Sala → um processo “Caixas”)</label>
+    <h3 style="margin:14px 0 6px">Processos novos (${xmPend.novos.length})</h3>
+    ${rN?`<div class="tbl"><table><thead><tr><th></th><th>Código</th><th>Fase</th><th>Grupo</th><th>Processo</th><th class="n">min/unid.</th></tr></thead><tbody>${rN}</tbody></table></div>`:'<p class="muted">Todos os caminhos já são reconhecidos pelo banco.</p>'}
+    <h3 style="margin:14px 0 6px">Atualizar tempo de processos existentes (${xmPend.atual.length})</h3>
+    ${rA?`<div class="tbl"><table><thead><tr><th></th><th>Cód.</th><th>Processo</th><th class="n">Atual</th><th class="n">No XMind</th><th class="n">Ocorr.</th></tr></thead><tbody>${rA}</tbody></table></div>`:'<p class="muted">Nenhum.</p>'}
+    <datalist id="faseList">${fases().map(c=>`<option value="${esc(c)}">`).join("")}</datalist>`;
+  $("#xmAgr").onchange=e=>montarRevisaoXmind(e.target.checked);
+}
+$("#dbXmind").onclick=()=>pickFile(".xmind",async f=>{
+  const txt=await unzipEntry(await f.arrayBuffer(),"content.json");
+  if(!txt) throw new Error("este .xmind não tem content.json (formato XMind 8 antigo).");
+  const linhas=xmindToDemandas(JSON.parse(txt)[0]).flatMap(d=>d.linhas).filter(l=>l.min>0&&l.qtd>0);
+  if(!linhas.length) throw new Error("nenhuma linha com quantidade e minutos encontrada.");
+  xmPend={nome:f.name,linhas};
+  abrirModal("Importar XMind no banco de processos","",[{label:"Aplicar ao banco",pri:true,fn:()=>{
+    let nN=0,nA=0;
+    document.querySelectorAll("[data-xnk]").forEach(inp=>{const n=xmPend.novos[+inp.dataset.xi],k=inp.dataset.xnk;n[k]=k==="min"?Math.max(0,+inp.value||0):inp.value.trim()});
+    xmPend.novos.forEach((n,i)=>{
+      if(!document.querySelector(`[data-xn="${i}"]`).checked) return;
+      if(!n.cod||proc(n.cod)){alert(`Código ${n.cod||"(vazio)"} já existe; ajuste e aplique de novo.`);throw new Error("código duplicado")}
+      db.processos.push({cod:n.cod,fase:n.fase,grupo:n.grupo,nome:n.nome,un:"unid.",min:n.min,fonte:"H",alias:n.alias}); nN++;
+    });
+    xmPend.atual.forEach((a,i)=>{if(document.querySelector(`[data-xa="${i}"]`).checked){a.p.min=a.min;a.p.fonte="H";nA++}});
+    persist(); render(); fecharModal(); alert(`${nN} processos criados e ${nA} tempos atualizados.`);
+  }}]);
+  montarRevisaoXmind(true);
+});
+$("#dbCalib").onclick=()=>{
+  const acc={};
+  est.demandas.forEach(d=>d.linhas.forEach(l=>{
+    if(!l.cod||l.real===undefined||l.real===null||l.real===""||!l.qtd) return;
+    const a=acc[l.cod]||(acc[l.cod]={real:0,qtd:0,n:0}); a.real+=+l.real; a.qtd+=+l.qtd; a.n++;
+  }));
+  const rows=Object.entries(acc).map(([cod,a])=>({cod,p:proc(cod),min:Math.round(a.real/a.qtd*10)/10,n:a.n})).filter(r=>r.p);
+  if(!rows.length){alert("Nenhuma linha com “Real (min)” preenchido na estimativa atual.");return}
+  abrirModal("Calibrar tempos pelo realizado",`<p class="muted">Tempo realizado por unidade = Σ real ÷ Σ quantidade, nas linhas da estimativa atual com realizado preenchido.</p>
+    <div class="tbl"><table><thead><tr><th></th><th>Cód.</th><th>Processo</th><th class="n">Atual</th><th class="n">Realizado</th><th class="n">Desvio</th><th class="n">Linhas</th></tr></thead><tbody>
+    ${rows.map((r,i)=>{const dv=r.p.min?(r.min/r.p.min-1)*100:0;return `<tr><td><input type="checkbox" data-cb="${i}" checked></td><td>${esc(r.cod)}</td><td>${esc(r.p.nome)}</td><td class="n">${num(r.p.min)}</td><td class="n"><b>${num(r.min)}</b></td><td class="n ${dv>0?"diff up":"diff down"}">${dv>0?"+":""}${num(dv,0)}%</td><td class="n">${r.n}</td></tr>`}).join("")}
+    </tbody></table></div>`,[{label:"Aplicar",pri:true,fn:()=>{
+      let n=0; rows.forEach((r,i)=>{if(document.querySelector(`[data-cb="${i}"]`).checked){r.p.min=r.min;r.p.fonte="H";n++}});
+      persist(); render(); fecharModal(); alert(n+" tempos-padrão calibrados.");
+    }}]);
+};
+
+/* ================= TOGGL ================= */
+// Cliente = projeto/cliente da estimativa · Projeto = demanda · Task = cada passo (linha), com tempo estimado
+function estruturaToggl(){
+  const c=db.cfg, cli=(est.nome||"Estimativa").trim();
+  return est.demandas.filter(d=>d.status!=="discussao"&&d.linhas.length).map(d=>{
+    d.toggl=`${cli} · ${d.nome}`.slice(0,255);
+    const tasks=d.linhas.map((l,i)=>{
+      const p=proc(l.cod), nome=p?p.nome:(l.desc||"Atividade");
+      l.toggl=`${String(i+1).padStart(2,"0")}. ${l.cod?l.cod+" ":""}${nome}${l.det?" — "+l.det:""}`.slice(0,255);
+      return {nome:l.toggl,seg:Math.round(lineMin(l)*60)};
+    });
+    const min=d.linhas.reduce((s,l)=>s+lineMin(l),0);
+    return {nome:d.toggl,horas:Math.max(1,Math.ceil(min/60*(1+(c.cont+c.gest)/100))),tasks};
+  });
+}
+const psq=v=>"'"+String(v).replace(/'/g,"''")+"'";
+function scriptToggl(token){
+  const e=estruturaToggl(), cli=(est.nome||"Estimativa").trim();
+  const dados=e.map(p=>`  @{ nome=${psq(p.nome)}; horas=${p.horas}; tasks=@(\n${p.tasks.map(t=>`    @{ nome=${psq(t.nome)}; seg=${t.seg} }`).join(",\n")}\n  ) }`).join(",\n");
+  return `# EstimaCerto → Toggl Track · ${cli} · gerado em ${new Date().toLocaleString("pt-BR")}
+# Cole no PowerShell e tecle Enter. Cria: Cliente › Projetos (demandas) › Tasks (passo a passo com tempo estimado).
+# Tasks exigem plano Starter ou superior no Toggl.
+$token = ${psq(token||"COLE_SEU_TOKEN_AQUI")}
+$api = 'https://api.track.toggl.com/api/v9'
+$h = @{ Authorization = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("$($token):api_token")) }
+function Post($url,$obj){ Invoke-RestMethod $url -Method Post -Headers $h -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes(($obj | ConvertTo-Json -Depth 5))) }
+$ws = (Invoke-RestMethod "$api/me" -Headers $h).default_workspace_id
+$clientes = @(Invoke-RestMethod "$api/workspaces/$ws/clients" -Headers $h)
+$cliente = $clientes | Where-Object { $_.name -eq ${psq(cli)} } | Select-Object -First 1
+if (-not $cliente) { $cliente = Post "$api/workspaces/$ws/clients" @{ name=${psq(cli)}; wid=$ws }; Write-Host "Cliente criado: ${cli.replace(/"/g,"'")}" }
+$projetos = @(Invoke-RestMethod "$api/workspaces/$ws/projects?active=both&per_page=500" -Headers $h)
+$estrutura = @(
+${dados}
+)
+$semPlano = $false
+foreach ($p in $estrutura) {
+  $proj = $projetos | Where-Object { $_.name -eq $p.nome } | Select-Object -First 1
+  if (-not $proj) { $proj = Post "$api/workspaces/$ws/projects" @{ name=$p.nome; active=$true; client_id=$cliente.id; estimated_hours=$p.horas; is_private=$true }; Write-Host "Projeto criado: $($p.nome)" }
+  else { Write-Host "Projeto já existia: $($p.nome)" }
+  if ($semPlano) { continue }
+  $existentes = @(); try { $existentes = @(Invoke-RestMethod "$api/workspaces/$ws/projects/$($proj.id)/tasks" -Headers $h) } catch {}
+  foreach ($t in $p.tasks) {
+    if ($existentes | Where-Object { $_.name -eq $t.nome }) { continue }
+    try { Post "$api/workspaces/$ws/projects/$($proj.id)/tasks" @{ name=$t.nome; active=$true; estimated_seconds=$t.seg } | Out-Null; Write-Host "   task: $($t.nome)" }
+    catch { Write-Warning "Task não criada: $($t.nome) — $($_.Exception.Message). Se for 402/403, o plano do Toggl não permite Tasks."; $semPlano = $true; break }
+  }
+}
+Write-Host 'Concluído.'
+`;
+}
+function promptToggl(token){
+  const e=estruturaToggl(), cli=(est.nome||"Estimativa").trim();
+  return `Você vai criar um Cliente, Projetos e Tasks (tarefas) no Toggl Track via API, referentes à estimativa de esforço "${cli}" (customização de biblioteca Promob), gerada no EstimaCerto.
+
+Credencial (Toggl Track API v9, Basic Auth com o token como username e a senha literal "api_token"):
+TOGGL_API_TOKEN = ${token||"[COLE O TOKEN AQUI ANTES DE EXECUTAR]"}
+
+Passos:
+
+1. Descobrir o workspace: GET https://api.track.toggl.com/api/v9/me -u "TOGGL_API_TOKEN:api_token" — pegue o \`default_workspace_id\`.
+
+2. Cliente: GET .../workspaces/{workspace_id}/clients; se não existir um cliente chamado "${cli}", crie com POST .../workspaces/{workspace_id}/clients body {"name": "${cli}", "wid": workspace_id}.
+
+3. Listar projetos existentes: GET .../workspaces/{workspace_id}/projects?active=both — para não duplicar projetos com o mesmo nome.
+
+4. Para cada projeto abaixo, crie-o se não existir (POST .../workspaces/{workspace_id}/projects com body {"name": "<nome>", "active": true, "client_id": <id do cliente>, "estimated_hours": <horas>, "is_private": true}), e depois crie as Tasks dentro dele na ordem listada (POST .../workspaces/{workspace_id}/projects/{project_id}/tasks com body {"name": "<nome da task>", "active": true, "estimated_seconds": <segundos>}), pulando as que já existirem com o mesmo nome.
+
+IMPORTANTE: a criação de Tasks no Toggl é um recurso de plano pago (Starter ou superior). Se a API retornar erro 402/403 relacionado a permissão de plano ao tentar criar uma task, pare de tentar criar tasks, reporte isso claramente no resumo final, e diga que as tasks não puderam ser criadas por limitação de plano — não invente sucesso.
+
+Estrutura a criar:
+
+${e.map(p=>`**Projeto: "${p.nome}"** (estimated_hours: ${p.horas})\n${p.tasks.map(t=>`- Task: "${t.nome}" (estimated_seconds: ${t.seg})`).join("\n")}`).join("\n\n")}
+
+5. Ao final, gere um resumo em português, tom executivo e direto, listando: quais projetos/tasks foram criados com sucesso, quais já existiam (não duplicados), e se houve falha por limitação de plano do Toggl (reporte claramente quais tasks não puderam ser criadas e por quê).
+
+Não invente resultados — reporte exatamente o que a API retornou.`;
+}
+function importarTogglCsv(txt){
+  const linhas=txt.replace(/^﻿/,"").split(/\r?\n/).filter(l=>l.trim());
+  const sep=(linhas[0].match(/;/g)||[]).length>(linhas[0].match(/,/g)||[]).length?";":",";
+  const split=l=>{const out=[];let cur="",q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='"'&&l[i+1]==='"'){cur+='"';i++}else if(ch==='"')q=false;else cur+=ch}else if(ch==='"')q=true;else if(ch===sep){out.push(cur);cur=""}else cur+=ch}out.push(cur);return out};
+  const hd=split(linhas[0]).map(norm), col=rx=>hd.findIndex(h=>rx.test(h));
+  const cP=col(/^(project|projeto)$/), cT=col(/^(task|tarefa)$/), cD=col(/^(duration|duracao)$/);
+  if(cP<0||cD<0) throw new Error("CSV sem colunas Project/Projeto e Duration/Duração. Exporte o relatório Detalhado do Toggl em CSV.");
+  const soma={};
+  linhas.slice(1).forEach(l=>{
+    const c=split(l), d=(c[cD]||"").trim().split(":").map(Number);
+    const min=d.length===3?d[0]*60+d[1]+d[2]/60:(+String(c[cD]).replace(",",".")||0)*60;
+    const k=(c[cP]||"").trim()+"\u0001"+(cT>=0?(c[cT]||"").trim():"");
+    soma[k]=(soma[k]||0)+min;
+  });
+  let ok=0,semTask=0,semMatch=0;
+  Object.entries(soma).forEach(([k,min])=>{
+    const [pj,tk]=k.split("\u0001");
+    const d=est.demandas.find(x=>x.toggl===pj); if(!d){semMatch++;return}
+    if(!tk){semTask++;return}
+    const l=d.linhas.find(x=>x.toggl===tk); if(!l){semMatch++;return}
+    l.real=Math.round(min); ok++;
+  });
+  persist(); renderEst();
+  return `${ok} tasks com realizado lançado na coluna Real.${semTask?` ${semTask} lançamentos sem task (só projeto) não puderam ser atribuídos a um passo.`:""}${semMatch?` ${semMatch} projetos/tasks do CSV não correspondem a esta estimativa.`:""}`;
+}
+$("#btnToggl").onclick=()=>{
+  if(!estruturaToggl().length){alert("Nenhuma demanda com linhas para enviar.");return}
+  persist();
+  const corpo=`<p class="muted">Estrutura: <b>Cliente</b> “${esc(est.nome||"Estimativa")}” › <b>Projeto</b> = cada demanda › <b>Tasks</b> = o passo a passo (cada linha), com o tempo estimado. O Toggl não tem subtarefas; os passos viram tasks numeradas na ordem da demanda.</p>
+    <div class="row"><label style="flex:1;min-width:240px">Token da API do Toggl (Profile › API Token) — não fica salvo<input id="tgTok" type="password" autocomplete="off" placeholder="opcional: entra no script/prompt"></label><button class="btn" id="tgGen">Gerar com o token</button></div>
+    <h3 style="margin:14px 0 6px">1 · Script PowerShell (roda no seu Windows, cria tudo direto)</h3>
+    <textarea class="code" id="tgPs" readonly></textarea><div class="row" style="margin-top:6px"><button class="btn" data-copy="tgPs">Copiar script</button></div>
+    <h3 style="margin:14px 0 6px">2 · Prompt para o Claude (padrão da skill /prompttoggl)</h3>
+    <textarea class="code" id="tgPr" readonly style="min-height:160px"></textarea><div class="row" style="margin-top:6px"><button class="btn" data-copy="tgPr">Copiar prompt</button></div>
+    <h3 style="margin:14px 0 6px">3 · Trazer o realizado de volta</h3>
+    <p class="muted" style="margin:0 0 6px">No Toggl: Relatórios › Detalhado › Exportar CSV. Importe aqui: as horas de cada task entram na coluna <b>Real (min)</b> da linha correspondente, e o banco pode ser calibrado.</p>
+    <button class="btn" id="tgCsv">Importar CSV do Toggl</button><div id="tgMsg"></div>`;
+  abrirModal("Integração Toggl Track",corpo);
+  const gerar=()=>{const tk=$("#tgTok").value.trim();$("#tgPs").value=scriptToggl(tk);$("#tgPr").value=promptToggl(tk)};
+  gerar(); $("#tgGen").onclick=gerar;
+  $("#mBody").querySelectorAll("[data-copy]").forEach(b=>b.onclick=async()=>{await copiar(b.dataset.copy);b.textContent="Copiado ✓";setTimeout(()=>b.textContent=b.dataset.copy==="tgPs"?"Copiar script":"Copiar prompt",1500)});
+  $("#tgCsv").onclick=()=>pickFile(".csv",async f=>{$("#tgMsg").innerHTML=`<div class="msg ok">${esc(importarTogglCsv(await f.text()))}</div>`});
+};
+
+/* ================= ZOHO INVOICE ================= */
+const ZS="Invoice";
+let zMcp, zOrg="";
+const zPay=r=>{const p=r&&r.payload!==undefined?r.payload:r;return p&&p.data?p.data:p};
+function zErro(e){
+  const c=e&&e.code;
+  if(c==="needs_reauth") return "A conexão com o Zoho Invoice expirou. Reconecte em claude.ai › Configurações › Conectores.";
+  if(c==="server_not_connected"||c==="selection_required") return "Conector Zoho Invoice não disponível para você. Adicione-o em claude.ai › Configurações › Conectores.";
+  if(c==="not_in_manifest"||c==="approval_required"||c==="consent_required") return "O acesso ao Zoho Invoice não foi permitido para esta página.";
+  if(c==="blocked_by_policy") return "A política da organização bloqueia esta ação no Zoho Invoice.";
+  if(c==="server_unavailable") return "O Zoho Invoice não respondeu agora. Tente de novo em instantes.";
+  if(c==="tool_error") return "O Zoho Invoice recusou: "+(e.message||"erro");
+  return "Falha ao falar com o Zoho Invoice"+(e&&e.message?": "+e.message:".");
+}
+const zCall=(tool,input)=>zMcp.callTool(ZS,tool,input,{cache:false}).then(zPay);
+const zHead=()=>({"X-com-zoho-invoice-organizationid":zOrg});
+function linhasOrcamento(modo){
+  const c=db.cfg, fator=1+(c.cont+c.gest)/100, h=v=>Math.round(v/60*fator*100)/100;
+  const dems=est.demandas.filter(d=>d.status!=="discussao"&&d.linhas.length);
+  const resumo=d=>d.linhas.map(l=>{const p=proc(l.cod);return `${l.qtd}× ${p?p.nome:l.desc}${l.det?" ("+l.det+")":""}`}).join("; ").slice(0,1900);
+  if(modo==="unica"){const tot=dems.reduce((s,d)=>s+d.linhas.reduce((a,l)=>a+lineMin(l),0),0);
+    return [{name:("Customização de biblioteca Promob — "+(est.nome||"")).slice(0,100),description:("Demandas: "+dems.map(d=>d.nome).join("; ")).slice(0,1900),quantity:h(tot),rate:c.valor}]}
+  return dems.map(d=>({name:d.nome.slice(0,100),description:resumo(d),quantity:h(d.linhas.reduce((a,l)=>a+lineMin(l),0)),rate:c.valor}));
+}
+function fallbackZoho(motivo){
+  const ls=linhasOrcamento("demanda");
+  abrirModal("Orçamento no Zoho Invoice",`<div class="msg">${esc(motivo)}</div>
+    <p class="muted">Abra <a href="https://invoice.zoho.com/app#/quotes/new" target="_blank" rel="noopener">Zoho Invoice › Novo orçamento</a> e use as linhas abaixo (horas já com reservas, a ${brl(db.cfg.valor)}/h):</p>
+    <textarea class="code" id="zTxt" readonly style="min-height:160px">${esc(ls.map(l=>`${l.name}\t${String(l.quantity).replace(".",",")} h\t${l.rate}\t${l.description}`).join("\n"))}</textarea>
+    <div class="row" style="margin-top:6px"><button class="btn" id="zCp">Copiar linhas</button></div>`);
+  $("#zCp").onclick=()=>copiar("zTxt");
+}
+$("#btnZoho").onclick=async()=>{
+  if(!linhasOrcamento("demanda").length){alert("Nenhuma demanda com linhas para orçar.");return}
+  zMcp=(window.claude&&window.claude.use)?await window.claude.use("mcp").catch(()=>null):null;
+  if(!zMcp) return fallbackZoho("A criação automática funciona no link publicado em claude.ai com o conector Zoho Invoice. Aqui, copie as linhas.");
+  abrirModal("Orçamento no Zoho Invoice",`<div id="zSt" class="msg">Conectando ao Zoho Invoice…</div><div id="zForm"></div>`);
+  try{
+    const orgs=(await zCall("ZohoInvoice_List_all_Organizations",{})).organizations||[];
+    if(!orgs.length) throw {code:"tool_error",message:"nenhuma organização encontrada"};
+    zOrg=(orgs.find(o=>o.is_default_org)||orgs[0]).organization_id;
+    const items=(await zCall("ZohoInvoice_List_all_Active_Items",{headers:zHead(),query_params:{per_page:200}})).items||[];
+    const venc=new Date(Date.now()+15*864e5).toISOString().slice(0,10);
+    $("#zSt").remove();
+    $("#zForm").innerHTML=`
+      <div class="row">
+        ${orgs.length>1?`<label>Organização<select id="zOrg">${orgs.map(o=>`<option value="${esc(o.organization_id)}" ${o.organization_id===zOrg?"selected":""}>${esc(o.name)}</option>`).join("")}</select></label>`:""}
+        <label style="flex:1;min-width:220px">Cliente (buscar no Zoho)<input id="zBusca" placeholder="nome do cliente"></label><button class="btn" id="zBuscar">Buscar</button>
+      </div>
+      <div class="row" style="margin-top:8px"><label style="flex:1;min-width:240px">Cliente selecionado<select id="zCli"><option value="">— busque e escolha —</option></select></label></div>
+      <div class="row" style="margin-top:8px">
+        <label style="flex:1;min-width:240px">Item do Zoho para as linhas (ex.: hora técnica)<select id="zItem">${items.map(i=>`<option value="${esc(i.item_id)}">${esc(i.name)} · ${brl(+i.rate||0)}/${esc(i.unit||"un")}</option>`).join("")}</select></label>
+        <label>Linhas<select id="zModo"><option value="demanda">uma por demanda</option><option value="unica">linha única</option></select></label>
+        <label>Validade<input type="date" id="zVenc" value="${venc}"></label>
+      </div>
+      <p class="muted">Quantidade = horas com reservas · preço = valor/hora dos Parâmetros (${brl(db.cfg.valor)}). Nome e descrição de cada linha vêm da demanda.</p>
+      <div id="zPrev"></div><div id="zRes"></div>`;
+    const prev=()=>{const ls=linhasOrcamento($("#zModo").value);$("#zPrev").innerHTML=`<div class="tbl"><table><thead><tr><th>Linha</th><th class="n">Horas</th><th class="n">Valor</th></tr></thead><tbody>${ls.map(l=>`<tr><td>${esc(l.name)}</td><td class="n">${num(l.quantity,2)}</td><td class="n">${brl(l.quantity*l.rate)}</td></tr>`).join("")}<tr><td><b>Total</b></td><td class="n"><b>${num(ls.reduce((s,l)=>s+l.quantity,0),2)}</b></td><td class="n"><b>${brl(ls.reduce((s,l)=>s+l.quantity*l.rate,0))}</b></td></tr></tbody></table></div>`};
+    prev(); $("#zModo").onchange=prev;
+    if($("#zOrg")) $("#zOrg").onchange=e=>{zOrg=e.target.value};
+    const buscar=async()=>{
+      const q=$("#zBusca").value.trim(); $("#zCli").innerHTML='<option value="">buscando…</option>';
+      try{
+        const cs=(await zCall("ZohoInvoice_List_all_Contacts",{headers:zHead(),query_params:{per_page:50,...(q?{search_text:q}:{})}})).contacts||[];
+        $("#zCli").innerHTML=cs.length?cs.map(c=>`<option value="${esc(c.contact_id)}">${esc(c.contact_name)}${c.company_name&&c.company_name!==c.contact_name?" · "+esc(c.company_name):""}</option>`).join(""):'<option value="">nenhum cliente encontrado</option>';
+      }catch(e){$("#zCli").innerHTML='<option value="">—</option>';$("#zRes").innerHTML=`<div class="msg err">${esc(zErro(e))}</div>`}
+    };
+    $("#zBuscar").onclick=buscar; $("#zBusca").onkeydown=e=>{if(e.key==="Enter")buscar()};
+    if(est.nome){$("#zBusca").value=est.nome.split(/[–—-]/).pop().trim();}
+    buscar();
+    $("#mFoot").insertAdjacentHTML("afterbegin",'<button class="btn pri" id="zCriar">Criar orçamento no Zoho</button>');
+    $("#zCriar").onclick=async()=>{
+      const cli=$("#zCli").value, item=$("#zItem").value; if(!cli||!item){alert("Escolha o cliente e o item.");return}
+      const ls=linhasOrcamento($("#zModo").value), r=calc(), c=db.cfg;
+      if(!confirm(`Criar orçamento de ${brl(ls.reduce((s,l)=>s+l.quantity*l.rate,0))} (${ls.length} linhas) no Zoho Invoice?`)) return;
+      $("#zCriar").disabled=true; $("#zRes").innerHTML='<div class="msg">Criando orçamento…</div>';
+      try{
+        const out=await zCall("ZohoInvoice_Create_an_Estimate",{headers:zHead(),body:{
+          customer_id:cli,date:hoje(),expiry_date:$("#zVenc").value,reference_number:(est.nome||"").slice(0,50),
+          line_items:ls.map((l,i)=>({item_id:item,name:l.name,description:l.description,quantity:l.quantity,rate:l.rate,unit:"h",item_order:i+1})),
+          notes:`Estimativa EstimaCerto: ${num(r.base/60)} h técnicas + ${c.cont}% contingência${c.gest?` + ${c.gest}% gestão`:""} = ${num(r.total/60)} h. Prazo estimado: ${num(Math.ceil(r.dias*10)/10)} dias úteis.`
+        }});
+        const e=(out&&(out.estimate||out.data&&out.data.estimate))||{};
+        $("#zRes").innerHTML=`<div class="msg ok">Orçamento criado${e.estimate_number?` (${esc(e.estimate_number)})`:""}. <a href="https://invoice.zoho.com/app#/quotes${e.estimate_id?"/"+encodeURIComponent(e.estimate_id):""}" target="_blank" rel="noopener">Abrir no Zoho Invoice</a></div>`;
+      }catch(err){$("#zRes").innerHTML=`<div class="msg err">${esc(zErro(err))} ${err&&err.code==="server_unavailable"?"Confira no Zoho se o orçamento não foi criado antes de tentar de novo.":""}</div>`;$("#zCriar").disabled=false}
+    };
+  }catch(e){const st=$("#zSt"); if(st){st.className="msg err";st.textContent=zErro(e)}}
 };
 
 /* ================= PARÂMETROS ================= */

@@ -26,6 +26,14 @@ Demandas marcadas como **Em discussão** aparecem na estimativa, mas não somam.
 | Publicação | Slides, validação, publicação |
 | Administrativo | Administrativo da demanda |
 
+Ferramentas do banco:
+- **Importar XMind no banco**: lê um mapa de estimativa e mostra uma revisão. Caminhos não reconhecidos
+  viram processos novos (fase, grupo, nome e tempo médio, com opção de agrupar variantes), e processos
+  existentes podem ter o tempo atualizado pela média do mapa. O reconhecimento usa a coluna
+  “Reconhecimento XMind” (trechos do caminho, separados por `;`), editável.
+- **Em lote**, sobre os processos filtrados: ajustar tempo em % e mover para outra fase.
+- **Calibrar pelo realizado**: tempo-padrão = Σ real ÷ Σ quantidade nas linhas com “Real (min)”.
+
 Fonte de cada tempo: **Histórico** (medido no mapa XMind *Estimativa LT* da equipe) ou **Manual**
 (derivado do guia Catalog Builder; precisa de calibração).
 
@@ -51,7 +59,8 @@ Duas formas de ler a biblioteca (ex.: `D:\Setor\...\Promob Studio Start Projetto
 2. **Importar lista**: dentro da pasta System, rode `tree /f /a > estrutura.txt` (ou
    `dir /s /b > lista.txt`) e importe o `.txt`. Conta arquivos por pasta e extensão, sem ler conteúdo.
 
-**Árvore da biblioteca**: mostra pastas, arquivos e grupos XML como no Editor de Módulos do Catalog,
+**Árvore da biblioteca**: as entidades (módulos) aparecem com ID, **Abreviatura** e **Descrição**, e
+podem ser exportadas em CSV. Mostra pastas, arquivos e grupos XML como no Editor de Módulos do Catalog,
 com a contagem de módulos em cada grupo (grupos ocultos em cinza). Escolha qual elemento XML é o
 “módulo” (a ferramenta sugere `<Module>` quando existe). O ＋ de cada grupo adiciona a quantidade à
 estimativa (demanda “Módulos do System”), usando o processo escolhido; com retrato salvo, a árvore
@@ -61,6 +70,21 @@ Cada métrica pode ser vinculada a um processo do banco; os vínculos ficam salv
 por pasta (ex.: Atributos → CFG-03, Materiais → MAT-02). Com **Salvar retrato** antes da customização e
 uma nova leitura depois, a **diferença** mostra o que foi produzido e vira uma demanda para comparar
 estimado × realizado.
+
+## Toggl Track
+
+Botão **Toggl** na estimativa. Estrutura: Cliente = projeto/cliente da estimativa › Projeto = demanda ›
+Tasks = passo a passo (cada linha, numerada, com `estimated_seconds`). Gera um **script PowerShell**
+(cria tudo direto no Windows) e o **prompt no padrão da skill /prompttoggl**. Tasks exigem plano Starter+.
+Para fechar o ciclo, importe o CSV do relatório Detalhado do Toggl: as horas de cada task entram em
+“Real (min)” da linha correspondente.
+
+## Zoho Invoice
+
+Botão **Orçamento Zoho Invoice**. No link publicado em claude.ai, usa o conector Zoho Invoice da conta:
+escolhe cliente e item, monta as linhas (uma por demanda ou linha única; quantidade = horas com
+reservas; preço = valor/hora) e cria o orçamento após confirmação. Aberto localmente, mostra as linhas
+para copiar em Zoho Invoice › Novo orçamento.
 
 ## Calibração
 
