@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EstimaCerto Promob</title>
+<style>
+:root{
+  --bg:#f6f5f2; --surface:#ffffff; --surface-2:#f0eee9; --text:#1d1c1a; --muted:#6b6862;
+  --line:#e0ddd6; --accent:#9a5b1e; --accent-ink:#ffffff; --ok:#2f7a4b; --warn:#b4541a;
+  --bar:#c98a4b;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#151413; --surface:#1e1d1b; --surface-2:#272522; --text:#ece9e3; --muted:#a29d94;
+    --line:#35322d; --accent:#e0a565; --accent-ink:#1a1206; --ok:#6cc08b; --warn:#f0965a; --bar:#d39557;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151413; --surface:#1e1d1b; --surface-2:#272522; --text:#ece9e3; --muted:#a29d94;
+  --line:#35322d; --accent:#e0a565; --accent-ink:#1a1206; --ok:#6cc08b; --warn:#f0965a; --bar:#d39557;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:20px 16px 0;max-width:1180px;margin:0 auto}
+h1{font-size:22px;margin:0}
+h1 small{font-weight:400;color:var(--muted);font-size:14px;margin-left:6px}
+h2{font-size:17px;margin:0 0 12px}
+nav{display:flex;gap:4px;margin-top:14px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;color:var(--muted);font:inherit;cursor:pointer;white-space:nowrap}
+nav button.on{color:var(--text);border-color:var(--accent);font-weight:600}
+main{max-width:1180px;margin:0 auto;padding:16px}
+.tab{display:none}.tab.on{display:block}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:end}
+label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+input,select,textarea{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:0}
+input[type=number]{width:90px}
+button.btn{font:inherit;border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:6px;padding:7px 12px;cursor:pointer}
+button.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button.x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:2px 6px}
+button.x:hover{color:var(--warn)}
+.tbl{width:100%;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+td input,td select{width:100%}
+td:first-child{white-space:nowrap}
+td select{min-width:96px}
+td input[type=number]{width:80px}
+tr.cat td{background:var(--surface-2);font-weight:600;font-size:13px}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi div{background:var(--surface-2);border-radius:8px;padding:10px}
+.kpi b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--muted)}
+.kpi .big{grid-column:1/-1}
+.kpi .big b{font-size:30px;color:var(--accent)}
+.bars{margin-top:12px}
+.bar{display:grid;grid-template-columns:110px 1fr 56px;gap:8px;align-items:center;font-size:13px;margin:5px 0}
+.bar i{display:block;height:10px;background:var(--bar);border-radius:3px}
+.muted{color:var(--muted);font-size:13px}
+.pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;background:var(--surface-2);color:var(--muted);margin-left:6px}
+.range{display:flex;justify-content:space-between;font-size:13px;margin-top:10px;color:var(--muted)}
+.range b{color:var(--text)}
+.empty{padding:24px;text-align:center;color:var(--muted)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+@media print{
+  nav,.toolbar,.noprint,button{display:none!important}
+  .grid{grid-template-columns:1fr}
+  body{background:#fff;color:#000}
+  .card{border:0;padding:0}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>EstimaCerto <small>Estimativa de esforço · customização de bibliotecas Promob</small></h1>
+  <nav>
+    <button data-tab="est" class="on">Estimativa</button>
+    <button data-tab="proc">Banco de processos</button>
+    <button data-tab="kits">Kits (composições)</button>
+    <button data-tab="cfg">Parâmetros</button>
+  </nav>
+</header>
+
+<main>
+<!-- ================= ESTIMATIVA ================= -->
+<section id="est" class="tab on">
+  <div class="grid">
+    <div>
+      <div class="card">
+        <div class="row">
+          <label style="flex:1;min-width:200px">Projeto / cliente<input id="pNome" placeholder="Ex.: Linha Cozinha Prime – Fábrica X"></label>
+          <label>Responsável<input id="pResp" placeholder="Nome"></label>
+          <label>Data<input id="pData" type="date"></label>
+        </div>
+      </div>
+
+      <div class="card noprint">
+        <h2>Adicionar à contagem</h2>
+        <div class="row">
+          <label style="flex:1;min-width:220px">Processo ou kit<select id="addItem"></select></label>
+          <label>Qtd.<input id="addQtd" type="number" min="0" step="1" value="1"></label>
+          <label>Complexidade<select id="addCx"></select></label>
+          <button class="btn pri" id="addBtn">Adicionar</button>
+        </div>
+        <p class="muted" style="margin:10px 0 0">Kits explodem automaticamente nos processos que os compõem; a quantidade do kit multiplica cada processo.</p>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <button class="btn" id="btnCsv">Exportar CSV</button>
+          <button class="btn" id="btnPrint">Imprimir / PDF</button>
+          <button class="btn" id="btnSaveEst">Salvar estimativa (.json)</button>
+          <button class="btn" id="btnLoadEst">Abrir estimativa</button>
+          <button class="btn" id="btnClear">Limpar</button>
+        </div>
+        <div class="tbl"><table>
+          <thead><tr><th>Cód.</th><th>Processo</th><th>Unid.</th><th class="n">Qtd.</th><th>Complex.</th><th class="n">h/unid.</th><th class="n">Horas</th><th class="noprint"></th></tr></thead>
+          <tbody id="estBody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <aside>
+      <div class="card">
+        <h2>Resultado</h2>
+        <div class="kpi">
+          <div class="big"><span>Esforço total (com reservas)</span><b id="kTotal">0 h</b></div>
+          <div><span>Horas técnicas</span><b id="kBase">0</b></div>
+          <div><span>Reservas</span><b id="kRes">0</b></div>
+          <div><span>Prazo (dias úteis)</span><b id="kDias">0</b></div>
+          <div><span>Investimento</span><b id="kValor">R$ 0</b></div>
+        </div>
+        <div class="range">
+          <span>Otimista <b id="rMin">0 h</b></span>
+          <span>Pessimista <b id="rMax">0 h</b></span>
+        </div>
+        <div class="bars" id="bars"></div>
+        <p class="muted" id="memo" style="margin-top:12px"></p>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ================= BANCO DE PROCESSOS ================= -->
+<section id="proc" class="tab">
+  <div class="card">
+    <h2>Banco de processos repetitivos</h2>
+    <p class="muted">Cada processo é uma unidade de trabalho que se repete. O tempo-padrão é o esforço de 1 unidade em complexidade normal. Calibre com o histórico real da equipe.</p>
+    <div class="toolbar">
+      <button class="btn pri" id="pAdd">+ Novo processo</button>
+      <input id="pFiltro" placeholder="Filtrar…" style="flex:1;min-width:160px">
+      <button class="btn" id="dbExport">Exportar banco (.json)</button>
+      <button class="btn" id="dbImport">Importar banco (.json / .csv)</button>
+      <button class="btn" id="dbReset">Restaurar padrão</button>
+    </div>
+    <div class="tbl"><table>
+      <thead><tr><th style="width:90px">Código</th><th style="width:150px">Categoria</th><th>Processo</th><th style="width:110px">Unidade</th><th class="n" style="width:100px">h/unid.</th><th></th></tr></thead>
+      <tbody id="procBody"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ================= KITS ================= -->
+<section id="kits" class="tab">
+  <div class="card">
+    <h2>Kits — composições padrão</h2>
+    <p class="muted">Um kit agrupa processos que sempre acontecem juntos (ex.: “Módulo aéreo padrão”). Na estimativa, você conta kits em vez de processos soltos.</p>
+    <div class="toolbar"><button class="btn pri" id="kAdd">+ Novo kit</button></div>
+    <div id="kitList"></div>
+  </div>
+</section>
+
+<!-- ================= PARÂMETROS ================= -->
+<section id="cfg" class="tab">
+  <div class="card">
+    <h2>Parâmetros da estimativa</h2>
+    <div class="row">
+      <label>Valor/hora (R$)<input id="cValor" type="number" min="0" step="1"></label>
+      <label>Horas produtivas/dia<input id="cHdia" type="number" min="1" step="0.5"></label>
+      <label>Pessoas na equipe<input id="cEquipe" type="number" min="1" step="1"></label>
+      <label>Contingência (%)<input id="cCont" type="number" min="0" step="1"></label>
+      <label>Gestão / comunicação (%)<input id="cGest" type="number" min="0" step="1"></label>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <label>Fator otimista<input id="cOti" type="number" min="0" step="0.05"></label>
+      <label>Fator pessimista<input id="cPes" type="number" min="0" step="0.05"></label>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Níveis de complexidade</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Nível</th><th class="n">Multiplicador</th><th>Critério</th></tr></thead>
+      <tbody id="cxBody"></tbody>
+    </table></div>
+  </div>
+</section>
+</main>
+
+<input type="file" id="fileIn" accept=".json,.csv" hidden>
+
+<script>
+/* ================= BANCO PADRÃO ================= */
+const SEED = {
+  categorias: ["Gestão e levantamento","Modelagem 3D","Parametrização","Materiais e acabamentos","Produção e saídas","Comercial e preços","Testes e validação"],
+  processos: [
+    ["GES-01","Gestão e levantamento","Briefing técnico da linha / reunião de levantamento","reunião",2],
+    ["GES-02","Gestão e levantamento","Análise de catálogo e ficha técnica do fornecedor","catálogo",4],
+    ["GES-03","Gestão e levantamento","Documentação / manual da biblioteca","documento",3],
+    ["GES-04","Gestão e levantamento","Treinamento de projetistas","sessão",2],
+    ["GES-05","Gestão e levantamento","Publicação e distribuição de atualização da biblioteca","publicação",1],
+    ["MOD-01","Modelagem 3D","Modelagem de peça simples (painel, porta lisa, tampo)","peça",0.5],
+    ["MOD-02","Modelagem 3D","Modelagem de peça com perfil/usinagem (porta perfil, cava, frisos)","peça",1.5],
+    ["MOD-03","Modelagem 3D","Modelagem de acessório / ferragem 3D (puxador, pé, cabideiro)","item",2],
+    ["MOD-04","Modelagem 3D","Importação e otimização de 3D de fornecedor","item",1],
+    ["PAR-01","Parametrização","Cadastro de módulo paramétrico base (caixa)","módulo",3],
+    ["PAR-02","Parametrização","Variação dimensional de módulo existente","variação",0.5],
+    ["PAR-03","Parametrização","Regra / variável de dimensão (script)","regra",1],
+    ["PAR-04","Parametrização","Componente interno (prateleira, divisória, gaveta)","componente",1],
+    ["PAR-05","Parametrização","Configuração de porta / frente (abertura, inserção)","tipo",1.5],
+    ["MAT-01","Materiais e acabamentos","Cadastro de material / acabamento (cor, padrão)","acabamento",0.25],
+    ["MAT-02","Materiais e acabamentos","Tratamento e mapeamento de textura","textura",0.5],
+    ["MAT-03","Materiais e acabamentos","Grupo / lista de acabamentos por componente","grupo",0.75],
+    ["MAT-04","Materiais e acabamentos","Regra de fita de borda","regra",0.5],
+    ["PRO-01","Produção e saídas","Usinagem / furação CNC por componente","componente",1.5],
+    ["PRO-02","Produção e saídas","Regra de plano de corte / lista de peças","regra",1],
+    ["PRO-03","Produção e saídas","Mapeamento de código ERP / referência","item",0.1],
+    ["PRO-04","Produção e saídas","Ferragem automática (dobradiça, corrediça)","regra",1],
+    ["COM-01","Comercial e preços","Cadastro de preço por item (tabela)","item",0.1],
+    ["COM-02","Comercial e preços","Regra de precificação (markup, fórmula)","regra",1],
+    ["COM-03","Comercial e preços","Relatório / orçamento personalizado","relatório",3],
+    ["COM-04","Comercial e preços","Geração de miniatura (thumbnail) de catálogo","item",0.1],
+    ["QA-01","Testes e validação","Teste de módulo em projeto (inserção, render, listas)","módulo",0.5],
+    ["QA-02","Testes e validação","Validação de saída de produção com a fábrica","lote",2],
+    ["QA-03","Testes e validação","Correção pós-validação (retrabalho previsto)","lote",1.5]
+  ].map(([cod,cat,nome,un,h])=>({cod,cat,nome,un,h})),
+  kits: [
+    {cod:"KIT-01",nome:"Módulo aéreo padrão (1–2 portas)",itens:[["PAR-01",1],["PAR-04",2],["PAR-05",1],["MOD-01",3],["PRO-01",2],["PRO-03",8],["COM-01",1],["COM-04",1],["QA-01",1]]},
+    {cod:"KIT-02",nome:"Balcão com gavetas",itens:[["PAR-01",1],["PAR-04",3],["PAR-05",2],["MOD-01",4],["PRO-01",3],["PRO-04",1],["PRO-03",12],["COM-01",1],["COM-04",1],["QA-01",1]]},
+    {cod:"KIT-03",nome:"Pacote de 10 acabamentos",itens:[["MAT-01",10],["MAT-02",10],["MAT-03",1]]},
+    {cod:"KIT-04",nome:"Abertura e entrega de linha",itens:[["GES-01",1],["GES-02",1],["GES-03",1],["GES-04",1],["GES-05",1],["QA-02",1],["QA-03",1]]}
+  ],
+  complexidades: [
+    {nome:"Baixa",f:0.75,crit:"Replica algo já existente na biblioteca"},
+    {nome:"Normal",f:1,crit:"Padrão de mercado, regras conhecidas"},
+    {nome:"Alta",f:1.5,crit:"Regras específicas do fornecedor / muitas variações"},
+    {nome:"Crítica",f:2,crit:"Inédito, sem referência, dependência de terceiros"}
+  ],
+  cfg: {valor:120,hdia:6,equipe:1,cont:15,gest:10,oti:0.85,pes:1.35}
+};
+
+/* ================= ESTADO ================= */
+const K_DB="estimacerto.db.v1", K_EST="estimacerto.est.v1";
+const clone=o=>JSON.parse(JSON.stringify(o));
+function load(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def}catch(e){return def}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+let db=load(K_DB,clone(SEED));
+let est=load(K_EST,{nome:"",resp:"",data:new Date().toISOString().slice(0,10),linhas:[]});
+const persist=()=>{save(K_DB,db);save(K_EST,est)};
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const num=(v,d=1)=>Number(v).toLocaleString("pt-BR",{minimumFractionDigits:0,maximumFractionDigits:d});
+const brl=v=>v.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
+const proc=cod=>db.processos.find(p=>p.cod===cod);
+const kit=cod=>db.kits.find(k=>k.cod===cod);
+const cxF=n=>(db.complexidades.find(c=>c.nome===n)||{f:1}).f;
+
+/* ================= TABS ================= */
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.id===b.dataset.tab));
+  render();
+});
+
+/* ================= CÁLCULO ================= */
+// Explode linhas (processo ou kit) em processos unitários
+function explode(){
+  const out=[];
+  est.linhas.forEach((l,i)=>{
+    const f=cxF(l.cx);
+    if(l.tipo==="kit"){
+      const k=kit(l.cod); if(!k) return;
+      k.itens.forEach(([pc,q])=>{const p=proc(pc); if(p) out.push({linha:i,p,qtd:q*l.qtd,f,h:p.h*q*l.qtd*f})});
+    }else{
+      const p=proc(l.cod); if(p) out.push({linha:i,p,qtd:l.qtd,f,h:p.h*l.qtd*f});
+    }
+  });
+  return out;
+}
+function calc(){
+  const it=explode(), c=db.cfg;
+  const base=it.reduce((s,x)=>s+x.h,0);
+  const res=base*(c.cont+c.gest)/100;
+  const total=base+res;
+  const dias=total/(c.hdia*c.equipe);
+  const porCat={};
+  it.forEach(x=>porCat[x.p.cat]=(porCat[x.p.cat]||0)+x.h);
+  return {it,base,res,total,dias,valor:total*c.valor,min:total*c.oti,max:total*c.pes,porCat};
+}
+
+/* ================= RENDER ESTIMATIVA ================= */
+function renderAddSelect(){
+  const sel=$("#addItem"), cur=sel.value;
+  let h='<optgroup label="Kits">'+db.kits.map(k=>`<option value="kit:${esc(k.cod)}">${esc(k.cod)} · ${esc(k.nome)}</option>`).join("")+"</optgroup>";
+  db.categorias.forEach(cat=>{
+    const ps=db.processos.filter(p=>p.cat===cat); if(!ps.length) return;
+    h+=`<optgroup label="${esc(cat)}">`+ps.map(p=>`<option value="proc:${esc(p.cod)}">${esc(p.cod)} · ${esc(p.nome)} (${num(p.h,2)} h/${esc(p.un)})</option>`).join("")+"</optgroup>";
+  });
+  sel.innerHTML=h; if(cur) sel.value=cur;
+  const cx=$("#addCx"), cxCur=cx.value||"Normal";
+  cx.innerHTML=db.complexidades.map(c=>`<option>${esc(c.nome)}</option>`).join(""); cx.value=cxCur;
+}
+function cxOptions(sel){return db.complexidades.map(c=>`<option ${c.nome===sel?"selected":""}>${esc(c.nome)}</option>`).join("")}
+
+function renderEst(){
+  $("#pNome").value=est.nome; $("#pResp").value=est.resp; $("#pData").value=est.data;
+  const r=calc(), body=$("#estBody");
+  if(!est.linhas.length){body.innerHTML=`<tr><td colspan="8" class="empty">Nenhum item contado ainda. Adicione kits ou processos acima.</td></tr>`;}
+  else{
+    body.innerHTML=est.linhas.map((l,i)=>{
+      const f=cxF(l.cx);
+      if(l.tipo==="kit"){
+        const k=kit(l.cod); if(!k) return `<tr><td>${esc(l.cod)}</td><td colspan="6" class="muted">Kit removido do banco</td><td class="noprint"><button class="x" data-del="${i}">×</button></td></tr>`;
+        const hu=k.itens.reduce((s,[pc,q])=>s+((proc(pc)||{h:0}).h*q),0);
+        const sub=r.it.filter(x=>x.linha===i);
+        return `<tr><td><b>${esc(k.cod)}</b></td><td><b>${esc(k.nome)}</b><span class="pill">kit · ${k.itens.length} processos</span></td><td>kit</td>
+          <td class="n"><input type="number" min="0" step="1" value="${l.qtd}" data-qtd="${i}"></td>
+          <td><select data-cx="${i}">${cxOptions(l.cx)}</select></td>
+          <td class="n">${num(hu*f,2)}</td><td class="n"><b>${num(sub.reduce((s,x)=>s+x.h,0))}</b></td>
+          <td class="noprint"><button class="x" data-del="${i}" title="Remover">×</button></td></tr>`+
+          sub.map(x=>`<tr class="muted"><td style="padding-left:18px">${esc(x.p.cod)}</td><td style="padding-left:18px">${esc(x.p.nome)}</td><td>${esc(x.p.un)}</td><td class="n">${num(x.qtd)}</td><td></td><td class="n">${num(x.p.h*x.f,2)}</td><td class="n">${num(x.h)}</td><td class="noprint"></td></tr>`).join("");
+      }
+      const p=proc(l.cod); if(!p) return `<tr><td>${esc(l.cod)}</td><td colspan="6" class="muted">Processo removido do banco</td><td class="noprint"><button class="x" data-del="${i}">×</button></td></tr>`;
+      return `<tr><td>${esc(p.cod)}</td><td>${esc(p.nome)}</td><td>${esc(p.un)}</td>
+        <td class="n"><input type="number" min="0" step="1" value="${l.qtd}" data-qtd="${i}"></td>
+        <td><select data-cx="${i}">${cxOptions(l.cx)}</select></td>
+        <td class="n">${num(p.h*f,2)}</td><td class="n"><b>${num(p.h*l.qtd*f)}</b></td>
+        <td class="noprint"><button class="x" data-del="${i}" title="Remover">×</button></td></tr>`;
+    }).join("");
+  }
+  const c=db.cfg;
+  $("#kTotal").textContent=num(r.total)+" h";
+  $("#kBase").textContent=num(r.base);
+  $("#kRes").textContent=num(r.res);
+  $("#kDias").textContent=num(Math.ceil(r.dias*10)/10);
+  $("#kValor").textContent=brl(r.valor);
+  $("#rMin").textContent=num(r.min)+" h";
+  $("#rMax").textContent=num(r.max)+" h";
+  const max=Math.max(1,...Object.values(r.porCat));
+  $("#bars").innerHTML=Object.entries(r.porCat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>
+    `<div class="bar"><span title="${esc(k)}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(k)}</span><i style="width:${v/max*100}%"></i><span class="n" style="text-align:right">${num(v)} h</span></div>`).join("");
+  $("#memo").textContent=r.base?`Memória: ${num(r.base)} h técnicas + ${c.cont}% contingência + ${c.gest}% gestão = ${num(r.total)} h ÷ (${c.hdia} h/dia × ${c.equipe} pessoa${c.equipe>1?"s":""}) × ${brl(c.valor)}/h.`:"";
+}
+
+$("#estBody").addEventListener("change",e=>{
+  const t=e.target;
+  if(t.dataset.qtd!==undefined){est.linhas[+t.dataset.qtd].qtd=Math.max(0,+t.value||0)}
+  else if(t.dataset.cx!==undefined){est.linhas[+t.dataset.cx].cx=t.value}
+  else return;
+  persist(); renderEst();
+});
+$("#estBody").addEventListener("click",e=>{
+  const d=e.target.dataset.del; if(d===undefined) return;
+  est.linhas.splice(+d,1); persist(); renderEst();
+});
+["pNome","pResp","pData"].forEach(id=>$("#"+id).addEventListener("input",e=>{
+  est[{pNome:"nome",pResp:"resp",pData:"data"}[id]]=e.target.value; persist();
+}));
+$("#addBtn").onclick=()=>{
+  const [tipo,cod]=$("#addItem").value.split(":"); const qtd=Math.max(0,+$("#addQtd").value||0);
+  if(!cod||!qtd) return;
+  const cx=$("#addCx").value;
+  const ex=est.linhas.find(l=>l.tipo===tipo&&l.cod===cod&&l.cx===cx);
+  if(ex) ex.qtd+=qtd; else est.linhas.push({tipo,cod,qtd,cx});
+  persist(); renderEst();
+};
+$("#btnClear").onclick=()=>{if(confirm("Limpar a estimativa atual?")){est={nome:"",resp:"",data:new Date().toISOString().slice(0,10),linhas:[]};persist();renderEst()}};
+$("#btnPrint").onclick=()=>window.print();
+$("#btnCsv").onclick=()=>{
+  const r=calc(), c=db.cfg;
+  const rows=[["Projeto",est.nome],["Responsável",est.resp],["Data",est.data],[],["Origem","Código","Processo","Categoria","Unidade","Qtd","Complexidade","Fator","h/unid","Horas"]];
+  r.it.forEach(x=>{const l=est.linhas[x.linha];rows.push([l.tipo==="kit"?l.cod:"avulso",x.p.cod,x.p.nome,x.p.cat,x.p.un,x.qtd,l.cx,x.f,x.p.h,x.h.toFixed(2)])});
+  rows.push([],["Horas técnicas",r.base.toFixed(2)],["Contingência %",c.cont],["Gestão %",c.gest],["Total horas",r.total.toFixed(2)],["Prazo dias úteis",r.dias.toFixed(1)],["Valor/hora",c.valor],["Investimento",r.valor.toFixed(2)]);
+  const csv=rows.map(r=>r.map(v=>{v=String(v??"");return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(";")).join("\n");
+  download("﻿"+csv,(est.nome||"estimativa")+".csv","text/csv");
+};
+$("#btnSaveEst").onclick=()=>download(JSON.stringify({estimativa:est,cfg:db.cfg},null,2),(est.nome||"estimativa")+".estimacerto.json","application/json");
+$("#btnLoadEst").onclick=()=>pickFile(txt=>{
+  const o=JSON.parse(txt); if(!o.estimativa) throw new Error("Arquivo não é uma estimativa EstimaCerto");
+  est=o.estimativa; if(o.cfg) db.cfg=o.cfg; persist(); render();
+});
+
+/* ================= BANCO DE PROCESSOS ================= */
+function renderProc(){
+  const f=$("#pFiltro").value.trim().toLowerCase();
+  let h="";
+  const cats=[...db.categorias, ...new Set(db.processos.map(p=>p.cat).filter(c=>!db.categorias.includes(c)))];
+  cats.forEach(cat=>{
+    const ps=db.processos.map((p,i)=>({p,i})).filter(({p})=>p.cat===cat&&(!f||(p.cod+" "+p.nome+" "+p.un).toLowerCase().includes(f)));
+    if(!ps.length) return;
+    h+=`<tr class="cat"><td colspan="6">${esc(cat)} <span class="pill">${ps.length}</span></td></tr>`;
+    h+=ps.map(({p,i})=>`<tr>
+      <td><input value="${esc(p.cod)}" data-i="${i}" data-k="cod"></td>
+      <td><input value="${esc(p.cat)}" data-i="${i}" data-k="cat" list="catList"></td>
+      <td><input value="${esc(p.nome)}" data-i="${i}" data-k="nome"></td>
+      <td><input value="${esc(p.un)}" data-i="${i}" data-k="un"></td>
+      <td class="n"><input type="number" min="0" step="0.05" value="${p.h}" data-i="${i}" data-k="h"></td>
+      <td><button class="x" data-pdel="${i}" title="Excluir">×</button></td></tr>`).join("");
+  });
+  $("#procBody").innerHTML=h+`<datalist id="catList">${db.categorias.map(c=>`<option value="${esc(c)}">`).join("")}</datalist>`;
+}
+$("#procBody").addEventListener("change",e=>{
+  const t=e.target; if(t.dataset.i===undefined) return;
+  const p=db.processos[+t.dataset.i], k=t.dataset.k, old=p.cod;
+  p[k]=k==="h"?Math.max(0,+t.value||0):t.value.trim();
+  if(k==="cod"&&old!==p.cod){ // propaga renomeação de código
+    db.kits.forEach(kt=>kt.itens.forEach(it=>{if(it[0]===old) it[0]=p.cod}));
+    est.linhas.forEach(l=>{if(l.tipo==="proc"&&l.cod===old) l.cod=p.cod});
+  }
+  if(k==="cat"&&p.cat&&!db.categorias.includes(p.cat)) db.categorias.push(p.cat);
+  persist(); if(k==="cat") renderProc();
+});
+$("#procBody").addEventListener("click",e=>{
+  const d=e.target.dataset.pdel; if(d===undefined) return;
+  const p=db.processos[+d];
+  const usos=db.kits.filter(k=>k.itens.some(it=>it[0]===p.cod)).map(k=>k.cod);
+  if(!confirm(`Excluir ${p.cod}?`+(usos.length?`\nEle é usado nos kits: ${usos.join(", ")} (será removido deles).`:""))) return;
+  db.kits.forEach(k=>k.itens=k.itens.filter(it=>it[0]!==p.cod));
+  db.processos.splice(+d,1); persist(); renderProc();
+});
+$("#pFiltro").oninput=renderProc;
+$("#pAdd").onclick=()=>{
+  const cat=db.categorias[0]||"Geral";
+  let n=db.processos.length+1, cod; do{cod="NOV-"+String(n++).padStart(2,"0")}while(proc(cod));
+  db.processos.push({cod,cat,nome:"Novo processo",un:"unid.",h:1});
+  $("#pFiltro").value=""; persist(); renderProc();
+};
+$("#dbExport").onclick=()=>download(JSON.stringify(db,null,2),"banco-processos-promob.json","application/json");
+$("#dbImport").onclick=()=>pickFile((txt,name)=>{
+  if(/\.csv$/i.test(name)){
+    // CSV: codigo;categoria;processo;unidade;horas
+    const linhas=txt.replace(/^﻿/,"").split(/\r?\n/).filter(Boolean);
+    const sep=linhas[0].includes(";")?";":",";
+    const novos=linhas.slice(1).map(l=>l.split(sep).map(s=>s.trim().replace(/^"|"$/g,""))).filter(c=>c[0]).map(c=>({cod:c[0],cat:c[1]||"Geral",nome:c[2]||c[0],un:c[3]||"unid.",h:+String(c[4]||"0").replace(",",".")||0}));
+    novos.forEach(n=>{const ex=proc(n.cod); if(ex) Object.assign(ex,n); else db.processos.push(n); if(!db.categorias.includes(n.cat)) db.categorias.push(n.cat)});
+    alert(novos.length+" processos importados/atualizados.");
+  }else{
+    const o=JSON.parse(txt); if(!o.processos) throw new Error("JSON sem lista de processos");
+    db=Object.assign(clone(SEED),o);
+  }
+  persist(); render();
+});
+$("#dbReset").onclick=()=>{if(confirm("Restaurar o banco padrão? Seus processos e kits personalizados serão substituídos.")){db=clone(SEED);persist();render()}};
+
+/* ================= KITS ================= */
+function renderKits(){
+  const opts=db.processos.map(p=>`<option value="${esc(p.cod)}">${esc(p.cod)} · ${esc(p.nome)}</option>`).join("");
+  $("#kitList").innerHTML=db.kits.map((k,ki)=>{
+    const tot=k.itens.reduce((s,[pc,q])=>s+((proc(pc)||{h:0}).h*q),0);
+    return `<div class="card" style="background:var(--surface-2)">
+      <div class="row" style="margin-bottom:10px">
+        <label style="width:100px">Código<input value="${esc(k.cod)}" data-ki="${ki}" data-kk="cod"></label>
+        <label style="flex:1;min-width:200px">Nome do kit<input value="${esc(k.nome)}" data-ki="${ki}" data-kk="nome"></label>
+        <span class="pill" style="align-self:center">${num(tot,2)} h em complexidade normal</span>
+        <button class="btn" data-kdel="${ki}">Excluir kit</button>
+      </div>
+      <div class="tbl"><table><thead><tr><th>Processo</th><th class="n">Qtd. por kit</th><th class="n">Horas</th><th></th></tr></thead><tbody>
+      ${k.itens.map(([pc,q],ii)=>{const p=proc(pc);return `<tr><td>${esc(pc)} · ${p?esc(p.nome):'<span class="muted">não encontrado</span>'}</td>
+        <td class="n"><input type="number" min="0" step="1" value="${q}" data-ki="${ki}" data-ii="${ii}"></td>
+        <td class="n">${num(p?p.h*q:0,2)}</td><td><button class="x" data-ki="${ki}" data-idel="${ii}">×</button></td></tr>`}).join("")}
+      </tbody></table></div>
+      <div class="row" style="margin-top:10px"><select data-kaddsel="${ki}" style="flex:1;min-width:200px">${opts}</select><button class="btn" data-kadd="${ki}">+ Adicionar processo</button></div>
+    </div>`}).join("")||'<p class="empty">Nenhum kit cadastrado.</p>';
+}
+$("#kitList").addEventListener("change",e=>{
+  const t=e.target, ki=t.dataset.ki; if(ki===undefined) return;
+  const k=db.kits[+ki];
+  if(t.dataset.kk){
+    const old=k.cod; k[t.dataset.kk]=t.value.trim();
+    if(t.dataset.kk==="cod") est.linhas.forEach(l=>{if(l.tipo==="kit"&&l.cod===old) l.cod=k.cod});
+  }
+  else if(t.dataset.ii!==undefined) k.itens[+t.dataset.ii][1]=Math.max(0,+t.value||0);
+  persist(); renderKits();
+});
+$("#kitList").addEventListener("click",e=>{
+  const t=e.target;
+  if(t.dataset.kdel!==undefined){if(confirm("Excluir este kit?")){db.kits.splice(+t.dataset.kdel,1);persist();renderKits()}}
+  else if(t.dataset.idel!==undefined){db.kits[+t.dataset.ki].itens.splice(+t.dataset.idel,1);persist();renderKits()}
+  else if(t.dataset.kadd!==undefined){
+    const ki=+t.dataset.kadd, pc=document.querySelector(`[data-kaddsel="${ki}"]`).value, k=db.kits[ki];
+    const ex=k.itens.find(it=>it[0]===pc); if(ex) ex[1]++; else k.itens.push([pc,1]);
+    persist(); renderKits();
+  }
+});
+$("#kAdd").onclick=()=>{
+  let n=db.kits.length+1, cod; do{cod="KIT-"+String(n++).padStart(2,"0")}while(kit(cod));
+  db.kits.push({cod,nome:"Novo kit",itens:[]}); persist(); renderKits();
+};
+
+/* ================= PARÂMETROS ================= */
+const CFG={cValor:"valor",cHdia:"hdia",cEquipe:"equipe",cCont:"cont",cGest:"gest",cOti:"oti",cPes:"pes"};
+function renderCfg(){
+  Object.entries(CFG).forEach(([id,k])=>$("#"+id).value=db.cfg[k]);
+  $("#cxBody").innerHTML=db.complexidades.map((c,i)=>`<tr><td>${esc(c.nome)}</td>
+    <td class="n"><input type="number" min="0" step="0.05" value="${c.f}" data-cxi="${i}"></td>
+    <td><input value="${esc(c.crit)}" data-cxc="${i}"></td></tr>`).join("");
+}
+Object.entries(CFG).forEach(([id,k])=>$("#"+id).addEventListener("change",e=>{db.cfg[k]=Math.max(0,+e.target.value||0);if(k==="hdia"||k==="equipe")db.cfg[k]=Math.max(1,db.cfg[k]);persist()}));
+$("#cxBody").addEventListener("change",e=>{
+  const t=e.target;
+  if(t.dataset.cxi!==undefined) db.complexidades[+t.dataset.cxi].f=Math.max(0,+t.value||0);
+  if(t.dataset.cxc!==undefined) db.complexidades[+t.dataset.cxc].crit=t.value;
+  persist();
+});
+
+/* ================= UTIL ================= */
+function download(content,name,type){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=name.replace(/[\\/:*?"<>|]/g,"-"); a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function pickFile(cb){
+  const inp=$("#fileIn"); inp.value="";
+  inp.onchange=()=>{const f=inp.files[0]; if(!f) return;
+    f.text().then(t=>{try{cb(t,f.name)}catch(err){alert("Não foi possível importar: "+err.message)}})};
+  inp.click();
+}
+function render(){renderAddSelect();renderEst();renderProc();renderKits();renderCfg()}
+render();
+</script>
+</body>
+</html>
