@@ -101,6 +101,11 @@ span.and{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px}
 .and-concluida{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
 .dem.ign{opacity:.65;border-style:dashed;padding:10px 16px}
 .dem.ign .dem-h{margin:0}.nome-ign{font-weight:600;flex:1;text-decoration:line-through}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.mgrid div{background:var(--surface-2);border-radius:8px;padding:8px 10px}
+.mgrid span{display:block;font-size:12px;color:var(--muted)}.mgrid b{font-size:16px;font-variant-numeric:tabular-nums}
+.dem-meta{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin:-2px 0 10px}
+.dem-meta label{flex-direction:row;align-items:center;gap:6px}.dem-meta select{width:auto;font-size:13px;padding:4px 6px}
 .ignbar{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin:-6px 0 10px}
 .estbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed var(--line)}
 .estbar select{width:auto}
@@ -167,6 +172,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
     <button data-tab="est" class="on">Estimativa</button>
     <button data-tab="proc">Banco de processos</button>
     <button data-tab="tpl">Modelos de demanda</button>
+    <button data-tab="cal">Calibração</button>
     <button data-tab="sys">Leitor de System</button>
     <button data-tab="cfg">Parâmetros</button>
   </nav>
@@ -226,6 +232,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
           <span>Otimista <b id="rMin">0 h</b></span>
           <span>Pessimista <b id="rMax">0 h</b></span>
         </div>
+        <div id="margemBox"></div>
         <div id="realBox"></div>
         <hr>
         <h3 style="margin-bottom:6px">Por demanda</h3>
@@ -310,20 +317,49 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
   </div>
 </section>
 
+<!-- ================= CALIBRAÇÃO ================= -->
+<section id="cal" class="tab">
+  <div class="card">
+    <h2>Calibração pelo realizado</h2>
+    <p class="muted">Junta todas as estimativas do Arquivo com “Real (min)” preenchido (vindo do Toggl ou digitado) e compara com o tempo-padrão do banco. Quanto mais amostras e menor a variação, maior a confiança para atualizar o padrão.</p>
+    <div class="toolbar"><label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="calFech"> somente estimativas fechadas</label></div>
+    <div id="calOut"></div>
+  </div>
+</section>
+
 <!-- ================= PARÂMETROS ================= -->
 <section id="cfg" class="tab">
   <div class="card">
     <h2>Parâmetros da estimativa</h2>
     <div class="row">
-      <label>Valor/hora (R$)<input id="cValor" type="number" min="0" step="1"></label>
+      <label>Margem-alvo (%)<input id="cMargem" type="number" min="0" max="95" step="1"></label>
       <label>Horas produtivas/dia<input id="cHdia" type="number" min="1" step="0.5"></label>
       <label>Pessoas na equipe<input id="cEquipe" type="number" min="1" step="1"></label>
-      <label>Contingência (%)<input id="cCont" type="number" min="0" step="1"></label>
       <label>Gestão extra (%)<input id="cGest" type="number" min="0" step="1"></label>
       <label>Fator otimista<input id="cOti" type="number" min="0" step="0.05"></label>
       <label>Fator pessimista<input id="cPes" type="number" min="0" step="0.05"></label>
     </div>
-    <p class="muted" style="margin-top:12px">O “Administrativo” de cada demanda já entra como processo (ADM-01). Use “Gestão extra” só para overhead fora disso.</p>
+    <p class="muted" style="margin-top:12px">O “Administrativo” de cada demanda já entra como processo (ADM-01). Use “Gestão extra” só para overhead fora disso; ela soma à reserva de risco de cada demanda.</p>
+  </div>
+  <div class="card">
+    <h2>Perfis — custo e preço por hora</h2>
+    <p class="muted">Cada demanda usa um perfil (ex.: Sênior, Pleno). O preço/hora gera o valor; o custo/hora interno (salário + encargos + estrutura) gera a margem.</p>
+    <div id="perfisBox"></div>
+  </div>
+  <div class="card">
+    <h2>Níveis de risco — reserva por demanda</h2>
+    <p class="muted">Substitui a contingência única: cada demanda escolhe seu nível. A aba Calibração mostra o desvio observado por nível para você ajustar estas reservas com dados.</p>
+    <div id="riscosBox"></div>
+  </div>
+  <div class="card">
+    <h2>Backup completo</h2>
+    <p class="muted">Um arquivo com tudo: banco de processos, modelos, templates, parâmetros, clientes e todas as estimativas. Guarde fora da ferramenta (Drive, e-mail) e restaure quando precisar.</p>
+    <div class="toolbar"><button class="btn pri" id="bkExp">Baixar backup (.json)</button><button class="btn" id="bkImp">Restaurar backup</button></div>
+  </div>
+  <div class="card">
+    <h2>Lixeira</h2>
+    <p class="muted">Processos, modelos, demandas e estimativas excluídos ficam aqui por 60 dias.</p>
+    <div id="lixBox"></div>
   </div>
 </section>
 </main>
@@ -436,8 +472,21 @@ const SEED_TPL=[
   {cod:"MD-04",nome:"Novo item com entidade (padrão Prateleira deslizante)",itens:[["ENT-01",2],["ENT-06",1],["ENT-07",1],["ENT-08",1],["BLD-01",2],["BLD-02",1],["REF-01",2],["ORC-01",2],["ORC-03",1],["MDL-01",6],["MDL-03",1],["TST-01",1],["TST-02",1],["ADM-01",1]]},
   {cod:"MD-05",nome:"Nova linha completa (roteiro do manual Catalog Builder)",itens:[["SET-01",4],["GRP-01",9],["GRP-02",4],["GRP-03",5],["MAT-01",4],["MAT-02",3],["MAT-03",2],["MAT-04",4],["MAT-05",6],["CMP-01",7],["CMP-02",1],["MDL-12",5],["MDL-13",1],["MDL-14",14],["MDL-15",8],["MDL-16",3],["FER-01",4],["FER-02",3],["FER-03",5],["FER-04",4],["FER-05",2],["FER-06",1],["FER-07",1],["FER-08",8],["BLD-06",1],["ENT-04",7],["ENT-05",7],["MDL-17",6],["REF-02",3],["REF-03",2],["ORC-04",2],["ORC-05",3],["ORC-06",2],["ORC-07",1],["ORC-03",1],["CFG-01",13],["CFG-02",1],["MDL-18",3],["PUB-01",2],["PUB-02",1],["PUB-03",1],["PUB-04",1],["TST-01",1],["TST-02",1],["ADM-01",1]]}
 ];
-const SEED_CFG={valor:120,hdia:6,equipe:1,cont:10,gest:0,oti:0.85,pes:1.3};
-const seedDb=()=>({processos:SEED_PROC.map(p=>({...p,alias:[...p.alias]})),modelos:JSON.parse(JSON.stringify(SEED_TPL)),cfg:{...SEED_CFG},vinculos:{},templates:[]});
+const SEED_CFG={valor:120,hdia:6,equipe:1,cont:10,gest:0,oti:0.85,pes:1.3,margemAlvo:40,
+  perfis:[{id:"pad",nome:"Padrão",custo:45,preco:120}],
+  riscos:[{id:"padrao",nome:"Padrão (já feito antes)",pct:10},{id:"novo",nome:"Novo fabricante / linha",pct:20},{id:"inedito",nome:"P&D / inédito",pct:35}]};
+const seedDb=()=>({processos:SEED_PROC.map(p=>({...p,alias:[...p.alias]})),modelos:JSON.parse(JSON.stringify(SEED_TPL)),cfg:JSON.parse(JSON.stringify(SEED_CFG)),vinculos:{},templates:[],lixeira:[]});
+// garante campos novos em bancos antigos (perfis, riscos, margem, lixeira)
+function completarDb(){
+  const c=db.cfg;
+  if(!Array.isArray(c.perfis)||!c.perfis.length) c.perfis=[{id:"pad",nome:"Padrão",custo:45,preco:+c.valor||120}];
+  if(!Array.isArray(c.riscos)||!c.riscos.length) c.riscos=[{id:"padrao",nome:"Padrão (já feito antes)",pct:c.cont??10},{id:"novo",nome:"Novo fabricante / linha",pct:20},{id:"inedito",nome:"P&D / inédito",pct:35}];
+  if(c.margemAlvo==null) c.margemAlvo=40;
+  if(c.gest==null) c.gest=0;
+  if(!db.templates) db.templates=[];
+  if(!Array.isArray(db.lixeira)) db.lixeira=[];
+  const lim=Date.now()-60*864e5; db.lixeira=db.lixeira.filter(x=>(x.em||0)>lim);  // lixeira guarda 60 dias
+}
 
 /* Exemplo: mapa XMind "Estimativa LT" transcrito */
 const L=(cod,det,qtd,min)=>({cod,det,qtd,min});
@@ -485,7 +534,7 @@ const semente={cli:null,est:null};  // criados localmente num aparelho novo; des
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const semTs=o=>JSON.stringify({...o,_ts:0,atualizadoEm:0});
 (function migrar(){
-  if(!db.templates) db.templates=[];
+  completarDb();
   if(!Object.keys(arq.clientes).length){const c={id:uid(),nome:est.nome==="Estimativa LT"?"Exemplo":"Geral",criadoEm:Date.now()};arq.clientes[c.id]=c;if(aparelhoNovo) semente.cli=c.id}
   if(!est.id){const t=Date.now();Object.assign(est,{id:uid(),clienteId:Object.keys(arq.clientes)[0],versao:1,status:"rascunho",arquivada:false,criadoEm:t,atualizadoEm:t});est.familia=est.id;if(aparelhoNovo) semente.est=est.id}
   if(!arq.estimativas[est.id]) arq.estimativas[est.id]=clone(est);
@@ -527,7 +576,7 @@ const Sync={db:null,timers:{},last:{},chain:{},primeira:true,
     try{
       const b=await d.doc("config/banco").get();
       if(b.exists){const r=b.data(); this.last["config/banco"]=JSON.stringify(r);
-        if((r._ts||0)>(db._ts||0)){db=Object.assign(seedDb(),clone(r.banco));if(!db.templates)db.templates=[];dbJson=semTs(db);save(K_DB,db);render()}
+        if((r._ts||0)>(db._ts||0)){db=Object.assign(seedDb(),clone(r.banco));completarDb();dbJson=semTs(db);save(K_DB,db);render()}
         else if((db._ts||0)>(r._ts||0)) this.banco();
       }else this.banco();
     }catch(e){}
@@ -590,22 +639,31 @@ const ANDAMENTO=[["nao_iniciada","Não iniciada"],["andamento","Em andamento"],[
 const andLabel=v=>(ANDAMENTO.find(a=>a[0]===v)||ANDAMENTO[0])[1];
 let mostrarIgn=false;
 const lineFase=l=>(proc(l.cod)||{}).fase||l.fase||"Outros";
+const temReal=l=>l.real!==undefined&&l.real!==""&&l.real!==null;
+const perfilDe=d=>db.cfg.perfis.find(p=>p.id===d.perfil)||db.cfg.perfis[0];
+const riscoDe=d=>db.cfg.riscos.find(r=>r.id===d.risco)||db.cfg.riscos[0];
+const fatorDem=d=>1+((+riscoDe(d).pct||0)+(+db.cfg.gest||0))/100;   // reserva de risco da demanda + gestão extra
 function calc(e=est){
-  const c=db.cfg, porDem=[], porFase={}, porAnd={};
-  let base=0, real=0, estComReal=0;
+  const c=db.cfg, porDem=[], porFase={}, porAnd={}, porDemVal=[];
+  let base=0, res=0, valor=0, custo=0, real=0, estComReal=0, valReal=0, custoReal=0;
   (e.demandas||[]).forEach(d=>{
-    const t=d.linhas.reduce((s,l)=>s+lineMin(l),0);
+    const t=d.linhas.reduce((s,l)=>s+lineMin(l),0), f=fatorDem(d), pf=perfilDe(d);
     porDem.push(t);
+    const vd=t*f/60*(+pf.preco||0), cd=t*f/60*(+pf.custo||0);
+    porDemVal.push({valor:vd,custo:cd,margem:vd?(vd-cd)/vd*100:0});
     if(!contaDem(d)) return;
-    base+=t; porAnd[d.andamento||"nao_iniciada"]=(porAnd[d.andamento||"nao_iniciada"]||0)+t;
+    base+=t; res+=t*(f-1); valor+=vd; custo+=cd;
+    porAnd[d.andamento||"nao_iniciada"]=(porAnd[d.andamento||"nao_iniciada"]||0)+t;
     d.linhas.forEach(l=>{
       porFase[lineFase(l)]=(porFase[lineFase(l)]||0)+lineMin(l);
-      if(l.real!==undefined&&l.real!==""&&l.real!==null){real+=+l.real;estComReal+=lineMin(l)}
+      if(temReal(l)){real+=+l.real;estComReal+=lineMin(l);valReal+=lineMin(l)*f/60*(+pf.preco||0);custoReal+=(+l.real)/60*(+pf.custo||0)}
     });
   });
-  const res=base*(c.cont+c.gest)/100, total=base+res;
-  return {base,res,total,porDem,porFase,porAnd,real,estComReal,
-    dias:total/60/(c.hdia*c.equipe), valor:total/60*c.valor, min:total*c.oti, max:total*c.pes};
+  const total=base+res, margem=valor-custo, alvo=(+c.margemAlvo||0)/100;
+  return {base,res,total,porDem,porDemVal,porFase,porAnd,real,estComReal,valor,custo,margem,
+    margemPct:valor?margem/valor*100:0, valReal, custoReal, margemRealPct:valReal?(valReal-custoReal)/valReal*100:null,
+    precoMinAlvo:total&&alvo<1?custo/(1-alvo)/(total/60):0,
+    dias:total/60/(c.hdia*c.equipe), min:total*c.oti, max:total*c.pes};
 }
 
 /* ================= RENDER ESTIMATIVA ================= */
@@ -670,6 +728,11 @@ function renderEst(){
         <button class="x noprint" data-up="${di}" title="Subir">↑</button>
         <button class="x noprint" data-deld="${di}" title="Excluir demanda">×</button>
       </div>
+      <div class="dem-meta">
+        <label>Risco<select data-d="${di}" data-dk="risco">${db.cfg.riscos.map(x=>`<option value="${esc(x.id)}" ${riscoDe(d).id===x.id?"selected":""}>${esc(x.nome)} · ${num(x.pct)}%</option>`).join("")}</select></label>
+        <label>Perfil<select data-d="${di}" data-dk="perfil">${db.cfg.perfis.map(x=>`<option value="${esc(x.id)}" ${perfilDe(d).id===x.id?"selected":""}>${esc(x.nome)} · ${brl(+x.preco||0)}/h</option>`).join("")}</select></label>
+        ${contaDem(d)&&r.porDemVal[di].valor?`<span class="muted">valor <b>${brl(r.porDemVal[di].valor)}</b> · margem <b class="${r.porDemVal[di].margem<(+db.cfg.margemAlvo||0)?"diff up":"diff down"}">${num(r.porDemVal[di].margem,0)}%</b></span>`:""}
+      </div>
       <textarea placeholder="Observações, escopo, premissas…" data-d="${di}" data-dk="obs" style="${d.obs||disc?"":"display:none"}">${esc(d.obs)}</textarea>
       ${d.linhas.length?`<div class="tbl"><table>
         <thead><tr><th>Cód.</th><th>Atividade</th><th>Unid.</th><th class="n">Qtd.</th><th class="n">min/unid.</th><th class="n">Total</th><th class="n noprint">Real (min)</th><th class="noprint"></th></tr></thead>
@@ -701,12 +764,18 @@ function renderEst(){
   $("#kDias").textContent=num(Math.ceil(r.dias*10)/10);
   $("#kValor").textContent=brl(r.valor);
   $("#rMin").textContent=hrs(r.min); $("#rMax").textContent=hrs(r.max);
+  const alvo=+c.margemAlvo||0, abaixo=r.valor&&r.margemPct<alvo;
+  $("#margemBox").innerHTML=r.valor?`<div class="mgrid">
+      <div><span>Custo interno</span><b>${brl(r.custo)}</b></div>
+      <div><span>Margem</span><b class="${abaixo?"diff up":"diff down"}">${brl(r.margem)} · ${num(r.margemPct,0)}%</b></div></div>
+    ${abaixo?`<p class="msg err" style="margin:8px 0 0">Margem abaixo do alvo de ${num(alvo,0)}%. Preço médio mínimo para o alvo: <b>${brl(r.precoMinAlvo)}/h</b>.</p>`:""}
+    ${r.margemRealPct!=null?`<p class="muted" style="margin:8px 0 0">Margem real (linhas com realizado): <b class="${r.margemRealPct<alvo?"diff up":"diff down"}">${num(r.margemRealPct,0)}%</b> — custo real ${brl(r.custoReal)} sobre ${brl(r.valReal)} faturável.</p>`:""}`:"";
   $("#realBox").innerHTML=r.estComReal?`<p class="muted" style="margin:10px 0 0">Calibração: nas linhas com realizado, estimado <b>${hm(r.estComReal)}</b> × real <b>${hm(r.real)}</b> → desvio <b class="${r.real>r.estComReal?"diff up":"diff down"}">${r.real>=r.estComReal?"+":""}${num((r.real/r.estComReal-1)*100,0)}%</b></p>`:"";
   const bars=(arr)=>{const mx=Math.max(1,...arr.map(a=>a[1]));return arr.map(([k,v,x])=>`<div class="bar"><span title="${esc(k)}">${esc(k)}</span><i style="width:${v/mx*100}%;${x?"opacity:.35":""}"></i><span class="n" style="text-align:right">${hrs(v)}</span></div>`).join("")};
   $("#barsDem").innerHTML=bars(est.demandas.map((d,i)=>[d.nome,r.porDem[i],!contaDem(d)]).filter((a,i)=>a[1]>0&&!est.demandas[i].ignorada));
   $("#andBox").innerHTML=r.base?ANDAMENTO.filter(([k])=>r.porAnd[k]).map(([k,l])=>`<div class="bar"><span><span class="and and-${k}">${esc(l)}</span></span><i style="width:${r.porAnd[k]/r.base*100}%"></i><span class="n" style="text-align:right">${num(r.porAnd[k]/r.base*100,0)}%</span></div>`).join(""):"";
   $("#barsFase").innerHTML=bars(Object.entries(r.porFase).sort((a,b)=>b[1]-a[1]));
-  $("#memo").textContent=r.base?`Memória: ${hrs(r.base)} estimadas + ${c.cont}% contingência${c.gest?` + ${c.gest}% gestão`:""} = ${hrs(r.total)} ÷ (${c.hdia} h/dia × ${c.equipe} pessoa${c.equipe>1?"s":""}) · ${brl(c.valor)}/h.`:"";
+  $("#memo").textContent=r.base?`Memória: ${hrs(r.base)} estimadas + ${hrs(r.res)} de reservas (risco de cada demanda${c.gest?` + ${c.gest}% gestão`:""}) = ${hrs(r.total)} ÷ (${c.hdia} h/dia × ${c.equipe} pessoa${c.equipe>1?"s":""}). Valor pelo preço/hora do perfil de cada demanda.`:"";
 }
 
 const dl=$("#demList");
@@ -864,7 +933,7 @@ dl.addEventListener("click",async e=>{
   }else if(ds.dell){
     const [di,li]=ds.dell.split(":").map(Number); est.demandas[di].linhas.splice(li,1); persist(); renderEst();
   }else if(ds.deld!==undefined){
-    if(await uiConfirm(`Excluir a demanda “${est.demandas[+ds.deld].nome}”?`)){est.demandas.splice(+ds.deld,1);persist();renderEst()}
+    if(await uiConfirm(`Excluir a demanda “${est.demandas[+ds.deld].nome}”? Ela fica 60 dias na lixeira (aba Parâmetros).`)){paraLixeira("demanda",est.demandas[+ds.deld],{estId:est.id,estNome:est.nome});est.demandas.splice(+ds.deld,1);persist();renderEst()}
   }else if(ds.dign!==undefined){
     const d=est.demandas[+ds.dign]; d.ignorada=!d.ignorada; persist(); renderEst();
   }else if(ds.mostraign!==undefined){
@@ -892,13 +961,13 @@ $("#btnPrint").onclick=()=>window.print();
 $("#btnCsv").onclick=()=>{
   const r=calc(), c=db.cfg;
   const rows=[["Projeto",est.nome],["Responsável",est.resp],["Data",est.data],[],
-    ["Demanda","Tipo","Andamento","Ignorada","Fase","Código","Atividade","Detalhe","Unidade","Qtd","min/unid","Total (min)","Total (h)","Real (min)"]];
+    ["Demanda","Tipo","Andamento","Ignorada","Risco","Perfil","Fase","Código","Atividade","Detalhe","Unidade","Qtd","min/unid","Total (min)","Total (h)","Real (min)"]];
   est.demandas.forEach(d=>{
-    const dc=[d.nome,d.status,andLabel(d.andamento),d.ignorada?"sim":""];
+    const dc=[d.nome,d.status,andLabel(d.andamento),d.ignorada?"sim":"",riscoDe(d).nome+" ("+riscoDe(d).pct+"%)",perfilDe(d).nome];
     if(!d.linhas.length) rows.push([...dc,"","",d.obs]);
     d.linhas.forEach(l=>{const p=proc(l.cod);rows.push([...dc,lineFase(l),l.cod,p?p.nome:l.desc,l.det,p?p.un:"",l.qtd,l.min,lineMin(l),(lineMin(l)/60).toFixed(2),l.real??""])});
   });
-  rows.push([],["Horas estimadas",(r.base/60).toFixed(2)],["Contingência %",c.cont],["Gestão extra %",c.gest],["Total horas",(r.total/60).toFixed(2)],["Prazo dias úteis",r.dias.toFixed(1)],["Valor/hora",c.valor],["Investimento",r.valor.toFixed(2)]);
+  rows.push([],["Horas estimadas",(r.base/60).toFixed(2)],["Reservas (h)",(r.res/60).toFixed(2)],["Gestão extra %",c.gest],["Total horas",(r.total/60).toFixed(2)],["Prazo dias úteis",r.dias.toFixed(1)],["Investimento",r.valor.toFixed(2)],["Custo interno",r.custo.toFixed(2)],["Margem %",r.margemPct.toFixed(1)]);
   download("﻿"+toCsv(rows),(est.nome||"estimativa")+".csv","text/csv");
 };
 $("#btnSaveEst").onclick=()=>download(JSON.stringify({estimativa:est,cfg:db.cfg},null,2),(est.nome||"estimativa")+".estimacerto.json","application/json");
@@ -906,7 +975,7 @@ $("#btnLoadEst").onclick=()=>pickFile(".json",async f=>{
   const o=JSON.parse(await f.text()); if(!o.estimativa||!o.estimativa.demandas) throw new Error("Arquivo não é uma estimativa EstimaCerto v2");
   const t=Date.now(), id=uid();
   est={...clone(o.estimativa),id,familia:id,clienteId:arqCliSel||est.clienteId,versao:1,status:"rascunho",arquivada:false,criadoEm:t,atualizadoEm:t};
-  persist(); render(); uiAlert("Estimativa importada como nova estimativa no cliente selecionado.");
+  completarDb(); persist(); render(); uiAlert("Estimativa importada como nova estimativa no cliente selecionado.");
 });
 
 /* ================= IMPORTAÇÃO XMIND ================= */
@@ -1078,6 +1147,7 @@ async function excluirProc(i,semPerguntar){
   const usos=db.modelos.filter(m=>m.itens.some(it=>it[0]===p.cod)).map(m=>m.cod);
   if(!semPerguntar&&!await uiConfirm(`Excluir ${p.cod} · ${p.nome}?`+(usos.length?`\nEle é usado nos modelos: ${usos.join(", ")} (será removido deles).`:""))) return false;
   db.modelos.forEach(m=>m.itens=m.itens.filter(it=>it[0]!==p.cod));
+  if(!semPerguntar) paraLixeira("processo",p);
   db.processos.splice(i,1); persist(); render(); return true;
 }
 $("#procBody").addEventListener("change",e=>{
@@ -1124,7 +1194,7 @@ $("#dbImport").onclick=()=>pickFile(".json,.csv",async f=>{
     uiAlert(novos.length+" processos importados/atualizados.");
   }else{
     const o=JSON.parse(txt); if(!o.processos) throw new Error("JSON sem lista de processos");
-    db=Object.assign(seedDb(),o);
+    db=Object.assign(seedDb(),o); completarDb();
   }
   persist(); render();
 });
@@ -1148,18 +1218,18 @@ const limparExecucao=demandas=>clone(demandas).map(d=>({...d,toggl:undefined,lin
 function renderArquivo(){
   const clis=Object.values(arq.clientes).sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
   if(!arqCliSel||!arq.clientes[arqCliSel]) arqCliSel=est.clienteId&&arq.clientes[est.clienteId]?est.clienteId:(clis[0]||{}).id;
-  const conta=id=>Object.values(arq.estimativas).filter(e=>e.clienteId===id&&!e.arquivada).length;
+  const conta=id=>Object.values(arq.estimativas).filter(e=>e.clienteId===id&&!e.arquivada&&!e.excluida).length;
   $("#arqCli").innerHTML=clis.map(c=>`<option value="${esc(c.id)}" ${c.id===arqCliSel?"selected":""}>${esc(c.nome)} (${conta(c.id)})</option>`).join("");
   $("#arqTpl").innerHTML='<option value="">Nova a partir de template…</option>'+(db.templates||[]).map(t=>`<option value="${esc(t.id)}">${esc(t.nome)}</option>`).join("");
   const mostrarArq=$("#arqArq").checked;
-  const lista=Object.values(arq.estimativas).filter(e=>e.clienteId===arqCliSel&&(mostrarArq||!e.arquivada)).sort((a,b)=>dataDe(b)-dataDe(a)||(b.atualizadoEm||0)-(a.atualizadoEm||0));
+  const lista=Object.values(arq.estimativas).filter(e=>e.clienteId===arqCliSel&&!e.excluida&&(mostrarArq||!e.arquivada)).sort((a,b)=>dataDe(b)-dataDe(a)||(b.atualizadoEm||0)-(a.atualizadoEm||0));
   if(!lista.length){$("#arqList").innerHTML='<p class="empty" style="padding:12px">Nenhuma estimativa neste cliente. Crie uma nova.</p>';return}
   let mes="", h="";
   lista.forEach(e=>{
     const m=mesFmt(dataDe(e)); if(m!==mes){mes=m;h+=`<tr class="mes"><td colspan="6">${esc(m)}</td></tr>`}
     const r=calc(e), pc=r.base?Math.round((r.porAnd.concluida||0)/r.base*100):0, st=e.arquivada?'<span class="pill st-a">arquivada</span>':e.status==="fechada"?'<span class="pill st-f">fechada</span>':'<span class="pill st-r">rascunho</span>';
     h+=`<tr class="${e.id===est.id?"cur":""}"><td><b>${esc(e.nome||"(sem nome)")}</b> <span class="pill">v${e.versao||1}</span>${e.id===est.id?' <span class="muted">· aberta</span>':""}</td>
-      <td>${st}${pc?` <span class="muted">${pc}% concluído</span>`:""}</td><td class="n">${hrs(r.total)}</td><td class="n">${brl(r.valor)}</td>
+      <td>${st}${pc?` <span class="muted">${pc}% concluído</span>`:""}</td><td class="n">${hrs(r.total)}${r.valor?`<div class="${r.margemPct<(+db.cfg.margemAlvo||0)?"diff up":"diff down"}">margem ${num(r.margemPct,0)}%</div>`:""}</td><td class="n">${brl(r.valor)}</td>
       <td class="muted" title="Atualizada em ${new Date(e.atualizadoEm||0).toLocaleString("pt-BR")}">${e.data?new Date(e.data+"T12:00:00").toLocaleDateString("pt-BR"):""}</td>
       <td class="acts">${e.id!==est.id?`<button class="btn sm pri" data-aab="${e.id}">Abrir</button>`:""}<button class="btn sm" data-aren="${e.id}">Renomear</button><button class="btn sm" data-aver="${e.id}">Nova versão</button><button class="btn sm" data-aarq="${e.id}">${e.arquivada?"Desarquivar":"Arquivar"}</button><button class="x" data-adel="${e.id}" title="Excluir">×</button></td></tr>`;
   });
@@ -1203,9 +1273,10 @@ $("#arqList").addEventListener("click",async e=>{
   }
   else if(ds.adel){
     const x=arq.estimativas[ds.adel]||est;
-    if(!await uiConfirm(`Excluir definitivamente “${x.nome}” v${x.versao||1}? Prefira “Arquivar” se quiser guardar.`)) return;
-    delete arq.estimativas[ds.adel]; Sync.del("estimativas/"+ds.adel); save(K_ARQ,arq);
-    if(ds.adel===est.id){const outra=Object.values(arq.estimativas).filter(z=>z.clienteId===arqCliSel).sort((a,b)=>(b.atualizadoEm||0)-(a.atualizadoEm||0))[0]||novaEstimativa(arqCliSel);abrirEstimativa(outra.id)}
+    if(!await uiConfirm(`Excluir “${x.nome}” v${x.versao||1}? Ela fica 60 dias na lixeira (aba Parâmetros).`)) return;
+    if(ds.adel===est.id){est.excluida=true;est.excluidaEm=Date.now();persist()}
+    else{x.excluida=true;x.excluidaEm=Date.now();x.atualizadoEm=Date.now();Sync.est(x.id);save(K_ARQ,arq)}
+    if(ds.adel===est.id){const outra=Object.values(arq.estimativas).filter(z=>z.clienteId===arqCliSel&&!z.excluida).sort((a,b)=>(b.atualizadoEm||0)-(a.atualizadoEm||0))[0]||novaEstimativa(arqCliSel);abrirEstimativa(outra.id)}
     else renderArquivo();
   }
 });
@@ -1274,7 +1345,7 @@ $("#tplList").addEventListener("change",e=>{
 });
 $("#tplList").addEventListener("click",async e=>{
   const t=e.target;
-  if(t.dataset.mdel!==undefined){if(await uiConfirm("Excluir este modelo?")){db.modelos.splice(+t.dataset.mdel,1);persist();renderTpl()}}
+  if(t.dataset.mdel!==undefined){if(await uiConfirm("Excluir este modelo? Ele fica 60 dias na lixeira.")){paraLixeira("modelo",db.modelos[+t.dataset.mdel]);db.modelos.splice(+t.dataset.mdel,1);persist();renderTpl()}}
   else if(t.dataset.idel!==undefined){db.modelos[+t.dataset.mi].itens.splice(+t.dataset.idel,1);persist();renderTpl()}
 
 });
@@ -1702,7 +1773,8 @@ $("#dbXmind").onclick=()=>pickFile(".xmind",async f=>{
   }}]);
   montarRevisaoXmind(true);
 });
-$("#dbCalib").onclick=()=>{
+$("#dbCalib").onclick=()=>document.querySelector('nav button[data-tab="cal"]').click();
+const calibrarEstimativaAtual=()=>{
   const acc={};
   est.demandas.forEach(d=>d.linhas.forEach(l=>{
     if(!l.cod||l.real===undefined||l.real===null||l.real===""||!l.qtd) return;
@@ -1731,7 +1803,7 @@ function estruturaToggl(){
       return {nome:l.toggl,seg:Math.round(lineMin(l)*60)};
     });
     const min=d.linhas.reduce((s,l)=>s+lineMin(l),0);
-    return {nome:d.toggl,horas:Math.max(1,Math.ceil(min/60*(1+(c.cont+c.gest)/100))),tasks};
+    return {nome:d.toggl,horas:Math.max(1,Math.ceil(min/60*fatorDem(d))),tasks};
   });
 }
 const psq=v=>"'"+String(v).replace(/'/g,"''")+"'";
@@ -1857,17 +1929,18 @@ function zErro(e){
 const zCall=(tool,input)=>zMcp.callTool(ZS,tool,input,{cache:false}).then(zPay);
 const zHead=()=>({"X-com-zoho-invoice-organizationid":zOrg});
 function linhasOrcamento(modo){
-  const c=db.cfg, fator=1+(c.cont+c.gest)/100, h=v=>Math.round(v/60*fator*100)/100;
+  const h=(v,d)=>Math.round(v/60*fatorDem(d)*100)/100, minD=d=>d.linhas.reduce((a,l)=>a+lineMin(l),0);
   const dems=est.demandas.filter(d=>contaDem(d)&&d.linhas.length);
   const resumo=d=>d.linhas.map(l=>{const p=proc(l.cod);return `${l.qtd}× ${p?p.nome:l.desc}${l.det?" ("+l.det+")":""}`}).join("; ").slice(0,1900);
-  if(modo==="unica"){const tot=dems.reduce((s,d)=>s+d.linhas.reduce((a,l)=>a+lineMin(l),0),0);
-    return [{name:("Customização de biblioteca Promob — "+(est.nome||"")).slice(0,100),description:("Demandas: "+dems.map(d=>d.nome).join("; ")).slice(0,1900),quantity:h(tot),rate:c.valor}]}
-  return dems.map(d=>({name:d.nome.slice(0,100),description:resumo(d),quantity:h(d.linhas.reduce((a,l)=>a+lineMin(l),0)),rate:c.valor}));
+  if(modo==="unica"){
+    const qt=Math.round(dems.reduce((s,d)=>s+h(minD(d),d),0)*100)/100, val=dems.reduce((s,d)=>s+h(minD(d),d)*(+perfilDe(d).preco||0),0);
+    return [{name:("Customização de biblioteca Promob — "+(est.nome||"")).slice(0,100),description:("Demandas: "+dems.map(d=>d.nome).join("; ")).slice(0,1900),quantity:qt,rate:qt?Math.round(val/qt*100)/100:0}]}
+  return dems.map(d=>({name:d.nome.slice(0,100),description:resumo(d),quantity:h(minD(d),d),rate:+perfilDe(d).preco||0}));
 }
 function fallbackZoho(motivo){
   const ls=linhasOrcamento("demanda");
   abrirModal("Orçamento no Zoho Invoice",`<div class="msg">${esc(motivo)}</div>
-    <p class="muted">Abra <a href="https://invoice.zoho.com/app#/quotes/new" target="_blank" rel="noopener">Zoho Invoice › Novo orçamento</a> e use as linhas abaixo (horas já com reservas, a ${brl(db.cfg.valor)}/h):</p>
+    <p class="muted">Abra <a href="https://invoice.zoho.com/app#/quotes/new" target="_blank" rel="noopener">Zoho Invoice › Novo orçamento</a> e use as linhas abaixo (horas já com as reservas de risco; preço/hora do perfil de cada demanda):</p>
     <textarea class="code" id="zTxt" readonly style="min-height:160px">${esc(ls.map(l=>`${l.name}\t${String(l.quantity).replace(".",",")} h\t${l.rate}\t${l.description}`).join("\n"))}</textarea>
     <div class="row" style="margin-top:6px"><button class="btn" id="zCp">Copiar linhas</button></div>`);
   $("#zCp").onclick=()=>copiar("zTxt");
@@ -1895,7 +1968,7 @@ $("#btnZoho").onclick=async()=>{
         <label>Linhas<select id="zModo"><option value="demanda">uma por demanda</option><option value="unica">linha única</option></select></label>
         <label>Validade<input type="date" id="zVenc" value="${venc}"></label>
       </div>
-      <p class="muted">Quantidade = horas com reservas · preço = valor/hora dos Parâmetros (${brl(db.cfg.valor)}). Nome e descrição de cada linha vêm da demanda.</p>
+      <p class="muted">Quantidade = horas com as reservas de risco · preço = preço/hora do perfil de cada demanda. Nome e descrição de cada linha vêm da demanda.</p>
       <div id="zPrev"></div><div id="zRes"></div>`;
     const prev=()=>{const ls=linhasOrcamento($("#zModo").value);$("#zPrev").innerHTML=`<div class="tbl"><table><thead><tr><th>Linha</th><th class="n">Horas</th><th class="n">Valor</th></tr></thead><tbody>${ls.map(l=>`<tr><td>${esc(l.name)}</td><td class="n">${num(l.quantity,2)}</td><td class="n">${brl(l.quantity*l.rate)}</td></tr>`).join("")}<tr><td><b>Total</b></td><td class="n"><b>${num(ls.reduce((s,l)=>s+l.quantity,0),2)}</b></td><td class="n"><b>${brl(ls.reduce((s,l)=>s+l.quantity*l.rate,0))}</b></td></tr></tbody></table></div>`};
     prev(); $("#zModo").onchange=prev;
@@ -1920,7 +1993,7 @@ $("#btnZoho").onclick=async()=>{
         const out=await zCall("ZohoInvoice_Create_an_Estimate",{headers:zHead(),body:{
           customer_id:cli,date:hoje(),expiry_date:$("#zVenc").value,reference_number:(est.nome||"").slice(0,50),
           line_items:ls.map((l,i)=>({item_id:item,name:l.name,description:l.description,quantity:l.quantity,rate:l.rate,unit:"h",item_order:i+1})),
-          notes:`Estimativa EstimaCerto: ${num(r.base/60)} h técnicas + ${c.cont}% contingência${c.gest?` + ${c.gest}% gestão`:""} = ${num(r.total/60)} h. Prazo estimado: ${num(Math.ceil(r.dias*10)/10)} dias úteis.`
+          notes:`Estimativa EstimaCerto: ${num(r.base/60)} h técnicas + ${num(r.res/60)} h de reservas de risco = ${num(r.total/60)} h. Prazo estimado: ${num(Math.ceil(r.dias*10)/10)} dias úteis.`
         }});
         const e=(out&&(out.estimate||out.data&&out.data.estimate))||{};
         $("#zRes").innerHTML=`<div class="msg ok">Orçamento criado${e.estimate_number?` (${esc(e.estimate_number)})`:""}. <a href="https://invoice.zoho.com/app#/quotes${e.estimate_id?"/"+encodeURIComponent(e.estimate_id):""}" target="_blank" rel="noopener">Abrir no Zoho Invoice</a></div>`;
@@ -1930,8 +2003,147 @@ $("#btnZoho").onclick=async()=>{
 };
 
 /* ================= PARÂMETROS ================= */
-const CFG={cValor:"valor",cHdia:"hdia",cEquipe:"equipe",cCont:"cont",cGest:"gest",cOti:"oti",cPes:"pes"};
-function renderCfg(){Object.entries(CFG).forEach(([id,k])=>$("#"+id).value=db.cfg[k])}
+const CFG={cMargem:"margemAlvo",cHdia:"hdia",cEquipe:"equipe",cGest:"gest",cOti:"oti",cPes:"pes"};
+function renderCfg(){
+  Object.entries(CFG).forEach(([id,k])=>$("#"+id).value=db.cfg[k]);
+  const c=db.cfg;
+  $("#perfisBox").innerHTML=`<div class="tbl"><table><thead><tr><th>Perfil</th><th class="n">Custo/h</th><th class="n">Preço/h</th><th class="n">Margem</th><th></th></tr></thead><tbody>
+    ${c.perfis.map((p,i)=>{const m=p.preco?(p.preco-p.custo)/p.preco*100:0;return `<tr><td><input value="${esc(p.nome)}" data-pf="${i}" data-pk="nome"></td>
+      <td class="n"><input type="number" min="0" step="1" value="${p.custo}" data-pf="${i}" data-pk="custo"></td>
+      <td class="n"><input type="number" min="0" step="1" value="${p.preco}" data-pf="${i}" data-pk="preco"></td>
+      <td class="n ${m<(+c.margemAlvo||0)?"diff up":"diff down"}">${num(m,0)}%</td>
+      <td>${c.perfis.length>1?`<button class="x" data-pfdel="${i}" title="Excluir">×</button>`:""}</td></tr>`}).join("")}</tbody></table></div>
+    <div class="toolbar" style="margin:8px 0 0"><button class="btn" id="pfAdd">+ Perfil</button><span class="muted">Preço mínimo para a margem-alvo de ${num(+c.margemAlvo||0,0)}%: custo ÷ ${num(1-(+c.margemAlvo||0)/100,2)}</span></div>`;
+  $("#riscosBox").innerHTML=`<div class="tbl"><table><thead><tr><th>Nível</th><th class="n">Reserva %</th><th></th></tr></thead><tbody>
+    ${c.riscos.map((x,i)=>`<tr><td><input value="${esc(x.nome)}" data-rk="nome" data-ri="${i}"></td><td class="n"><input type="number" min="0" step="1" value="${x.pct}" data-rk="pct" data-ri="${i}"></td>
+      <td>${c.riscos.length>1?`<button class="x" data-ridel="${i}" title="Excluir">×</button>`:""}</td></tr>`).join("")}</tbody></table></div>
+    <div class="toolbar" style="margin:8px 0 0"><button class="btn" id="riAdd">+ Nível de risco</button></div>`;
+  renderLixeira();
+}
+$("#perfisBox").addEventListener("change",e=>{const t=e.target;if(t.dataset.pf===undefined) return;const p=db.cfg.perfis[+t.dataset.pf];p[t.dataset.pk]=t.dataset.pk==="nome"?t.value.trim():Math.max(0,+t.value||0);persist();renderCfg();renderEst()});
+$("#riscosBox").addEventListener("change",e=>{const t=e.target;if(t.dataset.ri===undefined) return;const x=db.cfg.riscos[+t.dataset.ri];x[t.dataset.rk]=t.dataset.rk==="nome"?t.value.trim():Math.max(0,+t.value||0);persist();renderCfg();renderEst()});
+$("#perfisBox").addEventListener("click",async e=>{
+  if(e.target.id==="pfAdd"){const nome=(await uiPrompt("Nome do perfil (ex.: Sênior, Pleno, Júnior):")||"").trim();if(!nome) return;db.cfg.perfis.push({id:uid(),nome,custo:45,preco:+db.cfg.perfis[0].preco||120});persist();renderCfg();renderEst()}
+  else if(e.target.dataset.pfdel!==undefined){const p=db.cfg.perfis[+e.target.dataset.pfdel];if(await uiConfirm(`Excluir o perfil “${p.nome}”? Demandas que o usam passam para “${db.cfg.perfis.find(x=>x!==p).nome}”.`)){db.cfg.perfis.splice(+e.target.dataset.pfdel,1);persist();renderCfg();renderEst()}}
+});
+$("#riscosBox").addEventListener("click",async e=>{
+  if(e.target.id==="riAdd"){const nome=(await uiPrompt("Nome do nível de risco:")||"").trim();if(!nome) return;db.cfg.riscos.push({id:uid(),nome,pct:15});persist();renderCfg();renderEst()}
+  else if(e.target.dataset.ridel!==undefined){const x=db.cfg.riscos[+e.target.dataset.ridel];if(await uiConfirm(`Excluir o nível “${x.nome}”? Demandas que o usam passam para “${db.cfg.riscos.find(y=>y!==x).nome}”.`)){db.cfg.riscos.splice(+e.target.dataset.ridel,1);persist();renderCfg();renderEst()}}
+});
+
+/* ================= CALIBRAÇÃO ================= */
+const todasEstimativas=()=>Object.values(arq.estimativas).filter(e=>!e.excluida).map(e=>e.id===est.id?est:e);
+let calRows=[], calRis=[];
+function renderCal(){
+  const soFech=$("#calFech").checked, ests=todasEstimativas().filter(e=>!soFech||e.status==="fechada");
+  const porCod={}, porRisco={}; let sEst=0,sReal=0,sAbs=0,nLin=0; const estsCom=new Set();
+  ests.forEach(e=>(e.demandas||[]).forEach(d=>{
+    if(d.ignorada) return;
+    let dEst=0,dReal=0;
+    d.linhas.forEach(l=>{
+      if(!temReal(l)||!(+l.qtd)) return;
+      const em=lineMin(l), r=+l.real; sEst+=em; sReal+=r; sAbs+=Math.abs(r-em); nLin++; estsCom.add(e.id); dEst+=em; dReal+=r;
+      if(!l.cod) return;
+      const a=porCod[l.cod]||(porCod[l.cod]={cod:l.cod,linhas:0,ests:new Set(),qtd:0,est:0,real:0,xs:[]});
+      a.linhas++; a.ests.add(e.id); a.qtd+=+l.qtd; a.est+=em; a.real+=r; a.xs.push(r/(+l.qtd));
+    });
+    if(dEst){const k=riscoDe(d).id, b=porRisco[k]||(porRisco[k]={est:0,real:0,dems:0}); b.est+=dEst; b.real+=dReal; b.dems++}
+  }));
+  if(!nLin){$("#calOut").innerHTML='<p class="empty">Ainda não há realizado. Preencha “Real (min)” nas linhas executadas ou importe o CSV do Toggl (botão Toggl na estimativa fechada).</p>';return}
+  calRows=Object.values(porCod).map(a=>{
+    const p=proc(a.cod), sug=Math.round(a.real/a.qtd*10)/10, m=a.xs.reduce((s,x)=>s+x,0)/a.xs.length;
+    const cv=a.xs.length>1&&m?Math.sqrt(a.xs.reduce((s,x)=>s+(x-m)**2,0)/(a.xs.length-1))/m:null;
+    const ne=a.ests.size, conf=a.linhas>=5&&ne>=3&&(cv??1)<=0.35?"Alta":(ne>=2&&a.linhas>=3)||(a.linhas>=3&&(cv??1)<=0.25)?"Média":"Baixa";
+    const desv=p&&p.min?(sug/p.min-1)*100:0;
+    return {...a,p,sug,cv,conf,desv,marcar:p&&conf!=="Baixa"&&Math.abs(desv)>=5};
+  }).filter(r=>r.p).sort((a,b)=>Math.abs(b.desv)*b.linhas-Math.abs(a.desv)*a.linhas);
+  calRis=db.cfg.riscos.map(x=>{const b=porRisco[x.id];if(!b) return null;const ob=(b.real/b.est-1)*100;return {x,...b,ob,sug:Math.max(0,Math.ceil(ob))}}).filter(Boolean);
+  const dv=(sReal/sEst-1)*100, erro=sAbs/sEst*100;
+  $("#calOut").innerHTML=`<div class="kpi" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:14px">
+      <div><span>Estimativas com realizado</span><b>${estsCom.size}</b></div><div><span>Linhas medidas</span><b>${nLin}</b></div>
+      <div><span>Desvio geral (real × estimado)</span><b class="${dv>0?"diff up":"diff down"}">${dv>=0?"+":""}${num(dv,0)}%</b></div>
+      <div><span>Erro médio absoluto</span><b>${num(erro,0)}%</b></div></div>
+    <h3 style="margin:6px 0 8px">Tempo-padrão por processo</h3>
+    <div class="tbl"><table><thead><tr><th></th><th>Cód.</th><th>Processo</th><th class="n">Amostras</th><th class="n">Padrão</th><th class="n">Real/unid.</th><th class="n">Desvio</th><th class="n">Variação</th><th>Confiança</th></tr></thead><tbody>
+    ${calRows.map((r,i)=>`<tr><td><input type="checkbox" data-calp="${i}" ${r.marcar?"checked":""}></td><td>${esc(r.cod)}</td><td>${esc(r.p.nome)}</td>
+      <td class="n">${r.linhas} linha${r.linhas>1?"s":""} · ${r.ests.size} est.</td><td class="n">${num(r.p.min)}</td><td class="n"><b>${num(r.sug)}</b></td>
+      <td class="n ${r.desv>0?"diff up":"diff down"}">${r.desv>=0?"+":""}${num(r.desv,0)}%</td><td class="n">${r.cv==null?"—":num(r.cv*100,0)+"%"}</td>
+      <td><span class="pill ${r.conf==="Alta"?"h":r.conf==="Média"?"":"w"}">${r.conf}</span></td></tr>`).join("")}</tbody></table></div>
+    <div class="toolbar" style="margin:10px 0 0"><button class="btn pri" id="calAplicar">Aplicar tempos marcados ao banco</button><span class="muted">Sugestão = Σ real ÷ Σ quantidade. Confiança alta: ≥5 linhas em ≥3 estimativas e variação ≤35%. Marcados por padrão: confiança média/alta e desvio ≥ 5%.</span></div>
+    <h3 style="margin:18px 0 8px">Reserva por nível de risco</h3>
+    ${calRis.length?`<div class="tbl"><table><thead><tr><th>Nível</th><th class="n">Demandas medidas</th><th class="n">Estimado</th><th class="n">Real</th><th class="n">Estouro observado</th><th class="n">Reserva atual</th><th class="n">Sugerida</th><th></th></tr></thead><tbody>
+    ${calRis.map((r,i)=>`<tr><td>${esc(r.x.nome)}</td><td class="n">${r.dems}</td><td class="n">${hm(r.est)}</td><td class="n">${hm(r.real)}</td>
+      <td class="n ${r.ob>0?"diff up":"diff down"}">${r.ob>=0?"+":""}${num(r.ob,0)}%</td><td class="n">${num(r.x.pct)}%</td><td class="n"><b>${r.sug}%</b></td>
+      <td>${r.sug!==+r.x.pct?`<button class="btn sm" data-calr="${i}">Usar ${r.sug}%</button>`:""}</td></tr>`).join("")}</tbody></table></div>
+      <p class="muted">Estouro observado = quanto o realizado passou do estimado (sem reserva) nas demandas daquele nível. Use como reserva mínima; com poucas demandas, trate como indicação.</p>`:'<p class="muted">Sem demandas medidas.</p>'}`;
+}
+$("#calFech").onchange=renderCal;
+$("#calOut").addEventListener("click",async e=>{
+  if(e.target.id==="calAplicar"){
+    const sel=calRows.filter((r,i)=>document.querySelector(`[data-calp="${i}"]`).checked); if(!sel.length){uiAlert("Nenhum processo marcado.");return}
+    if(!await uiConfirm(`Atualizar o tempo-padrão de ${sel.length} processo(s) com o realizado? Eles passam a “Histórico”.`)) return;
+    sel.forEach(r=>{r.p.min=r.sug;r.p.fonte="H"}); persist(); render(); uiAlert(`${sel.length} tempos-padrão atualizados. Estimativas novas já usam os valores calibrados.`);
+  }else if(e.target.dataset.calr!==undefined){
+    const r=calRis[+e.target.dataset.calr]; r.x.pct=r.sug; persist(); render(); uiAlert(`Reserva de “${r.x.nome}” ajustada para ${r.sug}%.`);
+  }
+});
+
+/* ================= LIXEIRA ================= */
+function paraLixeira(tipo,item,ref){db.lixeira.unshift({id:uid(),tipo,em:Date.now(),item:clone(item),ref:ref||null})}
+function renderLixeira(){
+  const ests=Object.values(arq.estimativas).filter(e=>e.excluida).map(e=>({id:"est:"+e.id,tipo:"estimativa",em:e.excluidaEm||0,nome:`${e.nome} v${e.versao||1}`,origem:(arq.clientes[e.clienteId]||{}).nome||""}));
+  const outros=db.lixeira.map(x=>({id:x.id,tipo:x.tipo,em:x.em,nome:x.tipo==="processo"?`${x.item.cod} · ${x.item.nome}`:x.tipo==="modelo"?`${x.item.cod} · ${x.item.nome}`:x.item.nome,origem:x.ref&&x.ref.estNome?`estimativa “${x.ref.estNome}”`:""}));
+  const todos=[...ests,...outros].sort((a,b)=>b.em-a.em);
+  $("#lixBox").innerHTML=todos.length?`<div class="tbl"><table><thead><tr><th>Tipo</th><th>Item</th><th>Origem</th><th>Excluído em</th><th>Ações</th></tr></thead><tbody>
+    ${todos.map(x=>`<tr><td><span class="pill">${esc(x.tipo)}</span></td><td>${esc(x.nome)}</td><td class="muted">${esc(x.origem)}</td><td class="muted">${new Date(x.em).toLocaleString("pt-BR")}</td>
+      <td class="acts"><button class="btn sm pri" data-lres="${esc(x.id)}">Restaurar</button><button class="x" data-ldel="${esc(x.id)}" title="Excluir definitivamente">×</button></td></tr>`).join("")}</tbody></table></div>
+    <div class="toolbar" style="margin:8px 0 0"><button class="btn" id="lixVaziar">Esvaziar lixeira</button></div>`:'<p class="empty" style="padding:12px">Lixeira vazia.</p>';
+}
+function apagarEstimativaDef(id){delete arq.estimativas[id];Sync.del("estimativas/"+id);save(K_ARQ,arq)}
+$("#lixBox").addEventListener("click",async e=>{
+  const ds=e.target.dataset;
+  if(e.target.id==="lixVaziar"){
+    if(!await uiConfirm("Esvaziar a lixeira? Os itens serão apagados definitivamente.")) return;
+    Object.values(arq.estimativas).filter(x=>x.excluida).forEach(x=>apagarEstimativaDef(x.id)); db.lixeira=[]; persist(); renderCfg(); renderArquivo(); return;
+  }
+  const id=ds.lres||ds.ldel; if(!id) return;
+  if(id.startsWith("est:")){
+    const eid=id.slice(4), x=arq.estimativas[eid]; if(!x) return;
+    if(ds.ldel){if(!await uiConfirm(`Apagar definitivamente “${x.nome}”?`)) return; apagarEstimativaDef(eid)}
+    else{x.excluida=false;x.excluidaEm=null;x.atualizadoEm=Date.now();Sync.est(eid);save(K_ARQ,arq);uiAlert(`Estimativa “${x.nome}” restaurada no cliente ${(arq.clientes[x.clienteId]||{}).nome||""}.`)}
+    renderCfg(); renderArquivo(); return;
+  }
+  const i=db.lixeira.findIndex(x=>x.id===id); if(i<0) return; const x=db.lixeira[i];
+  if(ds.ldel){if(!await uiConfirm("Apagar definitivamente este item?")) return; db.lixeira.splice(i,1); persist(); renderCfg(); return}
+  if(x.tipo==="processo"){const p=x.item; if(proc(p.cod)) p.cod=codigoLivre(p.fase,p.grupo||""); db.processos.splice(posGrupo(p.fase,p.grupo||""),0,p); uiAlert(`Processo ${p.cod} restaurado no grupo ${p.grupo||"(sem grupo)"}.`)}
+  else if(x.tipo==="modelo"){const m=x.item; if(db.modelos.some(y=>y.cod===m.cod)){let n=db.modelos.length+1;do{m.cod="MD-"+String(n++).padStart(2,"0")}while(db.modelos.some(y=>y.cod===m.cod))} db.modelos.unshift(m); uiAlert(`Modelo ${m.cod} restaurado.`)}
+  else if(x.tipo==="demanda"){
+    const alvoId=x.ref&&x.ref.estId, alvo=alvoId&&alvoId!==est.id&&arq.estimativas[alvoId]&&!arq.estimativas[alvoId].excluida?arq.estimativas[alvoId]:null;
+    if(alvo){alvo.demandas.push(x.item);alvo.atualizadoEm=Date.now();Sync.est(alvo.id);save(K_ARQ,arq);uiAlert(`Demanda restaurada na estimativa “${alvo.nome}”.`)}
+    else{est.demandas.push(x.item);uiAlert(`Demanda restaurada na estimativa aberta “${est.nome}”.`)}
+  }
+  db.lixeira.splice(i,1); persist(); render();
+});
+
+/* ================= BACKUP ================= */
+$("#bkExp").onclick=()=>{persist();download(JSON.stringify({app:"EstimaCerto",formato:1,exportadoEm:new Date().toISOString(),banco:db,arquivo:arq,aberta:est.id},null,1),`estimacerto-backup-${hoje()}.json`,"application/json")};
+$("#bkImp").onclick=()=>pickFile(".json",async f=>{
+  const o=JSON.parse(await f.text());
+  if(o.app!=="EstimaCerto"||!o.arquivo||!o.banco) throw new Error("arquivo não é um backup completo do EstimaCerto");
+  const nC=Object.keys(o.arquivo.clientes||{}).length, nE=Object.keys(o.arquivo.estimativas||{}).length;
+  if(!await uiConfirm(`Backup de ${new Date(o.exportadoEm).toLocaleString("pt-BR")}: ${nC} clientes e ${nE} estimativas.\n\nClientes e estimativas serão mesclados (em cada estimativa fica a versão mais recente). Continuar?`,{ok:"Mesclar arquivo"})) return;
+  let novos=0;
+  Object.values(o.arquivo.clientes||{}).forEach(c=>{if(!arq.clientes[c.id]){arq.clientes[c.id]=c;Sync.cli(c.id)}});
+  Object.values(o.arquivo.estimativas||{}).forEach(e=>{const l=arq.estimativas[e.id];if(!l||(e.atualizadoEm||0)>(l.atualizadoEm||0)){arq.estimativas[e.id]=e;Sync.est(e.id);novos++}});
+  // num navegador novo, descarta o exemplo criado automaticamente se ninguém mexeu nele
+  const se=semente.est&&arq.estimativas[semente.est];
+  if(se&&!o.arquivo.estimativas[semente.est]&&(se.atualizadoEm||0)<=(se.criadoEm||0)+1000){delete arq.estimativas[semente.est];if(semente.cli&&!Object.values(arq.estimativas).some(e=>e.clienteId===semente.cli)) delete arq.clientes[semente.cli]}
+  save(K_ARQ,arq);
+  if(await uiConfirm("Substituir também o banco de processos, modelos, templates e parâmetros pelos do backup?",{ok:"Substituir banco",cancel:"Manter o atual"})){db=Object.assign(seedDb(),clone(o.banco));completarDb()}
+  const ab=(o.aberta&&arq.estimativas[o.aberta]&&!arq.estimativas[o.aberta].excluida)?o.aberta:(arq.estimativas[est.id]?est.id:Object.keys(arq.estimativas)[0]);
+  if(ab){est=clone(arq.estimativas[ab]);arqCliSel=est.clienteId}
+  persist(); render(); uiAlert(`Backup restaurado: ${novos} estimativas novas ou atualizadas.`);
+});
 Object.entries(CFG).forEach(([id,k])=>$("#"+id).addEventListener("change",e=>{
   db.cfg[k]=Math.max(0,+e.target.value||0); if(k==="hdia"||k==="equipe") db.cfg[k]=Math.max(1,db.cfg[k]); persist();
 }));
@@ -1962,7 +2174,7 @@ function pickFile(accept,cb){
     try{await cb(f)}catch(err){uiAlert("Não foi possível importar: "+err.message)}};
   inp.click();
 }
-function render(){renderEst();renderArquivo();renderProc();renderTpl();renderSys();renderCfg()}
+function render(){renderEst();renderArquivo();renderProc();renderTpl();renderCal();renderSys();renderCfg()}
 render();
 Sync.init();
 </script>

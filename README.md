@@ -134,11 +134,27 @@ para copiar em Zoho Invoice › Novo orçamento.
 Preencha **Real (min)** nas linhas executadas. O painel mostra o desvio estimado × real, que indica
 quais tempos-padrão ajustar no banco.
 
+## Calibração, margem e risco (Onda 1)
+
+- **Aba Calibração**: junta todas as estimativas com “Real (min)” e mostra, por processo, amostras
+  (linhas e estimativas), tempo-padrão, real por unidade, desvio, variação e confiança
+  (alta: ≥5 linhas em ≥3 estimativas e variação ≤35%). Aplica os tempos marcados ao banco. Também mostra
+  o estouro observado por nível de risco e sugere a reserva.
+- **Perfis de custo e preço** (Parâmetros): cada demanda usa um perfil; o preço/hora gera o valor e o
+  custo/hora interno gera a margem. Painel mostra custo, margem, alerta abaixo da margem-alvo (com o
+  preço mínimo) e margem real nas linhas com realizado. Zoho usa o preço do perfil de cada demanda.
+- **Risco por demanda**: níveis com reserva própria (Padrão 10%, Novo fabricante 20%, P&D 35%,
+  editáveis), no lugar da contingência única.
+- **Backup completo** (Parâmetros): baixa e restaura tudo; a restauração mescla estimativas (fica a mais
+  recente) e pergunta antes de substituir o banco.
+- **Lixeira** (Parâmetros): processos, modelos, demandas e estimativas excluídos ficam 60 dias, com
+  restaurar e excluir definitivamente.
+
 ## Fórmula
 
 ```
 horas estimadas = Σ (qtd × min/unid) / 60          [demandas "Estimar"]
-total           = horas estimadas × (1 + contingência% + gestão extra%)
+total           = Σ por demanda: horas × (1 + reserva do nível de risco% + gestão extra%)
+valor / custo   = Σ por demanda: horas com reserva × preço/hora | custo/hora do perfil
 prazo (dias)    = total ÷ (horas produtivas/dia × pessoas)
-investimento    = total × valor/hora
 ```
