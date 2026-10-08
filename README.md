@@ -213,6 +213,12 @@ prazo (dias)    = total ÷ (horas produtivas/dia × pessoas)
 
   O resumo do passo a passo lista os grupos de processos em ordem (Cadastro de entidade → Builder → … → Testes).
 - **Investimento:** só o valor total, ou valor total com desconto (em % ou R$, com nome editável) e valor final. O valor por extenso é opcional.
+- **Condições de pagamento** (no bloco Investimento, com o cálculo pronto):
+  - **entrada** em % ou R$, com o momento (ex.: "na aprovação");
+  - **restante** calculado sozinho, em N parcelas, com o momento (ex.: "a 30, 60 e 90 dias");
+  - forma de pagamento e observação.
+
+  O documento mostra os valores de cada parte. As condições do escopo não dependem mais do texto da Proposta premium.
 - **Blocos:** objetivo, briefing, escopo, entregáveis, fora do escopo, premissas, responsabilidades do cliente, cronograma, investimento, critérios de aceite, aceite, além de blocos de texto próprios. Você liga, desliga, renomeia, edita e reordena cada um. **Salvar como padrão** vale para as próximas estimativas.
 - **Aceite com assinatura eletrônica simples:**
   - O .html baixado abre no celular do cliente. Ele preenche nome e CPF/CNPJ, assina com o dedo e baixa o documento assinado.
