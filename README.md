@@ -304,3 +304,13 @@ prazo (dias)    = total ÷ (horas produtivas/dia × pessoas)
   - Cada linha continua editável. A quantidade digitada vira a proporção daquela linha dentro do modelo, e o bloco segue multiplicando.
   - **⤫ Desagrupar** solta as linhas. **×** remove o modelo e as linhas dele.
 - **Salvar como modelo** de uma demanda com blocos gera um modelo com os blocos como grupos, preservando quantidades e multiplicadores.
+
+## Descrição e observações por demanda · recolher a tabela
+
+- **Painel "Descrição e observações"** em cada demanda, com três campos:
+  - **Descrição:** vai para o cliente, no escopo e na proposta.
+  - **Critérios de aceite:** quando a demanda está pronta.
+  - **Observações internas:** só a equipe vê; nunca vão para documentos do cliente.
+- Fechado, o painel mostra o que está preenchido e a primeira linha da descrição.
+- **Demandas antigas:** a observação (que antes ia para a proposta) é copiada para a descrição na primeira abertura, sem as "Perguntas ao cliente". Textos gerados automaticamente (Leitor de System) ficam só como observação.
+- **Recolher:** ▾/▸ no cabeçalho recolhe a tabela de processos e modelos da demanda; o rodapé mostra "▸ Mostrar N linhas · M modelos". No topo, **Recolher/Expandir todas** e **Descrições: abrir/fechar todas**. Recolher funciona também com a estimativa fechada.

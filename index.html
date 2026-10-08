@@ -137,6 +137,12 @@ span.and{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px}
 .blk-h td{background:color-mix(in srgb,var(--accent) 9%,transparent);border-top:2px solid color-mix(in srgb,var(--accent) 45%,transparent)}
 .blk-h input{width:70px;font-weight:600}.blk-l td:first-child{border-left:3px solid color-mix(in srgb,var(--accent) 45%,transparent);padding-left:10px}
 .addmod{display:inline-flex;gap:4px;align-items:center}.addmod input[type=number]{width:62px}
+.drec{font-size:14px;width:26px}.dtxt-res{display:flex;gap:10px;align-items:center;margin:-4px 0 8px;min-width:0}.dtxt-prev{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.dtxt-tem{font-weight:400;opacity:.75;font-size:11px;margin-left:4px}
+.dtxt{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin:0 0 12px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.dtxt label{font-size:12px}.dtxt textarea{min-height:110px;font-size:13px}
+@media (max-width:760px){.dtxt{grid-template-columns:1fr}}
+@media print{.dtxt-res .muted{display:none}}
 .lblm{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}.chips{display:flex;flex-wrap:wrap;gap:4px}
 .escol{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px}.escol label{flex-direction:row;align-items:center;gap:5px}.escol select{width:auto;padding:3px 5px;font-size:13px}
 .eblk{border:1px solid var(--line);border-radius:6px;padding:6px;margin-bottom:6px;display:flex;flex-direction:column;gap:4px}.eblk.off{opacity:.55}
@@ -1009,6 +1015,25 @@ function renderEstBar(){
   ["btnNovaDem","btnXmind","btnExemplo","btnClear","pNome","pResp","pData","btnIA","pPerfil"].forEach(id=>document.getElementById(id).disabled=fechada);
   {const b=document.getElementById("btnZProj");b.disabled=!fechada;b.title=fechada?"":"Feche a estimativa para liberar"}
 }
+// Textos por demanda: descrição (vai para o cliente), critérios de aceite e observações internas
+const txtAbertos=new Set();
+const OBS_AUTO=/^(Gerado (pelo|pela)|Comparação com o retrato)/;
+// antes, a observação também ia para a proposta: na primeira abertura ela é copiada para a descrição (sem as perguntas ao cliente)
+function migrarDescricao(d){
+  if(d.descMig) return false; d.descMig=true;
+  if(!d.obs||OBS_AUTO.test(d.obs)||(d.escopo&&d.escopo.briefing)) return true;
+  const t=d.obs.replace(/\n?Perguntas ao cliente:[\s\S]*$/,"").trim(); if(t){d.escopo=d.escopo||{};d.escopo.briefing=t} return true;
+}
+function painelTextos(d,di){
+  const ex=d.escopo||{}, aberto=txtAbertos.has(demKey(d)), tem=[ex.briefing&&"descrição",ex.criterios&&"critérios",d.obs&&"observações"].filter(Boolean);
+  const bt=`<button class="btn sm noprint dtxt-bt${aberto?" pri":""}" data-dtxt="${di}" title="Descrição para o cliente, critérios de aceite e observações internas">${aberto?"▾":"▸"} Descrição e observações${tem.length?` <span class="dtxt-tem">${tem.join(" · ")}</span>`:""}</button>`;
+  if(!aberto) return `<div class="dtxt-res">${bt}${ex.briefing?`<span class="muted dtxt-prev" title="${esc(ex.briefing)}">${esc(ex.briefing.split("\n")[0].slice(0,160))}</span>`:""}</div>`;
+  return `<div class="dtxt-res">${bt}</div><div class="dtxt">
+    <label class="dtxt-desc">Descrição <span class="muted">· vai para o cliente (escopo e proposta)</span><textarea data-d="${di}" data-dtx="briefing" placeholder="O que será entregue nesta demanda, contexto e referências do cliente…">${esc(ex.briefing||"")}</textarea></label>
+    <label>Critérios de aceite <span class="muted">· quando está pronto</span><textarea data-d="${di}" data-dtx="criterios" placeholder="Ex.: portas abrem nas 3 larguras padrão; orçamento confere com a tabela da fábrica">${esc(ex.criterios||"")}</textarea></label>
+    <label>Observações internas <span class="muted">· só a equipe vê</span><textarea data-d="${di}" data-dk="obs" placeholder="Pendências, perguntas ao cliente, riscos, combinados internos…">${esc(d.obs||"")}</textarea></label>
+  </div>`;
+}
 // um campo editado que some durante o redesenho dispara "change" de novo: ignora a chamada aninhada
 let renderEstAtivo=false;
 function renderEst(){
@@ -1016,6 +1041,7 @@ function renderEst(){
   try{renderEstCorpo()}finally{renderEstAtivo=false}
 }
 function renderEstCorpo(){
+  if(est.demandas.map(migrarDescricao).some(Boolean)) save(K_EST,est);
   renderEstBar();
   if(migrarPerfil(est)|migrarComercial(est)) save(K_EST,est);
   {const pe=perfilEst(), exc=est.demandas.filter(d=>perfilProprio(d));
@@ -1054,6 +1080,7 @@ function renderEstCorpo(){
     }).join("");
     return `<div class="card dem ${disc?"disc":""}">
       <div class="dem-h">
+        <button class="x noprint drec" data-drec="${di}" title="${d.recolhida?"Expandir processos e modelos":"Recolher processos e modelos"}">${d.recolhida?"▸":"▾"}</button>
         <input class="nome" value="${esc(d.nome)}" data-d="${di}" data-dk="nome">
         <select data-d="${di}" data-dk="status" style="width:auto">
           <option value="estimar" ${!disc?"selected":""}>Estimar</option>
@@ -1070,8 +1097,8 @@ function renderEstCorpo(){
         <label class="${perfilProprio(d)?"pf-ovr":""}" title="${perfilProprio(d)?"Perfil próprio desta demanda (exceção)":"Segue o perfil da estimativa"}">${perfilProprio(d)?"Perfil próprio":"Perfil"}<select data-d="${di}" data-dk="perfil"><option value="">Da estimativa · ${esc(perfilEst().nome)}</option>${db.cfg.perfis.filter(x=>x.id!==perfilEst().id).map(x=>`<option value="${esc(x.id)}" ${perfilProprio(d)&&d.perfil===x.id?"selected":""}>${optPerfil(x)}</option>`).join("")}</select></label>${perfilProprio(d)&&respDe(perfilDe(d))?`<span class="muted pf-resp">responsável: <b>${esc(respDe(perfilDe(d)))}</b></span>`:""}
         ${contaDem(d)&&r.porDemVal[di].valor?`<span class="muted">valor <b>${brl(r.porDemVal[di].valor)}</b> · margem <b class="${r.porDemVal[di].margem<(+db.cfg.margemAlvo||0)?"diff up":"diff down"}">${num(r.porDemVal[di].margem,0)}%</b></span>`:""}
       </div>
-      <textarea placeholder="Observações, escopo, premissas…" data-d="${di}" data-dk="obs" style="${d.obs||disc?"":"display:none"}">${esc(d.obs)}</textarea>
-      ${d.linhas.length?`<div class="tbl"><table>
+      ${painelTextos(d,di)}
+      ${d.recolhida?"":`${d.linhas.length?`<div class="tbl"><table>
         <thead><tr><th>Cód.</th><th>Atividade</th><th>Unid.</th><th class="n">Qtd.</th><th class="n">min/unid.</th><th class="n">Total</th><th class="n noprint">Real (min)</th><th class="noprint"></th></tr></thead>
         <tbody>${rows}</tbody></table></div>`:""}
       <div class="addrow">
@@ -1081,17 +1108,20 @@ function renderEstCorpo(){
         <input type="number" min="0" step="1" placeholder="min" data-addm="${di}" title="Minutos por unidade (vazio = padrão do banco)">
         <button class="btn" data-add="${di}">Adicionar</button>
         <span class="addmod"><div class="combo cm" data-cb="m" data-d="${di}"><input class="cbi" placeholder="Aplicar modelo: digite…" autocomplete="off" spellcheck="false"><div class="cmenu"></div></div><input type="number" min="0" step="1" value="1" data-addmq="${di}" title="Quantidade do modelo (multiplica todas as linhas dele)"></span>
-        ${!d.obs&&!disc?`<button class="btn" data-obs="${di}">+ Obs.</button>`:""}
+
         ${d.linhas.length?`<button class="btn" data-dmod="${di}" title="Guardar esta demanda como modelo reutilizável">Salvar como modelo</button>`:""}
       </div>
-      <div class="sub"><span class="muted">${d.linhas.length} linhas</span><span>Subtotal <b>${hm(r.porDem[di])}</b> (${hrs(r.porDem[di])})${disc?' <span class="pill w">não contabilizada</span>':""}</span></div>
+      `}
+      <div class="sub"><span class="muted">${d.recolhida?`<button class="btn sm noprint" data-drec="${di}">▸ Mostrar ${d.linhas.length} linha${d.linhas.length===1?"":"s"}${(d.blocos||[]).length?` · ${(d.blocos||[]).length} modelo${(d.blocos||[]).length>1?"s":""}`:""}</button>`:`${d.linhas.length} linhas${(d.blocos||[]).length?` · ${(d.blocos||[]).length} modelo${(d.blocos||[]).length>1?"s":""}`:""}`}</span><span>Subtotal <b>${hm(r.porDem[di])}</b> (${hrs(r.porDem[di])})${disc?' <span class="pill w">não contabilizada</span>':""}</span></div>
     </div>`;
   }).join("")||'<div class="card empty">Nenhuma demanda. Crie uma, importe um XMind ou carregue o exemplo.</div>';
+  if(est.demandas.length>1){const tod=est.demandas.every(d=>d.recolhida);
+    $("#demList").insertAdjacentHTML("afterbegin",`<div class="ignbar noprint"><button class="btn sm" data-recall="${tod?0:1}">${tod?"▾ Expandir todas":"▸ Recolher todas"}</button><button class="btn sm" data-txtall="1">Descrições: ${est.demandas.every(d=>txtAbertos.has(demKey(d)))?"fechar todas":"abrir todas"}</button></div>`)}
   const nIgn=est.demandas.filter(d=>d.ignorada).length;
   if(nIgn) $("#demList").insertAdjacentHTML("afterbegin",`<div class="ignbar noprint"><span class="muted">${nIgn} demanda${nIgn>1?"s":""} ignorada${nIgn>1?"s":""} (fora dos totais)</span><button class="btn sm" data-mostraign="1">${mostrarIgn?"Ocultar ignoradas":"Mostrar ignoradas"}</button></div>`);
 
   if(est.status==="fechada"){
-    $("#demList").querySelectorAll("input,select,textarea,button").forEach(el=>{if(el.dataset.k!=="real"&&el.dataset.dk!=="andamento"&&!el.dataset.mostraign) el.disabled=true});
+    $("#demList").querySelectorAll("input,select,textarea,button").forEach(el=>{if(el.dataset.k!=="real"&&el.dataset.dk!=="andamento"&&!el.dataset.mostraign&&el.dataset.drec===undefined&&el.dataset.dtxt===undefined&&el.dataset.recall===undefined&&el.dataset.txtall===undefined) el.disabled=true});
     $("#demList").querySelectorAll(".addrow").forEach(el=>el.style.display="none");
   }
   const c=db.cfg;
@@ -1123,6 +1153,12 @@ dl.addEventListener("change",e=>{
   const t=e.target, di=t.dataset.d;
   if(di===undefined) return;
   const d=est.demandas[+di];
+  if(t.dataset.dtx||t.dataset.dk==="obs"){
+    if(t.dataset.dtx){d.escopo=d.escopo||{};d.escopo[t.dataset.dtx]=t.value} else d.obs=t.value;
+    persist(); const ex=d.escopo||{}, tem=[ex.briefing&&"descrição",ex.criterios&&"critérios",d.obs&&"observações"].filter(Boolean);
+    const sp=t.closest(".card").querySelector(".dtxt-bt"); if(sp) sp.innerHTML=`▾ Descrição e observações${tem.length?` <span class="dtxt-tem">${tem.join(" · ")}</span>`:""}`;
+    return;
+  }
   if(t.dataset.dk==="perfil"){if(!t.value||t.value===perfilEst().id) delete d.perfil; else d.perfil=t.value}
   else if(t.dataset.dk){d[t.dataset.dk]=t.value}
   else if(t.dataset.k){
@@ -1297,6 +1333,15 @@ dl.addEventListener("click",async e=>{
     const [di,li]=ds.dell.split(":").map(Number), d=est.demandas[di], l=d.linhas.splice(li,1)[0];
     if(l&&l.blk&&!d.linhas.some(x=>x.blk===l.blk)) tirarBloco(d,l.blk,false);
     persist(); renderEst();
+  }else if(ds.drec!==undefined){
+    const d=est.demandas[+ds.drec]; d.recolhida=!d.recolhida; persist(); renderEst();
+  }else if(ds.dtxt!==undefined){
+    const k=demKey(est.demandas[+ds.dtxt]); txtAbertos.has(k)?txtAbertos.delete(k):txtAbertos.add(k); renderEst();
+    if(txtAbertos.has(k)){const ta=document.querySelector(`textarea[data-d="${ds.dtxt}"][data-dtx="briefing"]`); if(ta&&!ta.value) ta.focus()}
+  }else if(ds.recall!==undefined){
+    est.demandas.forEach(d=>d.recolhida=ds.recall==="1"); persist(); renderEst();
+  }else if(ds.txtall!==undefined){
+    const todos=est.demandas.every(d=>txtAbertos.has(demKey(d))); est.demandas.forEach(d=>todos?txtAbertos.delete(demKey(d)):txtAbertos.add(demKey(d))); renderEst();
   }else if(ds.blkdes||ds.blkdel){
     const [di,id]=(ds.blkdes||ds.blkdel).split(":"), d=est.demandas[+di], b=blocoDe(d,id); if(!b) return;
     if(ds.blkdel&&!await uiConfirm(`Remover o modelo “${b.cod} · ${b.nome}” e as ${d.linhas.filter(l=>l.blk===id).length} linhas dele desta demanda?`,{ok:"Remover",cancel:"Manter"})) return;
@@ -2938,7 +2983,7 @@ function propostaHTML(p){
   const escopo=dems.map(({d,i})=>{
     const grupos={}; d.linhas.forEach(l=>{const pr=proc(l.cod), g=pr?(pr.grupo||pr.fase):"Atividades específicas"; (grupos[g]=grupos[g]||[]).push((pr?pr.nome:l.desc)+(l.det?` — ${l.det}`:"")+(l.qtd>1?` (${num(l.qtd,0)})`:""))});
     const it=cr.itens.find(x=>x.di===i);
-    return `<section class="dem"><h3>${e(d.nome)}</h3>${d.obs?`<p>${e(d.obs)}</p>`:""}
+    return `<section class="dem"><h3>${e(d.nome)}</h3>${(d.escopo||{}).briefing?`<p>${e(d.escopo.briefing).replace(/\n/g,"<br>")}</p>`:""}
       <div class="cols">${Object.entries(grupos).map(([g,ls])=>`<div><h4>${e(g)}</h4><ul>${[...new Set(ls)].map(x=>`<li>${e(x)}</li>`).join("")}</ul></div>`).join("")}</div>
       ${it?`<p class="meta">Prazo: ${fmtD(it.dataIni)} a ${fmtD(it.dataFim)}${p.mostrarHoras?` · ${num(it.h)} h`:""}</p>`:""}</section>`}).join("");
   const inv=dems.map(({d,i})=>`<tr><td>${e(d.nome)}</td>${p.mostrarHoras?`<td class="n">${num(d.linhas.reduce((s,l)=>s+lineMin(l),0)*fatorDem(d)/60)} h</td>`:""}<td class="n">${brl(r.porDemVal[i].valor)}</td></tr>`).join("");
@@ -3094,7 +3139,7 @@ function escModelo(cf=escCfg()){
   const um=cf.alcance?escDem().find(({d})=>d.id===cf.alcance):null, lista=um?[um]:escDem();
   const dems=lista.map(({d,i})=>{
     const it=cr.itens.find(x=>x.di===i), ex=d.escopo||{};
-    return {nome:d.nome,desc:c.desc?(ex.briefing||d.obs||resumoPassos(d)):(um&&ex.briefing?ex.briefing:""),resumo:c.resumo?resumoPassos(d):"",crit:um?(ex.criterios||""):"",
+    return {nome:d.nome,desc:c.desc?(ex.briefing||resumoPassos(d)):(um&&ex.briefing?ex.briefing:""),resumo:c.resumo?resumoPassos(d):"",crit:um?(ex.criterios||""):"",
       horas:c.horas?Math.round(hDem(d)*10)/10:null,valor:c.valor==="dem"?Math.round(r.porDemVal[i].valor):null,
       ini:it?it.dataIni:null,fim:it?it.dataFim:null};
   });
@@ -3237,9 +3282,9 @@ function renderEsc(){
   box.innerHTML=`<label>Abrangência<select id="esAlc"><option value="">Estimativa inteira (${ds.length} demanda${ds.length===1?"":"s"})</option>${ds.map(({d})=>`<option value="${esc(demKey(d))}" ${cf.alcance===d.id?"selected":""}>Só: ${esc(d.nome)}</option>`).join("")}</select></label>
     <label>Título<input id="esTit" value="${esc(cf.titulo)}" placeholder="${esc(um?`Escopo — ${um.d.nome}`:"Escopo de trabalho")}"></label>
     <div><span class="lblm">Nível de detalhe do escopo</span><div class="eopts">${ESC_PRESETS.map(p=>`<label class="eopt${cf.preset===p.id?" on":""}"><input type="radio" name="esPre" value="${p.id}" ${cf.preset===p.id?"checked":""}><span>${esc(p.nome)}</span></label>`).join("")}</div></div>
-    ${um?`<label>Briefing desta demanda <span class="muted">(vazio = observação da demanda)</span><textarea data-esd="briefing" placeholder="${esc(um.d.obs||"O que o cliente pediu, contexto, referências…")}">${esc((um.d.escopo||{}).briefing||"")}</textarea></label>
+    ${um?`<label>Descrição desta demanda <span class="muted">(a mesma do painel “Descrição e observações” da estimativa)</span><textarea data-esd="briefing" placeholder="O que será entregue, contexto e referências do cliente…">${esc((um.d.escopo||{}).briefing||"")}</textarea></label>
       <label>Critérios de aceite desta demanda<textarea data-esd="criterios" placeholder="Ex.: portas abrem nas 3 larguras padrão; orçamento confere com a tabela da fábrica">${esc((um.d.escopo||{}).criterios||"")}</textarea></label>`
-     :c.desc?`<p class="muted" style="font-size:12px">A descrição vem do briefing da demanda (escolha “Só: demanda” para editar), da observação na estimativa ou, sem nenhum dos dois, do resumo do passo a passo.</p>`:""}
+     :c.desc?`<p class="muted" style="font-size:12px">A descrição vem do painel “Descrição e observações” de cada demanda (aba Estimativa); sem descrição, entra o resumo do passo a passo. Observações internas nunca vão para o cliente.</p>`:""}
     <div><span class="lblm">Blocos do documento</span>
     ${cf.blocos.map((b,k)=>`<div class="eblk${b.on?"":" off"}"><div class="ebh"><input type="checkbox" data-ebon="${k}" ${b.on?"checked":""} title="Incluir"><input data-ebtit="${k}" value="${esc(b.tit)}">
         <button class="btn sm" data-ebup="${k}" ${k?"":"disabled"}>↑</button><button class="btn sm" data-ebdn="${k}" ${k<cf.blocos.length-1?"":"disabled"}>↓</button>${b.tipo==="texto"?`<button class="x" data-ebdel="${k}" title="Excluir bloco">×</button>`:""}</div>
@@ -3541,7 +3586,7 @@ function mostrarIA(){
   const add=$("#iaAdd"); if(add) add.onclick=()=>{
     const sel=iaRes.demandas.filter((d,i)=>document.querySelector(`[data-iad="${i}"]`).checked); if(!sel.length) return;
     const perg=Array.isArray(r.perguntas)?r.perguntas.filter(Boolean):[];
-    sel.forEach((d,k)=>est.demandas.push({nome:d.nome,status:"estimar",obs:(d.obs||"")+(k===0&&perg.length?(d.obs?"\n":"")+"Perguntas ao cliente: "+perg.join(" | "):""),risco:d.risco,linhas:d.linhas}));
+    sel.forEach((d,k)=>est.demandas.push({nome:d.nome,status:"estimar",descMig:true,escopo:d.obs?{briefing:d.obs}:undefined,obs:(d.obs||"")+(k===0&&perg.length?(d.obs?"\n":"")+"Perguntas ao cliente: "+perg.join(" | "):""),risco:d.risco,linhas:d.linhas}));
     persist(); renderEst(); fecharModal(); uiAlert(`${sel.length} demanda(s) adicionada(s). Revise quantidades e linhas avulsas antes de fechar.`);
   };
 }
