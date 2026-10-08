@@ -34,6 +34,12 @@ main{max-width:1240px;margin:0 auto;padding:16px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
 .grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;align-items:start}
 .grid aside{position:sticky;top:12px}
+.resh{display:flex;justify-content:space-between;align-items:center;gap:6px}.resh h2{margin:0}.resh span{display:flex;gap:4px}
+#resMini{display:none;width:44px;padding:10px 0;line-height:1.15;font-size:12px}
+.res-rec .grid{grid-template-columns:minmax(0,1fr) 44px}.res-rec aside .card{display:none}.res-rec #resMini{display:block}
+.modo-cli .so-int,.modo-cli #margemBox,.modo-cli #realBox,.modo-cli #memo,.modo-cli [data-k="real"],.modo-cli #demList .tbl .diff{display:none!important}
+#cliBanner{position:sticky;top:0;z-index:50;background:var(--accent);color:#fff;text-align:center;padding:5px 10px;font-size:13px}#cliBanner .btn{margin-left:8px}
+@media (max-width:960px){.res-rec .grid{grid-template-columns:minmax(0,1fr)}.res-rec #resMini{width:100%;line-height:1.4}.res-rec #resMini br{display:none}}
 @media (max-width:960px){.grid{grid-template-columns:minmax(0,1fr)}.grid aside{position:static}}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:end}
 label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
@@ -261,9 +267,9 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
           <label>Data<input id="pData" type="date"></label>
           <label>Início previsto<input id="pInicio" type="date"></label>
           <label>Prazo do cliente<input id="pPrazo" type="date" title="Opcional: data que o cliente precisa"></label>
-          <label>Perfil da estimativa<select id="pPerfil" title="Vale para todas as demandas; mude numa demanda específica só quando for exceção"></select></label>
+          <label class="so-int">Perfil da estimativa<select id="pPerfil" title="Vale para todas as demandas; mude numa demanda específica só quando for exceção"></select></label>
         </div>
-        <div id="pPerfilInfo" class="muted" style="font-size:12px;margin-top:4px"></div>
+        <div id="pPerfilInfo" class="muted so-int" style="font-size:12px;margin-top:4px"></div>
         <div class="toolbar noprint" style="margin:12px 0 0">
           <button class="btn pri" id="btnNovaDem">+ Nova demanda</button>
           <button class="btn" id="btnXmind">Importar XMind</button>
@@ -284,8 +290,9 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
     </div>
 
     <aside>
+      <button class="btn" id="resMini" title="Mostrar os resultados">◀<br>R<br>e<br>s<br>u<br>l<br>t<br>a<br>d<br>o<br>s</button>
       <div class="card">
-        <h2>Resultado</h2>
+        <div class="resh"><h2>Resultado</h2><span><button class="btn sm" id="btnModoCli" title="Esconde margens, custos, preço/hora, reservas e observações internas para apresentar a tela ao cliente">🙈 Modo cliente</button><button class="btn sm" id="btnRecRes" title="Recolher a coluna de resultados">⇥</button></span></div>
         <div class="kpi">
           <div class="big"><span>Esforço total (com reservas)</span><b id="kTotal">0 h</b></div>
           <div><span>Horas estimadas</span><b id="kBase">0</b></div>
@@ -1124,7 +1131,7 @@ function painelTextos(d,di){
   return `<div class="dtxt-res">${bt}</div><div class="dtxt">
     <label class="dtxt-desc">Descrição <span class="muted">· vai para o cliente (escopo e proposta)</span><textarea data-d="${di}" data-dtx="briefing" placeholder="O que será entregue nesta demanda, contexto e referências do cliente…">${esc(ex.briefing||"")}</textarea></label>
     <label>Critérios de aceite <span class="muted">· quando está pronto</span><textarea data-d="${di}" data-dtx="criterios" placeholder="Ex.: portas abrem nas 3 larguras padrão; orçamento confere com a tabela da fábrica">${esc(ex.criterios||"")}</textarea></label>
-    <label>Observações internas <span class="muted">· só a equipe vê</span><textarea data-d="${di}" data-dk="obs" placeholder="Pendências, perguntas ao cliente, riscos, combinados internos…">${esc(d.obs||"")}</textarea></label>
+    <label class="so-int">Observações internas <span class="muted">· só a equipe vê</span><textarea data-d="${di}" data-dk="obs" placeholder="Pendências, perguntas ao cliente, riscos, combinados internos…">${esc(d.obs||"")}</textarea></label>
   </div>`;
 }
 // um campo editado que some durante o redesenho dispara "change" de novo: ignora a chamada aninhada
@@ -1170,7 +1177,7 @@ function renderEstCorpo(){
         <td class="n"><input class="qcel" value="${nCel(l.qtd)}" data-d="${di}" data-l="${li}" data-k="qtd" title="Quantidade (3 ou 3un) ou uma duração (2h, 1d) que vira unidades">${cobra?`<div class="diff" title="${esc(descRegra(md))}">${cobra}</div>`:""}</td>
         <td class="n">${celNM(l.min,valorUnit(l),tu,`data-d="${di}" data-l="${li}" data-k="min"`,`${val?"Valor por unidade (R$)":"Tempo por unidade"}; aceita 30m, 1,5h, 1h30, 0,5d, 2pct10, R$ 1.500${p&&!val?", 2x = 2× o padrão":""}`)}${dif}</td>
         <td class="n"><b>${val?brl(lineValor(l)):hm(lineMin(l))}</b></td>
-        <td class="n noprint"><input class="tcel" placeholder="—" value="${l.real!=null&&l.real!==""?celTempo(+l.real,+l.real>=60?"hr":"min"):""}" data-d="${di}" data-l="${li}" data-k="real" title="Tempo realizado: 45m · 1h30 · 0,5d (calibração)"></td>
+        <td class="n noprint so-int"><input class="tcel" placeholder="—" value="${l.real!=null&&l.real!==""?celTempo(+l.real,+l.real>=60?"hr":"min"):""}" data-d="${di}" data-l="${li}" data-k="real" title="Tempo realizado: 45m · 1h30 · 0,5d (calibração)"></td>
         <td class="noprint"><button class="x" data-dell="${di}:${li}" title="Remover linha">×</button></td></tr>`;
     }).join("");
     return `<div class="card dem ${disc?"disc":""}">
@@ -1188,13 +1195,13 @@ function renderEstCorpo(){
         <button class="x noprint" data-deld="${di}" title="Excluir demanda">×</button>
       </div>
       <div class="dem-meta">
-        <label>Risco<select data-d="${di}" data-dk="risco">${db.cfg.riscos.map(x=>`<option value="${esc(x.id)}" ${riscoDe(d).id===x.id?"selected":""}>${esc(x.nome)} · ${num(x.pct)}%</option>`).join("")}</select></label>
-        <label class="${perfilProprio(d)?"pf-ovr":""}" title="${perfilProprio(d)?"Perfil próprio desta demanda (exceção)":"Segue o perfil da estimativa"}">${perfilProprio(d)?"Perfil próprio":"Perfil"}<select data-d="${di}" data-dk="perfil"><option value="">Da estimativa · ${esc(perfilEst().nome)}</option>${db.cfg.perfis.filter(x=>x.id!==perfilEst().id).map(x=>`<option value="${esc(x.id)}" ${perfilProprio(d)&&d.perfil===x.id?"selected":""}>${optPerfil(x)}</option>`).join("")}</select></label>${perfilProprio(d)&&respDe(perfilDe(d))?`<span class="muted pf-resp">responsável: <b>${esc(respDe(perfilDe(d)))}</b></span>`:""}
-        ${contaDem(d)&&r.porDemVal[di].valor?`<span class="muted">valor <b>${brl(r.porDemVal[di].valor)}</b> · margem <b class="${r.porDemVal[di].margem<(+db.cfg.margemAlvo||0)?"diff up":"diff down"}">${num(r.porDemVal[di].margem,0)}%</b></span>`:""}
+        <label class="so-int">Risco<select data-d="${di}" data-dk="risco">${db.cfg.riscos.map(x=>`<option value="${esc(x.id)}" ${riscoDe(d).id===x.id?"selected":""}>${esc(x.nome)} · ${num(x.pct)}%</option>`).join("")}</select></label>
+        <label class="so-int ${perfilProprio(d)?"pf-ovr":""}" title="${perfilProprio(d)?"Perfil próprio desta demanda (exceção)":"Segue o perfil da estimativa"}">${perfilProprio(d)?"Perfil próprio":"Perfil"}<select data-d="${di}" data-dk="perfil"><option value="">Da estimativa · ${esc(perfilEst().nome)}</option>${db.cfg.perfis.filter(x=>x.id!==perfilEst().id).map(x=>`<option value="${esc(x.id)}" ${perfilProprio(d)&&d.perfil===x.id?"selected":""}>${optPerfil(x)}</option>`).join("")}</select></label>${perfilProprio(d)&&respDe(perfilDe(d))?`<span class="muted pf-resp so-int">responsável: <b>${esc(respDe(perfilDe(d)))}</b></span>`:""}
+        ${contaDem(d)&&r.porDemVal[di].valor?`<span class="muted so-int">valor <b>${brl(r.porDemVal[di].valor)}</b> · margem <b class="${r.porDemVal[di].margem<(+db.cfg.margemAlvo||0)?"diff up":"diff down"}">${num(r.porDemVal[di].margem,0)}%</b></span>`:""}
       </div>
       ${painelTextos(d,di)}
       ${d.recolhida?"":`${d.linhas.length?`<div class="tbl"><table>
-        <thead><tr><th>Cód.</th><th>Atividade</th><th>Unid.</th><th class="n">Qtd.</th><th class="n">Tempo ou valor / unid.</th><th class="n">Total</th><th class="n noprint">Real</th><th class="noprint"></th></tr></thead>
+        <thead><tr><th>Cód.</th><th>Atividade</th><th>Unid.</th><th class="n">Qtd.</th><th class="n">Tempo ou valor / unid.</th><th class="n">Total</th><th class="n noprint so-int">Real</th><th class="noprint"></th></tr></thead>
         <tbody>${rows}</tbody></table></div>`:""}
       <div class="addrow">
         <div class="combo" data-cb="p" data-d="${di}"><input class="cbi" placeholder="Processo: digite código ou nome…" autocomplete="off" spellcheck="false"><div class="cmenu"></div></div>
@@ -1513,6 +1520,15 @@ table{width:100%;border-collapse:collapse}td,th{padding:4px 6px;border-bottom:1p
 ${corpo}
 <p><b>Condições de pagamento:</b> ${e(condTexto(fe.pg))}</p></div></body></html>`;
 }
+// Apresentação ao cliente: recolher resultados e esconder dados internos (preferência guardada neste navegador)
+const prefUI=(k,v)=>{try{if(v===undefined) return localStorage.getItem("estimacerto.ui."+k)==="1"; localStorage.setItem("estimacerto.ui."+k,v?"1":"0")}catch(e){} return false};
+function aplicarModoUI(){const cli=document.body.classList.contains("modo-cli"), rec=$("#est").classList.contains("res-rec");
+  $("#btnModoCli").textContent=cli?"👁 Sair do modo cliente":"🙈 Modo cliente"; $("#btnModoCli").classList.toggle("pri",cli);
+  let b=$("#cliBanner"); if(cli&&!b){document.body.insertAdjacentHTML("afterbegin",'<div id="cliBanner" class="noprint">Modo cliente: margens, custos e detalhes internos ocultos · <button class="btn sm" id="cliSair">Sair</button></div>');$("#cliSair").onclick=()=>{document.body.classList.remove("modo-cli");prefUI("cli",false);aplicarModoUI()}} else if(!cli&&b) b.remove();}
+$("#btnModoCli").onclick=()=>{const on=document.body.classList.toggle("modo-cli");prefUI("cli",on);aplicarModoUI()};
+$("#btnRecRes").onclick=()=>{$("#est").classList.add("res-rec");prefUI("rec",true);aplicarModoUI()};
+$("#resMini").onclick=()=>{$("#est").classList.remove("res-rec");prefUI("rec",false);aplicarModoUI()};
+if(prefUI("cli")) document.body.classList.add("modo-cli"); if(prefUI("rec")) $("#est").classList.add("res-rec"); aplicarModoUI();
 $("#btnPrint").onclick=()=>{
   let interno=true; const html=()=>estimativaHTML({interno});
   abrirModal("Imprimir / PDF",`<label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="prInt" checked> incluir dados internos (margem e observações internas)</label>
@@ -1928,7 +1944,7 @@ function renderArquivo(){
     const m=mesFmt(dataDe(e)); if(m!==mes){mes=m;h+=`<tr class="mes"><td colspan="6">${esc(m)}</td></tr>`}
     const r=calc(e), pc=r.base?Math.round((r.porAnd.concluida||0)/r.base*100):0, st=e.arquivada?'<span class="pill st-a">arquivada</span>':e.aprovacao?'<span class="pill h">aprovada</span>':e.status==="fechada"?'<span class="pill st-f">fechada</span>':'<span class="pill st-r">rascunho</span>';
     h+=`<tr class="${e.id===est.id?"cur":""}"><td><b>${esc(e.nome||"(sem nome)")}</b> <span class="pill">v${e.versao||1}</span>${e.id===est.id?' <span class="muted">· aberta</span>':""}</td>
-      <td>${st}${(e.catalogo||"promob")!=="promob"?` <span class="pill">${esc(catNome(e.catalogo))}</span>`:""}${pc?` <span class="muted">${pc}% concluído</span>`:""}</td><td class="n">${hrs(r.total)}${r.valor?`<div class="${r.margemPct<(+db.cfg.margemAlvo||0)?"diff up":"diff down"}">margem ${num(r.margemPct,0)}%</div>`:""}</td><td class="n">${brl(r.final)}${r.desc?`<div class="muted" style="font-size:11px">com desconto</div>`:""}</td>
+      <td>${st}${(e.catalogo||"promob")!=="promob"?` <span class="pill">${esc(catNome(e.catalogo))}</span>`:""}${pc?` <span class="muted">${pc}% concluído</span>`:""}</td><td class="n">${hrs(r.total)}${r.valor?`<div class="so-int ${r.margemPct<(+db.cfg.margemAlvo||0)?"diff up":"diff down"}">margem ${num(r.margemPct,0)}%</div>`:""}</td><td class="n">${brl(r.final)}${r.desc?`<div class="muted" style="font-size:11px">com desconto</div>`:""}</td>
       <td class="muted" title="Atualizada em ${new Date(e.atualizadoEm||0).toLocaleString("pt-BR")}">${e.data?new Date(e.data+"T12:00:00").toLocaleDateString("pt-BR"):""}</td>
       <td class="acts">${e.id!==est.id?`<button class="btn sm pri" data-aab="${e.id}">Abrir</button>`:""}<button class="btn sm" data-aren="${e.id}">Renomear</button><button class="btn sm" data-aver="${e.id}">Nova versão</button><button class="btn sm" data-aarq="${e.id}">${e.arquivada?"Desarquivar":"Arquivar"}</button><button class="x" data-adel="${e.id}" title="Excluir">×</button></td></tr>`;
   });
