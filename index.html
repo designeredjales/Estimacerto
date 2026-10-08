@@ -127,6 +127,11 @@ span.and{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px}
 @media (max-width:760px){.prop-grid{grid-template-columns:1fr}.g-row,.gh-row{grid-template-columns:190px minmax(380px,1fr)}}
 .eopts{display:flex;flex-direction:column;gap:3px}.eopt{flex-direction:row!important;align-items:flex-start;gap:7px!important;font-size:13px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;cursor:pointer;line-height:1.35}.eopt.on{border-color:var(--accent);background:var(--surface-2)}.eopt input{margin-top:2px;flex-shrink:0}
 .einv{display:flex;flex-direction:column;gap:5px;font-size:13px}.einv label{flex-direction:row;align-items:center;gap:6px}.einvd{display:flex;gap:4px;align-items:center}.cmf{display:flex;flex-direction:column;gap:5px;font-size:13px}.cml{width:62px;flex-shrink:0;font-size:12px;color:var(--muted)}#comBox .einvd input,#comBox .einvd select{font-size:13px;padding:4px 6px}.pgcalc{font-size:12px;background:var(--surface-2);border-radius:6px;padding:5px 7px}
+.mdl td{vertical-align:middle}.mnum{font:12px ui-monospace,monospace;color:var(--muted);white-space:nowrap}
+.mdl-g td{background:color-mix(in srgb,var(--accent) 7%,transparent);font-weight:600}.mdl-g.dest td{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.mdl-r td{background:color-mix(in srgb,var(--accent) 4%,transparent)}.mdl .ro td{color:var(--muted);font-weight:400;background:none}
+.gcod{width:70px;font:600 12px ui-monospace,monospace;padding:3px 5px}.gnome{width:min(320px,60%);font-weight:600;padding:3px 6px}
+.mdl-add{align-items:end}.mdl-add .combo{flex:1;min-width:220px}.card.flash{outline:2px solid var(--accent)}
 .lblm{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}.chips{display:flex;flex-wrap:wrap;gap:4px}
 .escol{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px}.escol label{flex-direction:row;align-items:center;gap:5px}.escol select{width:auto;padding:3px 5px;font-size:13px}
 .eblk{border:1px solid var(--line);border-radius:6px;padding:6px;margin-bottom:6px;display:flex;flex-direction:column;gap:4px}.eblk.off{opacity:.55}
@@ -330,7 +335,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
   </div>
   <div class="card">
     <h2>Modelos de demanda</h2>
-    <p class="muted">Pacotes de processos que se repetem (fechamento, orçamento, montagem de entidade…). Crie aqui ou pelo botão “Salvar como modelo” de uma demanda pronta. Na estimativa, “Aplicar modelo” insere as linhas na demanda e você ajusta.</p>
+    <p class="muted">Pacotes de processos que se repetem (fechamento, orçamento, montagem de entidade…). Organize em <b>grupos</b> (ex.: SC Sistema de Correr › M1 Trilho › M1.1, M1.2…) e inclua <b>modelos existentes</b> como grupos vinculados. Crie aqui ou pelo botão “Salvar como modelo” de uma demanda pronta. Na estimativa, “Aplicar modelo” insere todos os processos na demanda, com as quantidades multiplicadas pelos grupos.</p>
     <div class="toolbar"><label style="flex-direction:row;align-items:center;gap:6px">Catálogo<select id="tCat" style="width:auto"></select></label><input id="tBusca" placeholder="Buscar modelo pelo nome, código ou processo…" style="flex:1;min-width:220px" autocomplete="off"><button class="btn pri" id="tAdd">+ Novo modelo</button></div>
     <div id="tNovoBox"></div>
     <div id="tplList"></div>
@@ -1112,9 +1117,11 @@ dl.addEventListener("change",e=>{
 });
 function aplicarModelo(di,codModelo){
   const d=est.demandas[di], tp=db.modelos.find(x=>x.cod===codModelo); if(!tp) return;
-  tp.itens.forEach(([cod,q,det,min,desc])=>{
-    if(cod){const p=proc(cod); if(p) d.linhas.push({cod,det:det||"",qtd:q,min:min??p.min})}
-    else if(desc) d.linhas.push({cod:"",desc,det:"",qtd:q,min:+min||0});
+  // grupos e modelos vinculados viram linhas; a quantidade é multiplicada pelos grupos e o detalhe leva o nome do grupo
+  folhasDe(tp).forEach(({it:[cod,q0,det,min,desc],q,caminho})=>{
+    const g=caminho[caminho.length-1]||"", dd=[g,det].filter(Boolean).join(" · ");
+    if(cod){const p=proc(cod); if(p) d.linhas.push({cod,det:dd,qtd:q,min:min??p.min})}
+    else if(desc) d.linhas.push({cod:"",desc,det:dd,qtd:q,min:+min||0});
   });
   persist(); renderEst();
 }
@@ -1134,8 +1141,8 @@ function opcoesCombo(tipo,q,di,ctx){
     }
   }else{
     db.modelos.filter(m=>(m.catalogo||"promob")===catAtual()&&(!nq||norm(m.cod+" "+m.nome).includes(nq))).forEach(m=>{
-      const tot=m.itens.reduce((s,[pc,qq,det,min])=>s+((min??(proc(pc)||{min:0}).min)*qq),0);
-      its.push({v:m.cod,html:`<b>${esc(m.cod)}</b> ${esc(m.nome)} <span class="muted">${m.itens.length} linhas · ${hm(tot)}</span>`});
+      const f=folhasDe(m), ng=contaGrupos(m.itens);
+      its.push({v:m.cod,html:`<b>${esc(m.cod)}</b> ${esc(m.nome)} <span class="muted">${f.length} linhas${ng?` em ${ng} grupo${ng>1?"s":""}`:""} · ${hm(minFolhas(f))}</span>`});
     });
     if(q.trim()&&!db.modelos.some(m=>norm(m.nome)===nq||norm(m.cod)===nq)){
       if(est.demandas[di]&&est.demandas[di].linhas.length) its.push({v:"__novomod",cls:"novo",html:`＋ Criar modelo “${esc(q.trim())}” com as linhas desta demanda`});
@@ -1186,7 +1193,7 @@ async function escolherCombo(cb,x){
 function addItemModelo(mi,cod){
   const m=db.modelos[mi]; if(!m) return;
   const q=Math.max(1,+((document.querySelector(`[data-mq="${mi}"]`)||{}).value)||1);
-  const ex=m.itens.find(it=>it[0]===cod&&!it[2]); if(ex) ex[1]+=q; else m.itens.push([cod,q]);
+  const l=listaEm(m,destinoDe(m))||m.itens, ex=l.find(it=>Array.isArray(it)&&it[0]===cod&&!it[2]); if(ex) ex[1]+=q; else inserirItem(l,[cod,q]);
   persist(); renderTpl();
   const inp=document.querySelector(`.combo[data-ctx="mod"][data-mi="${mi}"] input`); if(inp) inp.focus();
 }
@@ -1406,14 +1413,14 @@ function renderProc(){
         <td><input value="${esc(p.un)}" data-i="${i}" data-k="un"></td>
         <td class="n"><input type="number" min="0" step="1" value="${p.min}" data-i="${i}" data-k="min"></td>
         <td><span class="pill ${p.fonte==="H"?"h":"w"}">${p.fonte==="H"?"Histórico":"Manual"}</span></td>
-        <td class="acts"><button class="x" data-ped="${i}" title="Editar tudo">✎</button><button class="x" data-pdup="${i}" title="Duplicar">⧉</button><button class="x" data-pmv="${i}" data-dir="-1" title="Subir">↑</button><button class="x" data-pmv="${i}" data-dir="1" title="Descer">↓</button><button class="x" data-pdel="${i}" title="Excluir">×</button></td></tr>`).join("");
+        <td class="acts"><button class="x" data-ped="${i}" title="Editar tudo">✎</button><button class="x" data-pdup="${i}" title="Duplicar">⧉</button><button class="x" data-pcm="${i}" title="Copiar ou mover (outro grupo, fase, catálogo ou para um modelo)">⇄</button><button class="x" data-pmv="${i}" data-dir="-1" title="Subir">↑</button><button class="x" data-pmv="${i}" data-dir="1" title="Descer">↓</button><button class="x" data-pdel="${i}" title="Excluir">×</button></td></tr>`).join("");
     });
   });
   $("#bulkFase").innerHTML=fases().map(x=>`<option>${esc(x)}</option>`).join("")+'<option value="__nova">+ nova fase…</option>';
   $("#procBody").innerHTML=h||'<tr><td colspan="6" class="empty">Nada encontrado.</td></tr>';
 }
 function renomearCodigo(old,v){
-  db.modelos.forEach(m=>m.itens.forEach(it=>{if(it[0]===old) it[0]=v}));
+  db.modelos.forEach(m=>cadaProcModelo(m.itens,it=>{if(it[0]===old) it[0]=v}));
   est.demandas.forEach(d=>d.linhas.forEach(l=>{if(l.cod===old) l.cod=v}));
   Object.keys(db.vinculos).forEach(k=>{if(db.vinculos[k]===old) db.vinculos[k]=v});
   if(sysProcMod===old) sysProcMod=v;
@@ -1432,7 +1439,7 @@ function prefixoGrupo(fase,grupo){
 function codigoLivre(fase,grupo){let n=1,c;const pf=prefixoGrupo(fase,grupo);do{c=pf+"-"+String(n++).padStart(2,"0")}while(proc(c));return c}
 function editarProc(i,novo=false,aoSalvar=null){
   const p=db.processos[i], codAuto=novo?p.cod:null;
-  const usoM=db.modelos.filter(m=>m.itens.some(it=>it[0]===p.cod)).map(m=>m.cod);
+  const usoM=db.modelos.filter(m=>usaProc(m.itens,p.cod)).map(m=>m.cod);
   const usoE=est.demandas.reduce((s,d)=>s+d.linhas.filter(l=>l.cod===p.cod).length,0);
   abrirModal(novo?"Novo processo":"Editar processo "+p.cod,`
     <div class="row">
@@ -1474,11 +1481,39 @@ function duplicarProc(i){
   const o=db.processos[i], c={...JSON.parse(JSON.stringify(o)),cod:codigoLivre(o.fase,o.grupo||""),nome:o.nome+" (cópia)",alias:[]};
   db.processos.splice(i+1,0,c); persist(); renderProc(); editarProc(i+1,true);
 }
+function copiarMoverProc(i){
+  const p=db.processos[i]; if(!p) return;
+  const cc=p.catalogo||"promob", gruposF=(c,f)=>[...new Set(db.processos.filter(x=>(x.catalogo||"promob")===c&&x.fase===f).map(x=>x.grupo||""))].filter(Boolean);
+  abrirModal(`Copiar ou mover ${esc(p.cod)}`,`<p class="muted"><b>${esc(p.cod)} · ${esc(p.nome)}</b> — ${esc(p.fase)}${p.grupo?" › "+esc(p.grupo):""} (${esc(catNome(cc))})</p>
+    <h4 style="margin:8px 0 4px">No banco de processos</h4>
+    <div class="row"><label>Catálogo<select id="pmCat">${db.catalogos.map(c=>`<option value="${esc(c.id)}" ${c.id===cc?"selected":""}>${esc(c.nome)}</option>`).join("")}</select></label>
+      <label>Fase<select id="pmFase">${fases().map(f=>`<option ${f===p.fase?"selected":""}>${esc(f)}</option>`).join("")}<option value="__nova">+ nova fase…</option></select></label>
+      <label style="flex:1;min-width:160px">Grupo<input id="pmGrp" list="pmGrps" value="${esc(p.grupo||"")}" placeholder="(sem grupo)"><datalist id="pmGrps"></datalist></label></div>
+    <div class="row" style="margin-top:6px"><button class="btn pri" id="pmCopiar">Copiar (novo código)</button><button class="btn" id="pmMover">Mover (mantém o código)</button></div>
+    <h4 style="margin:14px 0 4px">Para um modelo de demanda</h4>
+    <div class="row"><label style="flex:1;min-width:200px">Modelo<select id="pmMod">${db.modelos.map(m=>`<option value="${esc(m.cod)}">${esc(m.cod)} · ${esc(m.nome)}${(m.catalogo||"promob")!==cc?` (${esc(catNome(m.catalogo||"promob"))})`:""}</option>`).join("")}</select></label>
+      <label style="flex:1;min-width:180px">Grupo<select id="pmModG"></select></label><label>Qtd.<input type="number" id="pmQ" min="1" value="1" style="width:70px"></label>
+      <button class="btn" id="pmAddMod" style="align-self:end">Adicionar ao modelo</button></div>`);
+  const dl=()=>{$("#pmGrps").innerHTML=gruposF($("#pmCat").value,$("#pmFase").value).map(g=>`<option value="${esc(g)}">`).join("")};
+  const mg=()=>{const m=modeloPorCod($("#pmMod").value);$("#pmModG").innerHTML=m?gruposDe(m).map(g=>`<option value="${esc(g.p)}">${esc(g.rot)}</option>`).join(""):""};
+  dl(); mg(); $("#pmCat").onchange=dl; $("#pmMod").onchange=mg;
+  $("#pmFase").onchange=async e=>{if(e.target.value==="__nova"){const f=((await uiPrompt("Nome da nova fase:"))||"").trim();if(f){e.target.insertAdjacentHTML("afterbegin",`<option selected>${esc(f)}</option>`)}else e.target.value=p.fase}dl()};
+  const destino=()=>({catalogo:$("#pmCat").value,fase:$("#pmFase").value,grupo:$("#pmGrp").value.trim()});
+  $("#pmCopiar").onclick=()=>{const d=destino(), mesmo=d.catalogo===cc&&d.fase===p.fase&&d.grupo===(p.grupo||"");
+    const c={...clone(p),...d,cod:codigoLivre(d.fase,d.grupo),nome:p.nome+(mesmo?" (cópia)":""),alias:[]};
+    db.processos.splice(posGrupo(d.fase,d.grupo),0,c); persist(); fecharModal(); bancoCat=d.catalogo; renderProc(); renderTpl(); uiAlert(`Cópia criada: ${c.cod} · ${c.nome} em ${d.fase}${d.grupo?" › "+d.grupo:""}.`)};
+  $("#pmMover").onclick=()=>{const d=destino(); if(d.catalogo===cc&&d.fase===p.fase&&d.grupo===(p.grupo||"")) return uiAlert("O processo já está nesse lugar.");
+    db.processos.splice(db.processos.indexOf(p),1); Object.assign(p,d); db.processos.splice(posGrupo(d.fase,d.grupo),0,p); persist(); fecharModal(); bancoCat=d.catalogo; renderProc(); renderTpl(); render();
+    uiAlert(`${p.cod} movido para ${catNome(d.catalogo)} › ${d.fase}${d.grupo?" › "+d.grupo:""}. Estimativas e modelos que usam o código continuam valendo.`)};
+  $("#pmAddMod").onclick=()=>{const m=modeloPorCod($("#pmMod").value); if(!m) return; const L=listaEm(m,$("#pmModG").value)||m.itens, q=Math.max(1,+$("#pmQ").value||1);
+    const ex=L.find(it=>Array.isArray(it)&&it[0]===p.cod&&!it[2]); if(ex) ex[1]+=q; else inserirItem(L,[p.cod,q]);
+    persist(); fecharModal(); renderTpl(); uiAlert(`${p.cod} adicionado ao modelo ${m.cod}.`)};
+}
 async function excluirProc(i,semPerguntar){
   const p=db.processos[i]; if(!p) return true;
-  const usos=db.modelos.filter(m=>m.itens.some(it=>it[0]===p.cod)).map(m=>m.cod);
+  const usos=db.modelos.filter(m=>usaProc(m.itens,p.cod)).map(m=>m.cod);
   if(!semPerguntar&&!await uiConfirm(`Excluir ${p.cod} · ${p.nome}?`+(usos.length?`\nEle é usado nos modelos: ${usos.join(", ")} (será removido deles).`:""))) return false;
-  db.modelos.forEach(m=>m.itens=m.itens.filter(it=>it[0]!==p.cod));
+  db.modelos.forEach(m=>m.itens=semProc(m.itens,p.cod));
   if(!semPerguntar) paraLixeira("processo",p);
   db.processos.splice(i,1); persist(); render(); return true;
 }
@@ -1491,6 +1526,7 @@ $("#procBody").addEventListener("click",async e=>{
   const ds=e.target.dataset;
   if(ds.ped!==undefined) editarProc(+ds.ped);
   else if(ds.pdup!==undefined) duplicarProc(+ds.pdup);
+  else if(ds.pcm!==undefined) copiarMoverProc(+ds.pcm);
   else if(ds.pdel!==undefined) excluirProc(+ds.pdel);
   else if(ds.padd!==undefined) novoProc(ds.padd,ds.pg||"");
   else if(ds.pmv!==undefined){
@@ -1656,43 +1692,189 @@ $("#estTplList").addEventListener("click",async e=>{
 });
 
 /* ================= MODELOS ================= */
+// Itens de um modelo: processo = [cod,qtd,det,min,desc] · grupo = {tipo:"grupo",cod,nome,qtd,itens:[…]} · modelo vinculado = {tipo:"ref",ref,qtd}
+const ehGrupo=it=>!!it&&!Array.isArray(it)&&it.tipo==="grupo";
+const ehRef=it=>!!it&&!Array.isArray(it)&&it.tipo==="ref";
+const modeloPorCod=c=>db.modelos.find(m=>m.cod===c);
+// processos (folhas) já com a quantidade multiplicada pelos grupos e o caminho de grupos
+function folhasModelo(itens,mult=1,caminho=[],vistos=new Set()){
+  const out=[];
+  (itens||[]).forEach(it=>{
+    if(Array.isArray(it)) out.push({it,q:(+it[1]||0)*mult,caminho});
+    else if(ehGrupo(it)) out.push(...folhasModelo(it.itens,mult*(+it.qtd||1),[...caminho,it.nome],vistos));
+    else if(ehRef(it)){const m=modeloPorCod(it.ref); if(m&&!vistos.has(m.cod)) out.push(...folhasModelo(m.itens,mult*(+it.qtd||1),[...caminho,m.nome],new Set([...vistos,m.cod])))}
+  });
+  return out;
+}
+const folhasDe=m=>folhasModelo(m.itens,1,[],new Set([m.cod]));
+const minFolhas=f=>f.reduce((s,x)=>s+((x.it[3]??(proc(x.it[0])||{min:0}).min)*x.q),0);
+function cadaProcModelo(itens,fn){(itens||[]).forEach(it=>{if(Array.isArray(it)) fn(it); else if(ehGrupo(it)) cadaProcModelo(it.itens,fn)})}
+function usaProc(itens,cod){let r=false;cadaProcModelo(itens,it=>{if(it[0]===cod) r=true});return r}
+function semProc(itens,cod){return itens.filter(it=>!(Array.isArray(it)&&it[0]===cod)).map(it=>ehGrupo(it)?{...it,itens:semProc(it.itens,cod)}:it)}
+function contaGrupos(itens){let n=0;(itens||[]).forEach(it=>{if(ehGrupo(it)){n++;n+=contaGrupos(it.itens)}else if(ehRef(it)) n++});return n}
+// o modelo "de" inclui (direta ou indiretamente) o modelo "alvo"?
+function incluiModelo(deCod,alvoCod,vistos=new Set()){
+  if(deCod===alvoCod) return true; const m=modeloPorCod(deCod); if(!m||vistos.has(deCod)) return false; vistos.add(deCod);
+  let r=false; const w=l=>(l||[]).forEach(it=>{if(r) return; if(ehRef(it)) r=incluiModelo(it.ref,alvoCod,vistos); else if(ehGrupo(it)) w(it.itens)}); w(m.itens); return r;
+}
+function textoModelo(m){const t=[m.cod,m.nome];const w=l=>(l||[]).forEach(it=>{if(Array.isArray(it)) t.push(it[0],(proc(it[0])||{}).nome||"",it[4]||"",it[2]||"");else if(ehGrupo(it)){t.push(it.cod,it.nome);w(it.itens)}else if(ehRef(it)){const r=modeloPorCod(it.ref);t.push(it.ref,r?r.nome:"")}});w(m.itens);return t.join(" ")}
+// endereço de item: "2.0.1" = índices do topo até o item
+function listaEm(m,path){let l=m.itens; if(path===""||path==null) return l; for(const k of String(path).split(".").map(Number)){const it=l[k]; if(!ehGrupo(it)) return null; l=it.itens} return l}
+function itemEm(m,ip){const ps=String(ip).split("."), k=+ps.pop(), l=listaEm(m,ps.join(".")); return l?{l,k,it:l[k]}:null}
+function gruposDe(m){const out=[{p:"",rot:`${m.cod} · ${m.nome} (topo)`}];const w=(l,pre,d)=>l.forEach((it,k)=>{if(ehGrupo(it)){const p=pre===""?String(k):pre+"."+k;out.push({p,rot:`${"— ".repeat(d)}${it.cod} · ${it.nome}`});w(it.itens,p,d+1)}});w(m.itens,"",1);return out}
+// processos entram antes dos subgrupos do mesmo nível (lista legível: processos, depois grupos)
+function inserirItem(L,it){if(Array.isArray(it)){const k=L.findIndex(x=>!Array.isArray(x)); if(k>=0){L.splice(k,0,it);return}} L.push(it)}
+const modDest={};   // grupo de destino por modelo (código do modelo → endereço)
+const destinoDe=m=>{const p=modDest[m.cod]||""; return listaEm(m,p)?p:""};
+function codGrupoLivre(m,base){const usados=new Set();const w=l=>(l||[]).forEach(it=>{if(ehGrupo(it)){usados.add(it.cod);w(it.itens)}});w(m.itens);let n=1,c;do{c=(base||"G")+n++}while(usados.has(c));return c}
+function linhasModelo(m,mi,l,pre,pc,d,ro){
+  return l.map((it,k)=>{
+    const ip=pre===""?String(k):pre+"."+k, pad=`style="padding-left:${6+d*20}px"`, a=`data-mi="${mi}"`;
+    const mv=ro?"":`<button class="x" ${a} data-idup="${ip}" title="Duplicar">⧉</button><button class="x" ${a} data-icm="${ip}" title="Copiar ou mover para outro grupo ou modelo">⇄</button><button class="x" ${a} data-iup="${ip}" title="Subir">↑</button><button class="x" ${a} data-idn="${ip}" title="Descer">↓</button><button class="x" ${a} data-idel="${ip}" title="Remover">×</button>`;
+    if(Array.isArray(it)){const [c,q,det,min,desc]=it, p=proc(c), mm=min??(p?p.min:0);
+      return `<tr class="mdl-p${ro?" ro":""}"><td class="mnum">${esc(pc)}.${k+1}</td><td ${pad}>${c?`${esc(c)} · ${p?esc(p.nome):'<span class="muted">não encontrado</span>'}`:`<span class="pill">avulso</span> ${esc(desc||"")}`}${det?` <span class="muted">— ${esc(det)}</span>`:""}${p&&min!=null&&+min!==+p.min?` <span class="diff">${num(min)} min/unid.</span>`:""}</td>
+        <td class="n">${ro?num(q,0):`<input type="number" min="0" step="1" value="${q}" ${a} data-iq="${ip}">`}</td><td class="n">${hm(mm*q)}</td><td class="acts">${mv}</td></tr>`}
+    if(ehGrupo(it)){const f=folhasModelo(it.itens,+it.qtd||1,[],new Set([m.cod])), sel=!ro&&destinoDe(m)===ip;
+      return `<tr class="mdl-g${sel?" dest":""}${ro?" ro":""}"><td class="mnum">${ro?esc(it.cod):`<input ${a} data-ig="${ip}" data-gk="cod" value="${esc(it.cod)}" class="gcod" title="Código do grupo (ex.: M1, SP1)">`}</td>
+        <td ${pad}>${ro?`<b>${esc(it.nome)}</b>`:`<input ${a} data-ig="${ip}" data-gk="nome" value="${esc(it.nome)}" class="gnome" title="Nome do grupo">`} <span class="muted">${f.length} processo${f.length===1?"":"s"}</span></td>
+        <td class="n">${ro?(+it.qtd>1?"×"+it.qtd:""):`×<input type="number" min="1" step="1" value="${it.qtd||1}" ${a} data-iq="${ip}" title="Repetir o grupo N vezes" style="width:52px">`}</td><td class="n"><b>${hm(minFolhas(f))}</b></td>
+        <td class="acts">${ro?"":`<button class="btn sm" ${a} data-gaqui="${ip}" title="Os próximos processos entram neste grupo">+ aqui</button><button class="btn sm" ${a} data-gsub="${ip}">+ subgrupo</button>`}${mv}</td></tr>`
+        +linhasModelo(m,mi,it.itens,ip,it.cod||pc,d+1,ro)}
+    if(ehRef(it)){const r=modeloPorCod(it.ref), f=r?folhasModelo(r.itens,+it.qtd||1,[],new Set([m.cod,r.cod])):[];
+      return `<tr class="mdl-g mdl-r${ro?" ro":""}"><td class="mnum">${esc(it.ref)}</td><td ${pad}>${r?`<b>${esc(r.nome)}</b> <span class="pill" title="Modelo incluído: muda junto quando o modelo ${esc(r.cod)} muda">vinculado</span> <span class="muted">${f.length} processos</span>`:'<span class="muted">modelo não encontrado</span>'}</td>
+        <td class="n">${ro?(+it.qtd>1?"×"+it.qtd:""):`×<input type="number" min="1" step="1" value="${it.qtd||1}" ${a} data-iq="${ip}" style="width:52px">`}</td><td class="n"><b>${hm(minFolhas(f))}</b></td>
+        <td class="acts">${ro?"":`<button class="btn sm" data-rabrir="${esc(it.ref)}">Abrir</button>`}${mv}</td></tr>`
+        +(r&&d<6?linhasModelo(r,mi,r.itens,"",r.cod,d+1,true):"")}
+    return "";
+  }).join("");
+}
 function renderTpl(){
   renderEstTpl();
   const fq=norm(($("#tBusca")||{}).value||""), fqRaw=(($("#tBusca")||{}).value||"").trim();
   renderCatSelects();
-  const casaM=m=>(m.catalogo||"promob")===bancoCat&&(!fq||norm(m.cod+" "+m.nome+" "+m.itens.map(([pc,q,det,min,desc])=>pc+" "+((proc(pc)||{}).nome||"")+" "+(desc||"")).join(" ")).includes(fq));
+  const casaM=m=>(m.catalogo||"promob")===bancoCat&&(!fq||norm(textoModelo(m)).includes(fq));
   $("#tNovoBox").innerHTML=fqRaw&&!db.modelos.some(m=>norm(m.nome)===fq)?`<div class="card" style="padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="muted">${db.modelos.some(casaM)?"Nenhum modelo com esse nome exato.":"Nenhum modelo encontrado."}</span><button class="btn pri" id="tNovoBtn">＋ Criar modelo “${esc(fqRaw)}”</button></div>`:"";
   $("#tplList").innerHTML=db.modelos.map((m,mi)=>{
     if(!casaM(m)) return "";
-    const tot=m.itens.reduce((s,[pc,q,det,min])=>s+((min??(proc(pc)||{min:0}).min)*q),0);
-    return `<div class="card" style="background:var(--surface-2)" data-mcard="${mi}">
+    const f=folhasDe(m), ng=contaGrupos(m.itens), usadoEm=db.modelos.filter(x=>x!==m&&incluiModelo(x.cod,m.cod)).map(x=>x.cod), dest=destinoDe(m);
+    return `<div class="card" style="background:var(--surface-2)" data-mcard="${mi}" data-mcod="${esc(m.cod)}">
       <div class="row" style="margin-bottom:10px">
         <label style="width:90px">Código<input value="${esc(m.cod)}" data-mi="${mi}" data-mk="cod"></label>
         <label style="flex:1;min-width:200px">Nome do modelo<input value="${esc(m.nome)}" data-mi="${mi}" data-mk="nome"></label>
-        <span class="pill" style="align-self:center">${hm(tot)} · ${m.itens.length} processos</span>
+        <span class="pill" style="align-self:center">${hm(minFolhas(f))} · ${f.length} processos${ng?` · ${ng} grupo${ng>1?"s":""}`:""}</span>
+        <label>Catálogo<select data-mi="${mi}" data-mcat="1" style="width:auto" title="Mover o modelo para outro catálogo">${db.catalogos.map(c=>`<option value="${esc(c.id)}" ${(m.catalogo||"promob")===c.id?"selected":""}>${esc(c.nome)}</option>`).join("")}</select></label>
+        <button class="btn" data-mi="${mi}" data-mdup="${mi}" title="Cria uma cópia logo abaixo">Duplicar</button>
         <button class="btn" data-mdel="${mi}">Excluir</button>
       </div>
-      <div class="tbl"><table><thead><tr><th>Processo</th><th class="n">Qtd.</th><th class="n">Total</th><th></th></tr></thead><tbody>
-      ${m.itens.map(([pc,q,det,min,desc],ii)=>{const p=proc(pc), mm=min??(p?p.min:0);return `<tr><td>${pc?`${esc(pc)} · ${p?esc(p.nome):'<span class="muted">não encontrado</span>'}`:`<span class="pill">avulso</span> ${esc(desc||"")}`}${det?` <span class="muted">— ${esc(det)}</span>`:""}${p&&min!=null&&+min!==+p.min?` <span class="diff">${num(min)} min/unid.</span>`:""}</td>
-        <td class="n"><input type="number" min="0" step="1" value="${q}" data-mi="${mi}" data-ii="${ii}"></td>
-        <td class="n">${hm(mm*q)}</td><td><button class="x" data-mi="${mi}" data-idel="${ii}">×</button></td></tr>`}).join("")||'<tr><td colspan="4" class="muted">Sem processos. Adicione abaixo.</td></tr>'}
+      ${usadoEm.length?`<p class="muted" style="font-size:12px;margin:-4px 0 8px">Incluído como grupo em: ${usadoEm.map(c=>`<b>${esc(c)}</b>`).join(", ")}. Mudanças aqui valem lá também.</p>`:""}
+      <div class="tbl"><table class="mdl"><thead><tr><th style="width:84px">Nº</th><th>Grupo / processo</th><th class="n">Qtd.</th><th class="n">Total</th><th></th></tr></thead><tbody>
+      ${linhasModelo(m,mi,m.itens,"",m.cod,0,false)||'<tr><td colspan="5" class="muted">Vazio. Adicione processos, grupos ou modelos existentes abaixo.</td></tr>'}
       </tbody></table></div>
-      <div class="row" style="margin-top:10px"><div class="combo" data-cb="p" data-ctx="mod" data-mi="${mi}"><input class="cbi" placeholder="Adicionar processo: digite código ou nome… (Enter adiciona)" autocomplete="off" spellcheck="false"><div class="cmenu"></div></div><input type="number" min="1" step="1" value="1" data-mq="${mi}" title="Quantidade"></div>
+      <div class="row mdl-add" style="margin-top:10px">
+        <label>Adicionar em<select data-mdest="${mi}" style="width:auto;max-width:260px">${gruposDe(m).map(g=>`<option value="${esc(g.p)}" ${dest===g.p?"selected":""}>${esc(g.rot)}</option>`).join("")}</select></label>
+        <div class="combo" data-cb="p" data-ctx="mod" data-mi="${mi}"><input class="cbi" placeholder="Processo: digite código ou nome… (Enter adiciona)" autocomplete="off" spellcheck="false"><div class="cmenu"></div></div><input type="number" min="1" step="1" value="1" data-mq="${mi}" title="Quantidade">
+        <button class="btn" data-mi="${mi}" data-gnovo="${mi}" title="Cria um grupo dentro do destino escolhido">+ Grupo</button>
+        <button class="btn" data-mi="${mi}" data-mref="${mi}" title="Inclui outro modelo como grupo vinculado">+ Modelo existente</button>
+      </div>
     </div>`}).join("")||(fq?"":'<p class="empty">Nenhum modelo cadastrado.</p>');
 }
+async function novoGrupo(mi,path){
+  const m=db.modelos[mi]; if(!m) return;
+  const sug=codGrupoLivre(m,"G");
+  const txt=((await uiPrompt(`Código e nome do grupo (ex.: “M1 Trilho”, “SP1 Cadastro de Sistema Ponto a Ponto”). Só o nome também vale; o código vira ${sug}.`,""))||"").trim(); if(!txt) return;
+  const mm=/^([A-Za-z]{1,5}\d+(?:\.\d+)*)[\s)\-–:·]+(.+)$/.exec(txt);
+  const g={tipo:"grupo",cod:mm?mm[1].toUpperCase():sug,nome:(mm?mm[2]:txt).trim(),qtd:1,itens:[]};
+  const l=listaEm(m,path)||m.itens; l.push(g);
+  modDest[m.cod]=(path===""?"":path+".")+(l.length-1);
+  persist(); renderTpl();
+  const inp=document.querySelector(`.combo[data-ctx="mod"][data-mi="${mi}"] input`); if(inp) inp.focus();
+}
+function incluirModeloExistente(mi){
+  const m=db.modelos[mi]; if(!m) return;
+  const cands=()=>db.modelos.filter(x=>x!==m&&(x.catalogo||"promob")===(m.catalogo||"promob")&&!incluiModelo(x.cod,m.cod));
+  const lista=q=>{const nq=norm(q||"");return cands().filter(x=>!nq||norm(x.cod+" "+x.nome).includes(nq)).map(x=>{const f=folhasDe(x);return `<tr><td><b>${esc(x.cod)}</b> ${esc(x.nome)}</td><td class="muted">${f.length} processos · ${hm(minFolhas(f))}</td><td><button class="btn sm pri" data-incl="${esc(x.cod)}">Incluir</button></td></tr>`}).join("")||'<tr><td class="muted">Nenhum modelo disponível (o próprio modelo e os que já o incluem ficam de fora, para não criar ciclo).</td></tr>'};
+  const dst=gruposDe(m).find(g=>g.p===destinoDe(m));
+  abrirModal(`Incluir modelo em ${esc(m.cod)}`,`<p class="muted">O modelo entra como grupo <b>vinculado</b> em “${esc(dst?dst.rot:m.cod)}”: se você mudar o modelo original, muda aqui também.</p>
+    <input id="inclBusca" placeholder="Buscar modelo…" autocomplete="off"><div class="tbl" style="margin-top:8px"><table><tbody id="inclList">${lista("")}</tbody></table></div>`);
+  $("#inclBusca").oninput=e=>{$("#inclList").innerHTML=lista(e.target.value)};
+  $("#inclList").addEventListener("click",e=>{const c=e.target.dataset.incl; if(!c) return;
+    (listaEm(m,destinoDe(m))||m.itens).push({tipo:"ref",ref:c,qtd:1}); persist(); fecharModal(); renderTpl()});
+}
 $("#tplList").addEventListener("change",e=>{
-  const t=e.target, mi=t.dataset.mi; if(mi===undefined) return;
+  const t=e.target, mi=t.dataset.mi??t.dataset.mdest; if(mi===undefined) return;
   const m=db.modelos[+mi];
-  if(t.dataset.mk) m[t.dataset.mk]=t.value.trim();
-  else if(t.dataset.ii!==undefined) m.itens[+t.dataset.ii][1]=Math.max(0,+t.value||0);
+  if(t.dataset.mdest!==undefined){modDest[m.cod]=t.value;renderTpl();return}
+  if(t.dataset.mcat){m.catalogo=t.value;persist();renderTpl();uiAlert(`Modelo ${m.cod} movido para o catálogo “${catNome(t.value)}”. Para copiar em vez de mover: Duplicar e depois troque o catálogo da cópia.`);return}
+  if(t.dataset.mk==="cod"){const v=t.value.trim(), old=m.cod;
+    if(!v||(v!==old&&db.modelos.some(x=>x.cod===v))){uiAlert(v?`Já existe um modelo com o código ${v}.`:"O código não pode ficar vazio.");renderTpl();return}
+    m.cod=v; db.modelos.forEach(x=>{const w=l=>(l||[]).forEach(it=>{if(ehRef(it)&&it.ref===old) it.ref=v; else if(ehGrupo(it)) w(it.itens)});w(x.itens)});
+    if(modDest[old]!==undefined){modDest[v]=modDest[old];delete modDest[old]}}
+  else if(t.dataset.mk) m[t.dataset.mk]=t.value.trim();
+  else if(t.dataset.iq!==undefined){const x=itemEm(m,t.dataset.iq); if(x){if(Array.isArray(x.it)) x.it[1]=Math.max(0,+t.value||0); else x.it.qtd=Math.max(1,Math.round(+t.value||1))}}
+  else if(t.dataset.gk){const x=itemEm(m,t.dataset.ig); if(x&&ehGrupo(x.it)) x.it[t.dataset.gk]=t.dataset.gk==="cod"?t.value.trim().toUpperCase():t.value.trim()}
+  else return;
   persist(); renderTpl();
 });
 $("#tplList").addEventListener("click",async e=>{
-  const t=e.target;
-  if(t.dataset.mdel!==undefined){if(await uiConfirm("Excluir este modelo? Ele fica 60 dias na lixeira.")){paraLixeira("modelo",db.modelos[+t.dataset.mdel]);db.modelos.splice(+t.dataset.mdel,1);persist();renderTpl()}}
-  else if(t.dataset.idel!==undefined){db.modelos[+t.dataset.mi].itens.splice(+t.dataset.idel,1);persist();renderTpl()}
-
+  const t=e.target.closest("button"); if(!t) return; const ds=t.dataset, m=ds.mi!==undefined?db.modelos[+ds.mi]:null;
+  if(ds.mdel!==undefined){const x=db.modelos[+ds.mdel], us=db.modelos.filter(y=>y!==x&&incluiModelo(y.cod,x.cod)).map(y=>y.cod);
+    if(await uiConfirm(`Excluir este modelo? Ele fica 60 dias na lixeira.${us.length?`\nEle está incluído em: ${us.join(", ")} (será retirado deles).`:""}`)){
+      db.modelos.forEach(y=>{const tira=l=>l.filter(it=>!(ehRef(it)&&it.ref===x.cod)).map(it=>ehGrupo(it)?{...it,itens:tira(it.itens)}:it);y.itens=tira(y.itens)});
+      paraLixeira("modelo",x);db.modelos.splice(+ds.mdel,1);persist();renderTpl()}}
+  else if(ds.rabrir){const c=document.querySelector(`[data-mcod="${CSS.escape(ds.rabrir)}"]`); if(c){c.scrollIntoView({behavior:"smooth",block:"center"});c.classList.add("flash");setTimeout(()=>c.classList.remove("flash"),1200)}}
+  else if(!m) return;
+  else if(ds.idel!==undefined){const x=itemEm(m,ds.idel); if(!x) return;
+    if(ehGrupo(x.it)&&x.it.itens.length&&!await uiConfirm(`Remover o grupo “${x.it.nome}” e tudo o que está dentro dele?`,{ok:"Remover",cancel:"Manter"})) return;
+    x.l.splice(x.k,1); modDest[m.cod]=""; persist(); renderTpl()}
+  else if(ds.iup!==undefined||ds.idn!==undefined){const x=itemEm(m,ds.iup??ds.idn), j=ds.iup!==undefined?x.k-1:x.k+1; if(!x||j<0||j>=x.l.length) return; [x.l[x.k],x.l[j]]=[x.l[j],x.l[x.k]]; modDest[m.cod]=""; persist(); renderTpl()}
+  else if(ds.idup!==undefined){const x=itemEm(m,ds.idup); if(!x) return; const c=clone(x.it); if(ehGrupo(c)) recodificarGrupos(c,m); x.l.splice(x.k+1,0,c); modDest[m.cod]=""; persist(); renderTpl()}
+  else if(ds.icm!==undefined) copiarMoverItem(+ds.mi,ds.icm);
+  else if(ds.mdup!==undefined) duplicarModelo(+ds.mi);
+  else if(ds.gaqui!==undefined){modDest[m.cod]=ds.gaqui; renderTpl(); const inp=document.querySelector(`.combo[data-ctx="mod"][data-mi="${ds.mi}"] input`); if(inp) inp.focus()}
+  else if(ds.gsub!==undefined) novoGrupo(+ds.mi,ds.gsub);
+  else if(ds.gnovo!==undefined) novoGrupo(+ds.mi,destinoDe(m));
+  else if(ds.mref!==undefined) incluirModeloExistente(+ds.mi);
 });
+// grupos copiados recebem código novo quando o código já existe no modelo de destino
+function codsGrupos(itens,out=new Set()){(itens||[]).forEach(it=>{if(ehGrupo(it)){out.add(it.cod);codsGrupos(it.itens,out)}});return out}
+function recodificarGrupos(it,alvo){
+  const usados=codsGrupos(alvo.itens);
+  const w=g=>{if(!ehGrupo(g)) return; if(usados.has(g.cod)){const base=(g.cod.match(/^[A-Za-z]+/)||["G"])[0];let n=1,c;do{c=base+n++}while(usados.has(c));g.cod=c} usados.add(g.cod); g.itens.forEach(w)};
+  w(it);
+}
+const refsDe=it=>{const r=[];const w=x=>{if(ehRef(x)) r.push(x.ref); else if(ehGrupo(x)) x.itens.forEach(w)};w(it);return r};
+const listasDentro=it=>{const r=new Set();const w=x=>{if(ehGrupo(x)){r.add(x.itens);x.itens.forEach(w)}};w(it);return r};
+function copiarMoverItem(mi,ip){
+  const m=db.modelos[mi], x=itemEm(m,ip); if(!x) return;
+  const rot=Array.isArray(x.it)?`${x.it[0]||"avulso"} · ${(proc(x.it[0])||{nome:x.it[4]||""}).nome}`:ehGrupo(x.it)?`grupo ${x.it.cod} · ${x.it.nome}`:`modelo vinculado ${x.it.ref}`;
+  const ordem=[...db.modelos].sort((a,b)=>((a.catalogo||"promob")===(m.catalogo||"promob")?0:1)-((b.catalogo||"promob")===(m.catalogo||"promob")?0:1));
+  abrirModal("Copiar ou mover",`<p class="muted">Item: <b>${esc(rot)}</b> (de ${esc(m.cod)})</p>
+    <div class="row"><label style="flex:1;min-width:220px">Modelo de destino<select id="cmMod">${ordem.map(y=>`<option value="${esc(y.cod)}" ${y===m?"selected":""}>${esc(y.cod)} · ${esc(y.nome)}${(y.catalogo||"promob")!==(m.catalogo||"promob")?` (${esc(catNome(y.catalogo||"promob"))})`:""}</option>`).join("")}</select></label>
+    <label style="flex:1;min-width:200px">Grupo de destino<select id="cmGrp"></select></label></div>`,
+    [{label:"Copiar",pri:true,fn:()=>exec(false)},{label:"Mover",fn:()=>exec(true)}]);
+  const grp=()=>{const y=modeloPorCod($("#cmMod").value);$("#cmGrp").innerHTML=gruposDe(y).map(g=>`<option value="${esc(g.p)}">${esc(g.rot)}</option>`).join("")};
+  grp(); $("#cmMod").onchange=grp;
+  function exec(mover){
+    const y=modeloPorCod($("#cmMod").value), p=$("#cmGrp").value, L=listaEm(y,p); if(!y||!L) return;
+    const ciclo=refsDe(x.it).find(r=>incluiModelo(r,y.cod));
+    if(ciclo) return uiAlert(`Não dá: o modelo ${ciclo} inclui (ou é) o modelo ${y.cod}, e isso criaria um ciclo.`);
+    if(mover&&(L===x.l)) return uiAlert("O item já está nesse grupo. Para reordenar, use ↑ ↓.");
+    if(mover&&listasDentro(x.it).has(L)) return uiAlert("Um grupo não pode ir para dentro dele mesmo.");
+    let it=x.it;
+    if(mover) x.l.splice(x.k,1); else it=clone(x.it);
+    if(ehGrupo(it)&&(!mover||y!==m)) recodificarGrupos(it,y);
+    inserirItem(L,it); modDest[m.cod]=""; modDest[y.cod]=p;
+    persist(); fecharModal();
+    if((y.catalogo||"promob")!==bancoCat){bancoCat=y.catalogo||"promob"}
+    renderTpl();
+    const c=document.querySelector(`[data-mcod="${CSS.escape(y.cod)}"]`); if(c){c.scrollIntoView({behavior:"smooth",block:"center"});c.classList.add("flash");setTimeout(()=>c.classList.remove("flash"),1200)}
+  }
+}
+function duplicarModelo(mi){
+  const m=db.modelos[mi]; let n=2,cod; do{cod=`${m.cod}-${n++}`}while(modeloPorCod(cod));
+  const c={...clone(m),cod,nome:m.nome+" (cópia)"}; db.modelos.splice(mi+1,0,c); persist(); renderTpl();
+  const card=document.querySelector(`[data-mcod="${CSS.escape(cod)}"]`); if(card){card.scrollIntoView({behavior:"smooth",block:"center"});const inp=card.querySelector('[data-mk="nome"]');setTimeout(()=>{inp.focus();inp.select()},250)}
+}
 $("#tBusca").oninput=renderTpl;
 $("#tCat").onchange=e=>{bancoCat=e.target.value;renderTpl();renderProc()};
 $("#tNovoBox").addEventListener("click",e=>{
@@ -2112,7 +2294,7 @@ async function copiar(id){
 }
 
 /* ================= BANCO: XMIND, CALIBRAÇÃO, LOTE ================= */
-const filtrados=()=>{const f=norm($("#pFiltro").value);return db.processos.filter(p=>!f||norm(p.cod+" "+p.grupo+" "+p.nome+" "+p.un).includes(f))};
+const filtrados=()=>{const f=norm($("#pFiltro").value);return db.processos.filter(p=>(p.catalogo||"promob")===bancoCat&&(!f||norm(p.cod+" "+p.grupo+" "+p.nome+" "+p.un).includes(f)))};
 $("#bulkPctBtn").onclick=async()=>{
   const pct=+$("#bulkPct").value||0, ps=filtrados(); if(!pct||!ps.length) return;
   if(!await uiConfirm(`Ajustar ${pct>0?"+":""}${pct}% o tempo de ${ps.length} processos filtrados?`)) return;

@@ -265,3 +265,22 @@ prazo (dias)    = total ÷ (horas produtivas/dia × pessoas)
 - **Salvar como template** guarda nível de detalhe, blocos, textos e título. Opcionalmente leva as condições de pagamento; o desconto fica de fora, porque é de cada negociação.
 - **Aplicar:** escolha o template no seletor da aba Escopo. Abrangência e aceites são mantidos.
 - **Templates…** permite renomear, definir o ★ padrão (monta o escopo e as condições das novas estimativas), atualizar com o escopo aberto ou excluir.
+
+## Modelos com grupos
+
+- **Grupos com código e nome** (ex.: `SC Sistema de Correr` › `M1 Trilho` › M1.1, M1.2, M1.3; `SP1 Cadastro de Sistema Ponto a Ponto` › SP1.1). Os processos são numerados sozinhos pelo código do grupo.
+- **"+ Grupo" e "+ subgrupo"** criam grupos em qualquer nível. **"Adicionar em"** (ou "+ aqui" no grupo) escolhe onde entram os próximos processos.
+- **Repetir grupo:** um grupo pode valer N vezes (×N); as quantidades de dentro são multiplicadas.
+- **"+ Modelo existente"** inclui outro modelo como grupo **vinculado**: se o original muda, muda aqui também. Inclusões que criariam ciclo são bloqueadas.
+- **Na estimativa,** "Aplicar modelo" insere todos os processos (quantidades multiplicadas, nome do grupo no detalhe).
+
+## Duplicar, copiar e mover
+
+- **Itens do modelo** (processo, grupo ou vinculado):
+  - ⧉ duplica no lugar;
+  - ⇄ copia ou move para qualquer grupo de qualquer modelo. Códigos de grupo repetidos ganham código novo.
+- **Modelo:** **Duplicar** cria a cópia logo abaixo; o seletor **Catálogo** move o modelo para outro catálogo.
+- **Banco de processos (⇄):**
+  - copia, com código novo, ou move, mantendo o código, para outra fase, grupo ou catálogo;
+  - ou adiciona o processo a qualquer grupo de um modelo.
+- As ações em lote do banco agora valem só para o catálogo aberto.
