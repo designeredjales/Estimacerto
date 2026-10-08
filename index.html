@@ -131,6 +131,7 @@ span.and{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px}
 .ebh{display:flex;gap:4px;align-items:center}.ebh input:not([type=checkbox]){flex:1;min-width:0;padding:4px 6px;font-weight:600}.eblk textarea{min-height:56px;font-size:13px}
 .sigmini{display:block;width:110px;background:#fff;border-radius:4px;margin-bottom:3px}
 .sgpad{width:100%;max-width:600px;aspect-ratio:600/170;background:#fff;border:1px dashed var(--line);border-radius:6px;touch-action:none;display:block;margin-top:8px}
+.fxap{margin:0 0 6px;font-size:13px}.simfx{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--surface-2);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:13px}.simfx label{flex-direction:row;align-items:center;gap:6px}
 .ignbar{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin:-6px 0 10px}
 .estbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed var(--line)}
 .estbar select{width:auto}
@@ -418,7 +419,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
   </div>
   <div class="card">
     <h2>Perfis — custo e preço por hora</h2>
-    <p class="muted">Cada demanda usa um perfil (ex.: Sênior, Pleno). O preço/hora gera o valor; o custo/hora interno (salário + encargos + estrutura) gera a margem.</p>
+    <p class="muted">Cada demanda usa um perfil: uma pessoa da equipe ou um centro de custo. O preço/hora gera o valor; o custo/hora interno (salário + encargos + estrutura) gera a margem. Em “Decisão automática”, configure faixas de horas: o sistema escolhe sozinho o valor/hora pelo tamanho da estimativa (ex.: até 50 h um valor, de 50 a 100 h outro).</p>
     <div id="perfisBox"></div>
   </div>
   <div class="card">
@@ -595,6 +596,7 @@ function completarDb(){
   const c=db.cfg;
   if(!Array.isArray(c.perfis)||!c.perfis.length) c.perfis=[{id:"pad",nome:"Padrão",custo:45,preco:+c.valor||120}];
   if(!Array.isArray(c.riscos)||!c.riscos.length) c.riscos=[{id:"padrao",nome:"Padrão (já feito antes)",pct:c.cont??10},{id:"novo",nome:"Novo fabricante / linha",pct:20},{id:"inedito",nome:"P&D / inédito",pct:35}];
+  c.perfis.forEach(p=>{if(!p.tipo) p.tipo=p.id==="pad"?"centro":"pessoa"});
   if(c.margemAlvo==null) c.margemAlvo=40;
   if(c.gest==null) c.gest=0;
   if(!c.empresa) c.empresa={nome:"Diâmetro Design for Business",assinatura:"",cargo:"Consultor estratégico",contato:"",mantra:"Viva para transformar, sonhe para realizar e firme que vai!"};
@@ -778,24 +780,102 @@ const fatorDem=d=>1+((+riscoDe(d).pct||0)+(+db.cfg.gest||0))/100;   // reserva d
 function calc(e=est){
   const c=db.cfg, porDem=[], porFase={}, porAnd={}, porDemVal=[];
   let base=0, res=0, valor=0, custo=0, real=0, estComReal=0, valReal=0, custoReal=0;
+  // horas (com reservas) que decidem as faixas de preço
+  const hDe=d=>d.linhas.reduce((s,l)=>s+lineMin(l),0)*fatorDem(d)/60, hTot={est:0};
+  (e.demandas||[]).forEach(d=>{if(!contaDem(d)) return;const h=hDe(d),id=perfilDe(d).id;hTot.est+=h;hTot[id]=(hTot[id]||0)+h});
+  const faixasAplic={};
   (e.demandas||[]).forEach(d=>{
-    const t=d.linhas.reduce((s,l)=>s+lineMin(l),0), f=fatorDem(d), pf=perfilDe(d);
+    const t=d.linhas.reduce((s,l)=>s+lineMin(l),0), f=fatorDem(d), pf=perfilDe(d), hd=t*f/60;
     porDem.push(t);
-    const vd=t*f/60*(+pf.preco||0), cd=t*f/60*(+pf.custo||0);
-    porDemVal.push({valor:vd,custo:cd,margem:vd?(vd-cd)/vd*100:0});
+    const bH=pf.faixaBase==="demanda"?hd:pf.faixaBase==="perfil"?(contaDem(d)?hTot[pf.id]:(hTot[pf.id]||0)+hd):(contaDem(d)?hTot.est:hTot.est+hd), fx=precoFaixa(pf,bH), taxa=fx.taxa;
+    if(fx.k!=null&&contaDem(d)&&hd>0){const ch=pf.id+"|"+(pf.faixaBase==="demanda"?d.nome:"");faixasAplic[ch]=faixasAplic[ch]||{perfil:pf.nome,base:pf.faixaBase||"estimativa",dem:pf.faixaBase==="demanda"?d.nome:"",fx}}
+    const vd=hd*taxa, cd=hd*(+pf.custo||0);
+    porDemVal.push({valor:vd,custo:cd,margem:vd?(vd-cd)/vd*100:0,taxa,fx});
     if(!contaDem(d)) return;
     base+=t; res+=t*(f-1); valor+=vd; custo+=cd;
     porAnd[d.andamento||"nao_iniciada"]=(porAnd[d.andamento||"nao_iniciada"]||0)+t;
     d.linhas.forEach(l=>{
       porFase[lineFase(l)]=(porFase[lineFase(l)]||0)+lineMin(l);
-      if(temReal(l)){real+=+l.real;estComReal+=lineMin(l);valReal+=lineMin(l)*f/60*(+pf.preco||0);custoReal+=(+l.real)/60*(+pf.custo||0)}
+      if(temReal(l)){real+=+l.real;estComReal+=lineMin(l);valReal+=lineMin(l)*f/60*taxa;custoReal+=(+l.real)/60*(+pf.custo||0)}
     });
   });
   const total=base+res, margem=valor-custo, alvo=(+c.margemAlvo||0)/100;
-  return {base,res,total,porDem,porDemVal,porFase,porAnd,real,estComReal,valor,custo,margem,
+  return {base,res,total,porDem,porDemVal,porFase,porAnd,faixas:Object.values(faixasAplic),real,estComReal,valor,custo,margem,
     margemPct:valor?margem/valor*100:0, valReal, custoReal, margemRealPct:valReal?(valReal-custoReal)/valReal*100:null,
     precoMinAlvo:total&&alvo<1?custo/(1-alvo)/(total/60):0,
     dias:total/60/(c.hdia*c.equipe), min:total*c.oti, max:total*c.pes};
+}
+
+/* ================= PREÇO POR FAIXA DE HORAS ================= */
+const limF=f=>f.ate===""||f.ate==null?Infinity:+f.ate;
+const faixasOrd=pf=>(pf.faixas||[]).filter(f=>+f.preco>0).slice().sort((a,b)=>limF(a)-limF(b));
+const BASE_FX={estimativa:"horas da estimativa inteira",demanda:"horas da demanda",perfil:"horas deste perfil na estimativa"};
+// Decide o valor/hora do perfil para H horas (com reservas). Sem faixas = preço fixo.
+function precoFaixa(pf,H){
+  const fx=faixasOrd(pf); if(!fx.length) return {taxa:+pf.preco||0,k:null};
+  let k=fx.findIndex(f=>H<=limF(f)+1e-9); if(k<0) k=fx.length-1;
+  const info={k,n:fx.length,de:k?limF(fx[k-1]):0,ate:k===fx.length-1?Infinity:limF(fx[k]),preco:+fx[k].preco,modo:pf.faixaModo||"unica",H,
+    prox:k<fx.length-1?{em:limF(fx[k]),preco:+fx[k+1].preco}:null};
+  if(info.modo==="escalonada"){
+    let v=0,lo=0; fx.forEach((f,j)=>{const hi=j===fx.length-1?Infinity:limF(f); v+=Math.max(0,Math.min(H,hi)-lo)*(+f.preco); lo=hi});
+    return {...info,taxa:H?v/H:+fx[0].preco};
+  }
+  let v=H*info.preco, piso=0;
+  if(pf.degrau!==false) for(let j=0;j<k;j++) piso=Math.max(piso,limF(fx[j])*(+fx[j].preco));
+  if(v<piso-0.005) return {...info,taxa:H?piso/H:info.preco,protegido:piso};
+  return {...info,taxa:info.preco};
+}
+// Degraus: pontos onde a faixa única faz o total cair ao ganhar horas
+function degrausFx(fx){
+  const out=[]; for(let j=0;j<fx.length-1;j++){const b=limF(fx[j]),p0=+fx[j].preco,p1=+fx[j+1].preco; if(p1<p0) out.push({b,antes:b*p0,depois:b*p1,ate:b*p0/p1})}
+  return out;
+}
+function editarFaixas(i){
+  const pf=db.cfg.perfis[i], w={tipo:pf.tipo||"pessoa",faixaBase:pf.faixaBase||"estimativa",faixaModo:pf.faixaModo||"unica",degrau:pf.degrau!==false,
+    faixas:clone(pf.faixas&&pf.faixas.length?pf.faixas:[{ate:50,preco:+pf.preco||120},{ate:100,preco:Math.round((+pf.preco||120)*0.9)},{ate:"",preco:Math.round((+pf.preco||120)*0.8)}])};
+  const alvo=+db.cfg.margemAlvo||0, mg=p=>p?(p-(+pf.custo||0))/p*100:0;
+  abrirModal(`Faixas de preço · ${esc(pf.nome)}`,`
+    <p class="muted">O sistema escolhe sozinho o valor/hora conforme o volume de horas (já com as reservas de risco). Ex.: até 50 h vale um preço; de 50 a 100 h, outro. O custo/hora (${brl(+pf.custo||0)}) não muda, então a margem de cada faixa aparece ao lado.</p>
+    <div class="row">
+      <label>Este perfil é<select id="fxTipo"><option value="pessoa" ${w.tipo==="pessoa"?"selected":""}>Pessoa da equipe</option><option value="centro" ${w.tipo==="centro"?"selected":""}>Centro de custo</option></select></label>
+      <label>A faixa é decidida pelas<select id="fxBase">${Object.entries(BASE_FX).map(([k,v])=>`<option value="${k}" ${w.faixaBase===k?"selected":""}>${v}</option>`).join("")}</select></label>
+      <label>Cálculo<select id="fxModo"><option value="unica" ${w.faixaModo==="unica"?"selected":""}>Faixa única: todas as horas no valor da faixa atingida</option><option value="escalonada" ${w.faixaModo==="escalonada"?"selected":""}>Escalonado: cada faixa de horas no seu valor</option></select></label>
+    </div>
+    <label style="flex-direction:row;align-items:center;gap:6px" id="fxDegL"><input type="checkbox" id="fxDeg" ${w.degrau?"checked":""}> Proteger o degrau: o total nunca cai quando a estimativa passa para a faixa seguinte</label>
+    <div id="fxBox"></div>`,
+    [{label:"Salvar faixas",pri:true,fn:()=>{
+      const fx=w.faixas.map(f=>({ate:f.ate===""||f.ate==null?"":Math.max(0,+f.ate||0),preco:Math.max(0,+f.preco||0)})).filter(f=>f.preco>0);
+      const lims=fx.map(limF); if(lims.filter(x=>x===Infinity).length>1) return uiAlert("Só a última faixa pode ficar sem limite (“acima de”).");
+      if(new Set(lims).size!==lims.length) return uiAlert("Duas faixas com o mesmo limite de horas. Ajuste os valores de “até”.");
+      Object.assign(pf,{tipo:w.tipo,faixaBase:w.faixaBase,faixaModo:w.faixaModo,degrau:w.degrau,faixas:fx.sort((a,b)=>limF(a)-limF(b))});
+      persist();fecharModal();renderCfg();renderEst();renderEsc()}},
+     {label:"Remover faixas (preço fixo)",fn:()=>{pf.faixas=[];pf.tipo=w.tipo;persist();fecharModal();renderCfg();renderEst();renderEsc()}}]);
+  let sim=75;
+  const desenha=()=>{
+    const fx=w.faixas.slice().sort((a,b)=>limF(a)-limF(b)), tmp={...pf,...w,faixas:fx};
+    $("#fxDegL").style.display=w.faixaModo==="unica"?"":"none";
+    const dg=w.faixaModo==="unica"?degrausFx(faixasOrd(tmp)):[], r=precoFaixa(tmp,sim);
+    $("#fxBox").innerHTML=`<table class="agtab"><thead><tr><th>De</th><th>Até (h)</th><th class="n">Preço/h</th><th class="n">Margem</th><th></th></tr></thead><tbody>
+      ${fx.map((f,j)=>{const de=j?limF(fx[j-1]):0,m=mg(+f.preco);return `<tr><td class="muted">${j?"acima de "+num(de):"0"} h</td>
+        <td><input type="number" min="0" step="1" data-fxa="${w.faixas.indexOf(f)}" value="${f.ate===""||f.ate==null?"":f.ate}" placeholder="sem limite" style="width:110px"></td>
+        <td class="n"><input type="number" min="0" step="1" data-fxp="${w.faixas.indexOf(f)}" value="${f.preco}" style="width:100px"></td>
+        <td class="n ${m<alvo?"diff up":"diff down"}">${num(m,0)}%</td><td>${w.faixas.length>1?`<button class="x" data-fxdel="${w.faixas.indexOf(f)}" title="Excluir faixa">×</button>`:""}</td></tr>`}).join("")}</tbody></table>
+      <div class="toolbar" style="margin:6px 0"><button class="btn sm" id="fxAdd">+ Faixa</button><span class="muted" style="font-size:12px">“Até” em branco = sem limite (só na última). Limites incluem o valor: 50 h cai na faixa “até 50”.</span></div>
+      ${fx.some(f=>mg(+f.preco)<alvo)?`<p class="msg err">Faixa com margem abaixo do alvo de ${num(alvo,0)}%. Preço mínimo para o alvo: ${brl((+pf.custo||0)/(1-alvo/100))}/h.</p>`:""}
+      ${dg.map(x=>`<p class="msg ${w.degrau?"":"err"}">Degrau em ${num(x.b)} h: com ${num(x.b)} h o total é ${brl(x.antes)}; logo acima, cairia para ${brl(x.depois)}. ${w.degrau?`Proteção ativa: de ${num(x.b)} a ${num(x.ate)} h o total fica em ${brl(x.antes)}.`:`Sem proteção, uma estimativa maior sai mais barata até ${num(x.ate)} h. Ative a proteção ou use o escalonado.`}</p>`).join("")}
+      <div class="simfx"><label>Simular<input type="number" min="0" step="1" id="fxSim" value="${sim}" style="width:90px"> h</label>
+        <span>faixa ${r.k!=null?r.k+1:"—"} · <b>${brl(r.taxa)}/h</b> efetivo · total <b>${brl(r.taxa*sim)}</b> · margem ${num(mg(r.taxa),0)}%${r.protegido?" · degrau protegido":""}</span></div>`;
+  };
+  $("#mBody").addEventListener("change",e=>{const t=e.target,ds=t.dataset;
+    if(t.id==="fxTipo") w.tipo=t.value; else if(t.id==="fxBase") w.faixaBase=t.value; else if(t.id==="fxModo") w.faixaModo=t.value; else if(t.id==="fxDeg") w.degrau=t.checked;
+    else if(t.id==="fxSim") sim=Math.max(0,+t.value||0);
+    else if(ds.fxa!==undefined) w.faixas[+ds.fxa].ate=t.value===""?"":+t.value; else if(ds.fxp!==undefined) w.faixas[+ds.fxp].preco=+t.value||0; else return;
+    desenha()});
+  $("#mBody").addEventListener("click",e=>{const t=e.target;
+    if(t.id==="fxAdd"){const fx=w.faixas.slice().sort((a,b)=>limF(a)-limF(b)), fin=fx.filter(f=>limF(f)<Infinity), ult=fin.length?limF(fin[fin.length-1]):0;
+      w.faixas.push({ate:ult+50,preco:+(fx[fx.length-1]||{preco:pf.preco}).preco});desenha()}
+    else if(t.dataset.fxdel!==undefined){w.faixas.splice(+t.dataset.fxdel,1);desenha()}});
+  desenha();
 }
 
 /* ================= RENDER ESTIMATIVA ================= */
@@ -866,7 +946,7 @@ function renderEst(){
       </div>
       <div class="dem-meta">
         <label>Risco<select data-d="${di}" data-dk="risco">${db.cfg.riscos.map(x=>`<option value="${esc(x.id)}" ${riscoDe(d).id===x.id?"selected":""}>${esc(x.nome)} · ${num(x.pct)}%</option>`).join("")}</select></label>
-        <label>Perfil<select data-d="${di}" data-dk="perfil">${db.cfg.perfis.map(x=>`<option value="${esc(x.id)}" ${perfilDe(d).id===x.id?"selected":""}>${esc(x.nome)} · ${brl(+x.preco||0)}/h</option>`).join("")}</select></label>
+        <label>Perfil<select data-d="${di}" data-dk="perfil">${db.cfg.perfis.map(x=>`<option value="${esc(x.id)}" ${perfilDe(d).id===x.id?"selected":""}>${x.tipo==="centro"?"◆ ":""}${esc(x.nome)} · ${faixasOrd(x).length?"por faixa":brl(+x.preco||0)+"/h"}</option>`).join("")}</select></label>
         ${contaDem(d)&&r.porDemVal[di].valor?`<span class="muted">valor <b>${brl(r.porDemVal[di].valor)}</b> · margem <b class="${r.porDemVal[di].margem<(+db.cfg.margemAlvo||0)?"diff up":"diff down"}">${num(r.porDemVal[di].margem,0)}%</b></span>`:""}
       </div>
       <textarea placeholder="Observações, escopo, premissas…" data-d="${di}" data-dk="obs" style="${d.obs||disc?"":"display:none"}">${esc(d.obs)}</textarea>
@@ -902,7 +982,8 @@ function renderEst(){
   $("#kValor").textContent=brl(r.valor);
   $("#rMin").textContent=hrs(r.min); $("#rMax").textContent=hrs(r.max);
   const alvo=+c.margemAlvo||0, abaixo=r.valor&&r.margemPct<alvo;
-  $("#margemBox").innerHTML=r.valor?`<div class="mgrid">
+  const fxTxt=r.faixas.map(a=>{const x=a.fx;return `<p class="muted fxap"><b>${esc(a.perfil)}</b>${a.dem?` · ${esc(a.dem)}`:""}: ${num(x.H)} h (${BASE_FX[a.base]}) → faixa ${x.k+1}/${x.n} (${x.de?"acima de "+num(x.de):"até"}${x.ate<Infinity?(x.de?" até ":" ")+num(x.ate)+" h":" h"}) · <b>${brl(x.taxa)}/h</b>${x.modo==="escalonada"?" efetivo (escalonado)":""}${x.protegido?` · degrau protegido: total mínimo ${brl(x.protegido)}`:""}${x.prox?` · faltam ${num(x.prox.em-x.H)} h para ${brl(x.prox.preco)}/h`:""}</p>`}).join("");
+  $("#margemBox").innerHTML=r.valor?fxTxt+`<div class="mgrid">
       <div><span>Custo interno</span><b>${brl(r.custo)}</b></div>
       <div><span>Margem</span><b class="${abaixo?"diff up":"diff down"}">${brl(r.margem)} · ${num(r.margemPct,0)}%</b></div></div>
     ${abaixo?`<p class="msg err" style="margin:8px 0 0">Margem abaixo do alvo de ${num(alvo,0)}%. Preço médio mínimo para o alvo: <b>${brl(r.precoMinAlvo)}/h</b>.</p>`:""}
@@ -2152,12 +2233,12 @@ const zCall=(tool,input)=>zMcp.callTool(ZS,tool,input,{cache:false}).then(zPay);
 const zHead=()=>({"X-com-zoho-invoice-organizationid":zOrg});
 function linhasOrcamento(modo){
   const h=(v,d)=>Math.round(v/60*fatorDem(d)*100)/100, minD=d=>d.linhas.reduce((a,l)=>a+lineMin(l),0);
-  const dems=est.demandas.filter(d=>contaDem(d)&&d.linhas.length);
+  const dems=est.demandas.filter(d=>contaDem(d)&&d.linhas.length), rc=calc(), taxa=d=>rc.porDemVal[est.demandas.indexOf(d)].taxa;
   const resumo=d=>d.linhas.map(l=>{const p=proc(l.cod);return `${l.qtd}× ${p?p.nome:l.desc}${l.det?" ("+l.det+")":""}`}).join("; ").slice(0,1900);
   if(modo==="unica"){
-    const qt=Math.round(dems.reduce((s,d)=>s+h(minD(d),d),0)*100)/100, val=dems.reduce((s,d)=>s+h(minD(d),d)*(+perfilDe(d).preco||0),0);
+    const qt=Math.round(dems.reduce((s,d)=>s+h(minD(d),d),0)*100)/100, val=dems.reduce((s,d)=>s+h(minD(d),d)*taxa(d),0);
     return [{name:(catNome(catAtual())+" — "+(est.nome||"")).slice(0,100),description:("Demandas: "+dems.map(d=>d.nome).join("; ")).slice(0,1900),quantity:qt,rate:qt?Math.round(val/qt*100)/100:0}]}
-  return dems.map(d=>({name:d.nome.slice(0,100),description:resumo(d),quantity:h(minD(d),d),rate:+perfilDe(d).preco||0}));
+  return dems.map(d=>({name:d.nome.slice(0,100),description:resumo(d),quantity:h(minD(d),d),rate:Math.round(taxa(d)*100)/100}));
 }
 function fallbackZoho(motivo){
   const ls=linhasOrcamento("demanda");
@@ -2237,11 +2318,14 @@ function renderCfg(){
   Object.entries(EMP).forEach(([id,k])=>$("#"+id).value=db.cfg.empresa[k]||"");
   $("#eFer").value=(db.cfg.feriados||[]).map(fmtD).join("\n");
   const c=db.cfg;
-  $("#perfisBox").innerHTML=`<div class="tbl"><table><thead><tr><th>Perfil</th><th class="n">Custo/h</th><th class="n">Preço/h</th><th class="n">Margem</th><th></th></tr></thead><tbody>
-    ${c.perfis.map((p,i)=>{const m=p.preco?(p.preco-p.custo)/p.preco*100:0;return `<tr><td><input value="${esc(p.nome)}" data-pf="${i}" data-pk="nome"></td>
+  $("#perfisBox").innerHTML=`<div class="tbl"><table><thead><tr><th>Perfil</th><th>Tipo</th><th class="n">Custo/h</th><th class="n">Preço/h</th><th class="n">Margem</th><th>Decisão automática</th><th></th></tr></thead><tbody>
+    ${c.perfis.map((p,i)=>{const fx=faixasOrd(p), ps=fx.length?fx.map(f=>+f.preco):[+p.preco||0], mg=x=>x?(x-p.custo)/x*100:0, mmin=Math.min(...ps.map(mg)), mmax=Math.max(...ps.map(mg));
+      return `<tr><td><input value="${esc(p.nome)}" data-pf="${i}" data-pk="nome"></td>
+      <td><select data-pf="${i}" data-pk="tipo" style="width:auto"><option value="pessoa" ${p.tipo!=="centro"?"selected":""}>Pessoa</option><option value="centro" ${p.tipo==="centro"?"selected":""}>Centro de custo</option></select></td>
       <td class="n"><input type="number" min="0" step="1" value="${p.custo}" data-pf="${i}" data-pk="custo"></td>
-      <td class="n"><input type="number" min="0" step="1" value="${p.preco}" data-pf="${i}" data-pk="preco"></td>
-      <td class="n ${m<(+c.margemAlvo||0)?"diff up":"diff down"}">${num(m,0)}%</td>
+      <td class="n">${fx.length?`<span class="muted">${brl(Math.min(...ps))} a ${brl(Math.max(...ps))}</span>`:`<input type="number" min="0" step="1" value="${p.preco}" data-pf="${i}" data-pk="preco">`}</td>
+      <td class="n ${mmin<(+c.margemAlvo||0)?"diff up":"diff down"}">${fx.length&&Math.round(mmin)!==Math.round(mmax)?num(mmin,0)+"–"+num(mmax,0):num(mmin,0)}%</td>
+      <td><button class="btn sm${fx.length?" pri":""}" data-pffx="${i}">${fx.length?`${fx.length} faixas · ${p.faixaModo==="escalonada"?"escalonado":"faixa única"}`:"Preço por faixa de horas…"}</button></td>
       <td>${c.perfis.length>1?`<button class="x" data-pfdel="${i}" title="Excluir">×</button>`:""}</td></tr>`}).join("")}</tbody></table></div>
     <div class="toolbar" style="margin:8px 0 0"><button class="btn" id="pfAdd">+ Perfil</button><span class="muted">Preço mínimo para a margem-alvo de ${num(+c.margemAlvo||0,0)}%: custo ÷ ${num(1-(+c.margemAlvo||0)/100,2)}</span></div>`;
   $("#riscosBox").innerHTML=`<div class="tbl"><table><thead><tr><th>Nível</th><th class="n">Reserva %</th><th></th></tr></thead><tbody>
@@ -2261,10 +2345,11 @@ $("#catBox").addEventListener("click",async e=>{
     db.catalogos.push({id:"c"+uid(),nome});persist();render();uiAlert(`Catálogo “${nome}” criado. Cadastre os processos no Banco (seletor Catálogo).`)}
   else if(e.target.dataset.ctdel!==undefined){const x=db.catalogos[+e.target.dataset.ctdel];if(await uiConfirm(`Excluir o catálogo “${x.nome}”?`)){db.catalogos.splice(+e.target.dataset.ctdel,1);persist();render()}}
 });
-$("#perfisBox").addEventListener("change",e=>{const t=e.target;if(t.dataset.pf===undefined) return;const p=db.cfg.perfis[+t.dataset.pf];p[t.dataset.pk]=t.dataset.pk==="nome"?t.value.trim():Math.max(0,+t.value||0);persist();renderCfg();renderEst()});
+$("#perfisBox").addEventListener("change",e=>{const t=e.target;if(t.dataset.pf===undefined) return;const p=db.cfg.perfis[+t.dataset.pf];p[t.dataset.pk]=t.dataset.pk==="nome"?t.value.trim():t.dataset.pk==="tipo"?t.value:Math.max(0,+t.value||0);persist();renderCfg();renderEst()});
 $("#riscosBox").addEventListener("change",e=>{const t=e.target;if(t.dataset.ri===undefined) return;const x=db.cfg.riscos[+t.dataset.ri];x[t.dataset.rk]=t.dataset.rk==="nome"?t.value.trim():Math.max(0,+t.value||0);persist();renderCfg();renderEst()});
 $("#perfisBox").addEventListener("click",async e=>{
-  if(e.target.id==="pfAdd"){const nome=(await uiPrompt("Nome do perfil (ex.: Sênior, Pleno, Júnior):")||"").trim();if(!nome) return;db.cfg.perfis.push({id:uid(),nome,custo:45,preco:+db.cfg.perfis[0].preco||120});persist();renderCfg();renderEst()}
+  if(e.target.dataset.pffx!==undefined) return editarFaixas(+e.target.dataset.pffx);
+  if(e.target.id==="pfAdd"){const nome=(await uiPrompt("Nome do perfil (ex.: Sênior, Pleno, Júnior):")||"").trim();if(!nome) return;db.cfg.perfis.push({id:uid(),nome,tipo:"pessoa",custo:45,preco:+db.cfg.perfis[0].preco||120});persist();renderCfg();renderEst()}
   else if(e.target.dataset.pfdel!==undefined){const p=db.cfg.perfis[+e.target.dataset.pfdel];if(await uiConfirm(`Excluir o perfil “${p.nome}”? Demandas que o usam passam para “${db.cfg.perfis.find(x=>x!==p).nome}”.`)){db.cfg.perfis.splice(+e.target.dataset.pfdel,1);persist();renderCfg();renderEst()}}
 });
 $("#riscosBox").addEventListener("click",async e=>{

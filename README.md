@@ -208,3 +208,14 @@ prazo (dias)    = total ÷ (horas produtivas/dia × pessoas)
   - **Importar escopo assinado** confere os códigos de integridade, recusa arquivo adulterado e registra o aceite. Quando o escopo é da estimativa inteira, registra também a aprovação.
   - **Coletar assinatura aqui** serve para a assinatura presencial.
   - Cada aceite mostra **confere** ou **mudou depois**, se o conteúdo mudar após a assinatura. Nova versão não herda aceites nem aprovação.
+
+## Perfis com decisão automática de preço (faixas de horas)
+
+- Cada perfil é uma **pessoa da equipe** ou um **centro de custo** (◆ na lista da demanda).
+- **Preço por faixa de horas…** define faixas (ex.: até 50 h → R$ 150/h; até 100 h → R$ 130/h; acima → R$ 110/h). O sistema escolhe a faixa sozinho.
+- **Base da decisão:** horas da estimativa inteira (padrão), horas da demanda ou horas deste perfil na estimativa. As horas já incluem as reservas de risco. Demandas ignoradas ou em discussão não contam.
+- **Cálculo:**
+  - **Faixa única:** todas as horas no valor da faixa atingida.
+  - **Escalonado:** cada faixa de horas no seu valor, como no IR.
+- **Proteção de degrau** (faixa única, ligada por padrão): o total nunca cai quando a estimativa passa de faixa. O editor mostra cada degrau, a margem de cada faixa contra a margem-alvo e um simulador de horas.
+- A estimativa mostra a faixa aplicada e quantas horas faltam para a próxima. Proposta, escopo e Zoho Invoice usam o valor/hora efetivo.
