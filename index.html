@@ -279,6 +279,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
       <span class="pill h">Histórico</span> = medido nas estimativas reais da equipe.
       <span class="pill w">Manual</span> = derivado do guia Catalog Builder; calibrar com o histórico.</p>
     <div class="toolbar">
+      <label style="flex-direction:row;align-items:center;gap:6px">Catálogo<select id="pCat" style="width:auto"></select></label>
       <button class="btn pri" id="pAdd">+ Novo processo</button>
       <input id="pFiltro" placeholder="Filtrar…" style="flex:1;min-width:160px">
       <button class="btn" id="dbExport">Exportar banco (.json)</button>
@@ -309,7 +310,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
   <div class="card">
     <h2>Modelos de demanda</h2>
     <p class="muted">Pacotes de processos que se repetem (fechamento, orçamento, montagem de entidade…). Crie aqui ou pelo botão “Salvar como modelo” de uma demanda pronta. Na estimativa, “Aplicar modelo” insere as linhas na demanda e você ajusta.</p>
-    <div class="toolbar"><input id="tBusca" placeholder="Buscar modelo pelo nome, código ou processo…" style="flex:1;min-width:220px" autocomplete="off"><button class="btn pri" id="tAdd">+ Novo modelo</button></div>
+    <div class="toolbar"><label style="flex-direction:row;align-items:center;gap:6px">Catálogo<select id="tCat" style="width:auto"></select></label><input id="tBusca" placeholder="Buscar modelo pelo nome, código ou processo…" style="flex:1;min-width:220px" autocomplete="off"><button class="btn pri" id="tAdd">+ Novo modelo</button></div>
     <div id="tNovoBox"></div>
     <div id="tplList"></div>
   </div>
@@ -361,6 +362,12 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
     <div class="toolbar"><label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="calFech"> somente estimativas fechadas</label></div>
     <div id="calOut"></div>
   </div>
+  <div class="card">
+    <h2>Benchmark da rede</h2>
+    <p class="muted">Compare seus tempos-padrão com os de outras empresas (mentorados, parceiros). Cada empresa exporta um arquivo <b>anônimo</b> — só processos, unidades, tempos e nº de amostras, sem clientes nem valores — e você importa aqui.</p>
+    <div class="toolbar"><button class="btn" id="bmExp">Exportar meus tempos (anônimo)</button><button class="btn" id="bmImp">Importar benchmark</button></div>
+    <div id="bmOut"></div>
+  </div>
 </section>
 
 <!-- ================= PARÂMETROS ================= -->
@@ -388,6 +395,11 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
     <div id="riscosBox"></div>
   </div>
   <div class="card">
+    <h2>Catálogos de processos</h2>
+    <p class="muted">Cada catálogo é um banco de processos para um tipo de serviço. Cada estimativa usa um catálogo (seletor no topo da estimativa). Os catálogos novos vêm com processos de partida, marcados como Manual — calibre com o realizado.</p>
+    <div id="catBox"></div>
+  </div>
+  <div class="card">
     <h2>Empresa e proposta</h2>
     <p class="muted">Dados que assinam a proposta premium.</p>
     <div class="row">
@@ -395,6 +407,8 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
       <label style="flex:1;min-width:160px">Assinatura<input id="eAss" placeholder="Nome de quem assina"></label>
       <label style="flex:1;min-width:160px">Cargo<input id="eCargo"></label>
       <label style="flex:1;min-width:200px">Contato<input id="eCont" placeholder="telefone · site"></label>
+      <label style="flex:1;min-width:200px">E-mail para aprovação<input id="eMail" type="email"></label>
+      <label style="flex:1;min-width:160px">WhatsApp para aprovação<input id="eZap" placeholder="55 11 99999-9999"></label>
     </div>
     <label style="margin-top:10px">Frase de fechamento<input id="eMantra"></label>
     <label style="margin-top:10px">Feriados (um por linha, dd/mm/aaaa) — usados no cronograma<textarea id="eFer" style="min-height:60px"></textarea></label>
@@ -513,6 +527,26 @@ const SEED_PROC=[
 
   P("ADM-01","Administrativo","Administrativo","Administrativo da demanda (alinhamento, comunicação, entrega)","demanda",30,"H",["administrativo"])
 ];
+const CATALOGOS_PADRAO=[{id:"promob",nome:"Customização Promob"},{id:"projeto",nome:"Projeto de ambientes"},{id:"producao",nome:"Produção fabril"},{id:"montagem",nome:"Montagem e instalação"},{id:"consultoria",nome:"Consultoria Diâmetro"}];
+// Pontos de partida (fonte Manual) — calibrar com o realizado de cada operação
+const SEED_EXTRA={
+  projeto:[["PRJ-01","Briefing","Atendimento","Briefing e visita ao cliente","visita",120],["PRJ-02","Briefing","Atendimento","Medição técnica","ambiente",60],
+    ["PRJ-03","Projeto","Criação","Layout 3D do ambiente","ambiente",180],["PRJ-04","Projeto","Criação","Render / imagem para apresentação","imagem",30],
+    ["PRJ-05","Apresentação","Cliente","Apresentação ao cliente","reunião",90],["PRJ-06","Apresentação","Cliente","Rodada de revisão do projeto","revisão",60],
+    ["PRJ-07","Detalhamento","Executivo","Detalhamento executivo e conferência de medidas","ambiente",120],["PRJ-08","Detalhamento","Executivo","Orçamento e lista de materiais","ambiente",30]],
+  producao:[["FAB-01","Preparação","Setup","Setup de máquina / lote","setup",20],["FAB-02","Corte","Seccionadora","Corte de peças","peça",2],
+    ["FAB-03","Bordas","Coladeira","Aplicação de fita de borda","peça",1.5],["FAB-04","Usinagem","CNC / furadeira","Furação e usinagem","peça",3],
+    ["FAB-05","Montagem","Bancada","Pré-montagem de módulo","módulo",25],["FAB-06","Montagem","Bancada","Montagem e regulagem de portas/gavetas","frente",8],
+    ["FAB-07","Qualidade","Inspeção","Conferência de qualidade","módulo",5],["FAB-08","Expedição","Embalagem","Embalagem e identificação","volume",6]],
+  montagem:[["MON-01","Logística","Recebimento","Descarregamento e conferência","volume",3],["MON-02","Montagem","Módulos","Montagem de módulo inferior","módulo",45],
+    ["MON-03","Montagem","Módulos","Montagem de módulo superior","módulo",40],["MON-04","Montagem","Módulos","Torre / paneleiro / roupeiro","módulo",90],
+    ["MON-05","Acabamento","Tampos","Instalação de tampo / bancada","tampo",60],["MON-06","Acabamento","Ajustes","Regulagem de portas e gavetas","frente",5],
+    ["MON-07","Acabamento","Ajustes","Rodapés e arremates","metro",10],["MON-08","Entrega","Vistoria","Limpeza e vistoria final com o cliente","ambiente",45]],
+  consultoria:[["CON-01","Diagnóstico","Imersão","Diagnóstico in loco","dia",480],["CON-02","Diagnóstico","Imersão","Entrevista com liderança","entrevista",60],
+    ["CON-03","Desenho","Processos","Mapeamento e redesenho de processo","processo",240],["CON-04","Desenho","Gestão","Definição de KPIs e painel","indicador",60],
+    ["CON-05","Implantação","Rotinas","Implantação de rotina (PCP, comercial, projetos)","rotina",480],["CON-06","Implantação","Pessoas","Treinamento de equipe","sessão",180],
+    ["CON-07","Acompanhamento","Ritmo","Reunião de acompanhamento","reunião",90],["CON-08","Acompanhamento","Entrega","Relatório executivo","relatório",240]]
+};
 const SEED_TPL=[
   {cod:"MD-01",nome:"Fechamento padrão da demanda",itens:[["TST-01",1],["TST-02",1],["ADM-01",1]]},
   {cod:"MD-02",nome:"Montagem de entidade",itens:[["ENT-06",1],["ENT-07",1],["ENT-08",1]]},
@@ -535,6 +569,17 @@ function completarDb(){
   if(!Array.isArray(c.feriados)) c.feriados=[];
   if(!db.templates) db.templates=[];
   if(!Array.isArray(db.lixeira)) db.lixeira=[];
+  if(!Array.isArray(db.catalogos)||!db.catalogos.length) db.catalogos=JSON.parse(JSON.stringify(CATALOGOS_PADRAO));
+  db.processos.forEach(p=>{if(!p.catalogo) p.catalogo="promob"});
+  db.modelos.forEach(m=>{if(!m.catalogo) m.catalogo="promob"});
+  if(!Array.isArray(db.catSemeados)) db.catSemeados=["promob"];
+  Object.entries(SEED_EXTRA).forEach(([cid,lista])=>{
+    if(db.catSemeados.includes(cid)) return; db.catSemeados.push(cid);
+    if(!db.catalogos.some(c=>c.id===cid)) db.catalogos.push(CATALOGOS_PADRAO.find(c=>c.id===cid));
+    lista.forEach(([cod,fase,grupo,nome,un,min])=>{if(!db.processos.some(p=>p.cod===cod)) db.processos.push({cod,fase,grupo,nome,un,min,fonte:"M",alias:[],desc:"",catalogo:cid})});
+  });
+  if(!Array.isArray(db.benchmarks)) db.benchmarks=[];
+  if(c.empresa){if(c.empresa.email==null) c.empresa.email="";if(c.empresa.whatsapp==null) c.empresa.whatsapp=""}
   const lim=Date.now()-60*864e5; db.lixeira=db.lixeira.filter(x=>(x.em||0)>lim);  // lixeira guarda 60 dias
 }
 
@@ -690,6 +735,10 @@ const ANDAMENTO=[["nao_iniciada","Não iniciada"],["andamento","Em andamento"],[
 const andLabel=v=>(ANDAMENTO.find(a=>a[0]===v)||ANDAMENTO[0])[1];
 let mostrarIgn=false;
 const lineFase=l=>(proc(l.cod)||{}).fase||l.fase||"Outros";
+const catAtual=()=>est.catalogo||"promob";
+const catNome=id=>(db.catalogos.find(c=>c.id===id)||{nome:id}).nome;
+const procsCat=c=>db.processos.filter(p=>(p.catalogo||"promob")===c);
+let bancoCat=null;  // catálogo exibido no Banco e em Modelos
 const temReal=l=>l.real!==undefined&&l.real!==""&&l.real!==null;
 const perfilDe=d=>db.cfg.perfis.find(p=>p.id===d.perfil)||db.cfg.perfis[0];
 const riscoDe=d=>db.cfg.riscos.find(r=>r.id===d.risco)||db.cfg.riscos[0];
@@ -731,13 +780,16 @@ function renderEstBar(){
   const fechada=est.status==="fechada";
   const clis=Object.values(arq.clientes).sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
   $("#estBar").innerHTML=`<span class="muted">Cliente</span><select id="estCli">${clis.map(c=>`<option value="${esc(c.id)}" ${c.id===est.clienteId?"selected":""}>${esc(c.nome)}</option>`).join("")}</select>
+    <span class="muted">Catálogo</span><select id="estCat" ${fechada?"disabled":""}>${db.catalogos.map(c=>`<option value="${esc(c.id)}" ${c.id===catAtual()?"selected":""}>${esc(c.nome)}</option>`).join("")}</select>
     <span class="pill">v${est.versao||1}</span>
+    ${est.aprovacao?`<span class="pill h" title="${esc(est.aprovacao.canal||"")}">Aprovada em ${new Date(est.aprovacao.em).toLocaleDateString("pt-BR")} · ${esc(est.aprovacao.nome)}</span>`:""}
     <span class="pill ${fechada?"st-f":"st-r"}">${fechada?"Fechada em "+new Date(est.fechadaEm||Date.now()).toLocaleDateString("pt-BR"):"Rascunho"}</span>
     ${est.arquivada?'<span class="pill st-a">arquivada</span>':""}
     <span style="flex:1"></span>
     ${fechada?'<button class="btn" id="btnReabrir">Reabrir para edição</button>':'<button class="btn pri" id="btnFechar">Fechar estimativa</button>'}
     <button class="btn" id="btnNovaVersao">Nova versão</button>
-    <button class="btn" id="btnSalvarTpl">Salvar como template</button>`;
+    <button class="btn" id="btnSalvarTpl">Salvar como template</button>
+    ${fechada?`<button class="btn" id="btnAprov">${est.aprovacao?"Aprovação…":"Registrar aprovação"}</button>`:""}`;
   ["btnToggl","btnZoho"].forEach(id=>{const b=document.getElementById(id);b.disabled=!fechada;b.title=fechada?"":"Feche a estimativa para liberar"});
   ["btnNovaDem","btnXmind","btnExemplo","btnClear","pNome","pResp","pData","btnIA"].forEach(id=>document.getElementById(id).disabled=fechada);
   {const b=document.getElementById("btnZProj");b.disabled=!fechada;b.title=fechada?"":"Feche a estimativa para liberar"}
@@ -858,7 +910,8 @@ function opcoesCombo(tipo,q,di,ctx){
   const nq=norm(q), its=[];
   if(tipo==="p"){
     let ultFase="";
-    db.processos.filter(p=>!nq||norm(p.cod+" "+p.nome+" "+p.grupo+" "+p.fase).includes(nq)).slice(0,60).forEach(p=>{
+    const cc=ctx==="mod"?((db.modelos[+di]||{}).catalogo||"promob"):catAtual();
+    procsCat(cc).filter(p=>!nq||norm(p.cod+" "+p.nome+" "+p.grupo+" "+p.fase).includes(nq)).slice(0,60).forEach(p=>{
       if(p.fase!==ultFase){ultFase=p.fase;its.push({grupo:p.fase})}
       its.push({v:p.cod,txt:`${p.cod} · ${p.nome}`,html:`<b>${esc(p.cod)}</b> ${esc(p.nome)} <span class="muted">${esc(p.grupo||"")} · ${num(p.min)} min/${esc(p.un)}</span>`});
     });
@@ -867,7 +920,7 @@ function opcoesCombo(tipo,q,di,ctx){
       if(ctx!=="mod") its.push({v:"__avulso",cls:"novo alt",html:`Usar como linha avulsa “${esc(q.trim())}” (sem cadastrar)`});
     }
   }else{
-    db.modelos.filter(m=>!nq||norm(m.cod+" "+m.nome).includes(nq)).forEach(m=>{
+    db.modelos.filter(m=>(m.catalogo||"promob")===catAtual()&&(!nq||norm(m.cod+" "+m.nome).includes(nq))).forEach(m=>{
       const tot=m.itens.reduce((s,[pc,qq,det,min])=>s+((min??(proc(pc)||{min:0}).min)*qq),0);
       its.push({v:m.cod,html:`<b>${esc(m.cod)}</b> ${esc(m.nome)} <span class="muted">${m.itens.length} linhas · ${hm(tot)}</span>`});
     });
@@ -879,7 +932,7 @@ function opcoesCombo(tipo,q,di,ctx){
   return its;
 }
 function abrirCombo(cb){
-  const inp=cb.querySelector("input"), its=opcoesCombo(cb.dataset.cb,inp.value,+cb.dataset.d,cb.dataset.ctx);
+  const inp=cb.querySelector("input"), its=opcoesCombo(cb.dataset.cb,inp.value,cb.dataset.ctx==="mod"?+cb.dataset.mi:+cb.dataset.d,cb.dataset.ctx);
   cb._its=its.filter(x=>!x.grupo); let sel=+(cb.dataset.sel||0); if(sel>=cb._its.length) sel=0; cb.dataset.sel=sel;
   let k=-1;
   cb.querySelector(".cmenu").innerHTML=its.length?its.map(x=>x.grupo?`<div class="cgr">${esc(x.grupo)}</div>`:`<div class="copt ${x.cls||""} ${++k===sel?"on":""}" data-ci="${k}">${x.html}</div>`).join(""):'<div class="copt muted">Nenhum resultado</div>';
@@ -889,7 +942,7 @@ function abrirCombo(cb){
 const fecharCombo=cb=>{cb.classList.remove("open");cb.dataset.sel=0};
 function criarModelo(nome,itens){
   let n=db.modelos.length+1, cod; do{cod="MD-"+String(n++).padStart(2,"0")}while(db.modelos.some(m=>m.cod===cod));
-  db.modelos.unshift({cod,nome,itens}); persist(); renderTpl(); return cod;
+  db.modelos.unshift({cod,nome,itens,catalogo:(bancoCat&&document.querySelector("#tpl.on"))?bancoCat:catAtual()}); persist(); renderTpl(); return cod;
 }
 async function escolherCombo(cb,x){
   const inp=cb.querySelector("input"), di=+cb.dataset.d, q=inp.value.trim();
@@ -925,8 +978,9 @@ function addItemModelo(mi,cod){
   const inp=document.querySelector(`.combo[data-ctx="mod"][data-mi="${mi}"] input`); if(inp) inp.focus();
 }
 function cadastrarProcessoRapido(nome,di,alvo){
-  const fase=fases().includes("Cadastros")?"Cadastros":fases()[0];
-  const p={cod:codigoLivre(fase,""),fase,grupo:"",nome,un:"unid.",min:10,fonte:"M",alias:[],desc:""};
+  const cc=alvo&&alvo.mi!==undefined?((db.modelos[alvo.mi]||{}).catalogo||"promob"):catAtual();
+  const fc=[...new Set(procsCat(cc).map(p=>p.fase))], fase=fc.includes("Cadastros")?"Cadastros":(fc[0]||"Geral");
+  const p={cod:codigoLivre(fase,""),fase,grupo:"",nome,un:"unid.",min:10,fonte:"M",alias:[],desc:"",catalogo:cc};
   db.processos.push(p);
   editarProc(db.processos.length-1,true,pp=>{
     const idx=db.processos.indexOf(pp); db.processos.splice(idx,1); db.processos.splice(posGrupo(pp.fase,pp.grupo),0,pp);
@@ -1106,17 +1160,23 @@ $("#btnXmind").onclick=()=>pickFile(".xmind",async f=>{
 // Visão em árvore Fase › Grupo › Processo, com inserção direta no grupo, duplicar, mover e editor completo
 const grupos=fase=>[...new Set(db.processos.filter(p=>p.fase===fase).map(p=>p.grupo||""))];
 const SEMGRUPO="(sem grupo)";
+function renderCatSelects(){
+  if(!bancoCat||!db.catalogos.some(c=>c.id===bancoCat)) bancoCat=catAtual();
+  const o=db.catalogos.map(c=>`<option value="${esc(c.id)}" ${c.id===bancoCat?"selected":""}>${esc(c.nome)} (${procsCat(c.id).length})</option>`).join("");
+  ["#pCat","#tCat"].forEach(sel=>{const el=document.querySelector(sel); if(el) el.innerHTML=o});
+}
 function renderProc(){
+  renderCatSelects();
   const f=norm($("#pFiltro").value);
-  const casa=p=>!f||norm(p.cod+" "+p.fase+" "+p.grupo+" "+p.nome+" "+p.un+" "+(p.desc||"")).includes(f);
+  const casa=p=>(p.catalogo||"promob")===bancoCat&&(!f||norm(p.cod+" "+p.fase+" "+p.grupo+" "+p.nome+" "+p.un+" "+(p.desc||"")).includes(f));
   let h="";
   fases().forEach(fase=>{
-    const naFase=db.processos.filter(p=>p.fase===fase);
-    if(!naFase.length&&f) return;
+    const naFase=db.processos.filter(p=>p.fase===fase&&(p.catalogo||"promob")===bancoCat);
+    if(!naFase.length) return;
     const vis=naFase.filter(casa); if(f&&!vis.length) return;
     h+=`<tr class="cat"><td colspan="6"><div class="gh"><span>${esc(fase)}</span><span class="pill">${naFase.length}</span>
       <span class="sp"></span><button class="btn sm" data-gadd="${esc(fase)}">+ grupo</button><button class="btn sm" data-frn="${esc(fase)}">Renomear fase</button></div></td></tr>`;
-    grupos(fase).forEach(g=>{
+    [...new Set(naFase.map(p=>p.grupo||""))].forEach(g=>{
       const ps=db.processos.map((p,i)=>({p,i})).filter(({p})=>p.fase===fase&&(p.grupo||"")===g&&casa(p));
       if(f&&!ps.length) return;
       const tot=ps.reduce((s,{p})=>s+(+p.min||0),0);
@@ -1190,7 +1250,7 @@ function editarProc(i,novo=false,aoSalvar=null){
   $(novo?"#peNome":"#peMin").select();
 }
 function novoProc(fase,grupo){
-  const p={cod:codigoLivre(fase,grupo),fase,grupo,nome:"Novo processo",un:"unid.",min:10,fonte:"M",alias:[],desc:""};
+  const p={cod:codigoLivre(fase,grupo),fase,grupo,nome:"Novo processo",un:"unid.",min:10,fonte:"M",alias:[],desc:"",catalogo:bancoCat||catAtual()};
   const pos=posGrupo(fase,grupo); db.processos.splice(pos,0,p); persist(); renderProc(); editarProc(pos,true);
 }
 function duplicarProc(i){
@@ -1232,6 +1292,7 @@ $("#procBody").addEventListener("click",async e=>{
   }
 });
 $("#pFiltro").oninput=renderProc;
+$("#pCat").onchange=e=>{bancoCat=e.target.value;renderProc();renderTpl()};
 $("#pAdd").onclick=async()=>{
   const f=await uiPrompt("Fase do novo processo:",fases()[3]||"Cadastros"); if(!f) return;
   const g=await uiPrompt("Grupo:",grupos(f.trim())[0]||""); if(g===null) return;
@@ -1261,7 +1322,7 @@ const mesFmt=t=>new Date(t).toLocaleDateString("pt-BR",{month:"long",year:"numer
 const dataDe=e=>e.data?new Date(e.data+"T12:00:00").getTime():(e.criadoEm||Date.now());
 function novaEstimativa(clienteId,base){
   const t=Date.now(), id=uid();
-  const e={nome:"Nova estimativa",resp:est.resp||"",data:hoje(),demandas:[],...(base||{}),id,familia:id,clienteId,versao:1,status:"rascunho",arquivada:false,criadoEm:t,atualizadoEm:t,fechadaEm:null};
+  const e={nome:"Nova estimativa",resp:est.resp||"",data:hoje(),demandas:[],catalogo:catAtual(),...(base||{}),id,familia:id,clienteId,versao:1,status:"rascunho",arquivada:false,criadoEm:t,atualizadoEm:t,fechadaEm:null};
   arq.estimativas[id]=clone(e); Sync.est(id); return e;
 }
 function abrirEstimativa(id){
@@ -1282,9 +1343,9 @@ function renderArquivo(){
   let mes="", h="";
   lista.forEach(e=>{
     const m=mesFmt(dataDe(e)); if(m!==mes){mes=m;h+=`<tr class="mes"><td colspan="6">${esc(m)}</td></tr>`}
-    const r=calc(e), pc=r.base?Math.round((r.porAnd.concluida||0)/r.base*100):0, st=e.arquivada?'<span class="pill st-a">arquivada</span>':e.status==="fechada"?'<span class="pill st-f">fechada</span>':'<span class="pill st-r">rascunho</span>';
+    const r=calc(e), pc=r.base?Math.round((r.porAnd.concluida||0)/r.base*100):0, st=e.arquivada?'<span class="pill st-a">arquivada</span>':e.aprovacao?'<span class="pill h">aprovada</span>':e.status==="fechada"?'<span class="pill st-f">fechada</span>':'<span class="pill st-r">rascunho</span>';
     h+=`<tr class="${e.id===est.id?"cur":""}"><td><b>${esc(e.nome||"(sem nome)")}</b> <span class="pill">v${e.versao||1}</span>${e.id===est.id?' <span class="muted">· aberta</span>':""}</td>
-      <td>${st}${pc?` <span class="muted">${pc}% concluído</span>`:""}</td><td class="n">${hrs(r.total)}${r.valor?`<div class="${r.margemPct<(+db.cfg.margemAlvo||0)?"diff up":"diff down"}">margem ${num(r.margemPct,0)}%</div>`:""}</td><td class="n">${brl(r.valor)}</td>
+      <td>${st}${(e.catalogo||"promob")!=="promob"?` <span class="pill">${esc(catNome(e.catalogo))}</span>`:""}${pc?` <span class="muted">${pc}% concluído</span>`:""}</td><td class="n">${hrs(r.total)}${r.valor?`<div class="${r.margemPct<(+db.cfg.margemAlvo||0)?"diff up":"diff down"}">margem ${num(r.margemPct,0)}%</div>`:""}</td><td class="n">${brl(r.valor)}</td>
       <td class="muted" title="Atualizada em ${new Date(e.atualizadoEm||0).toLocaleString("pt-BR")}">${e.data?new Date(e.data+"T12:00:00").toLocaleDateString("pt-BR"):""}</td>
       <td class="acts">${e.id!==est.id?`<button class="btn sm pri" data-aab="${e.id}">Abrir</button>`:""}<button class="btn sm" data-aren="${e.id}">Renomear</button><button class="btn sm" data-aver="${e.id}">Nova versão</button><button class="btn sm" data-aarq="${e.id}">${e.arquivada?"Desarquivar":"Arquivar"}</button><button class="x" data-adel="${e.id}" title="Excluir">×</button></td></tr>`;
   });
@@ -1312,7 +1373,7 @@ $("#arqCliRen").onclick=async()=>{
 $("#arqNova").onclick=()=>{persist(); const e=novaEstimativa(arqCliSel); save(K_ARQ,arq); abrirEstimativa(e.id); setTimeout(()=>{$("#pNome").focus();$("#pNome").select()},300)};
 $("#arqTpl").onchange=e=>{
   const t=(db.templates||[]).find(x=>x.id===e.target.value); e.target.value=""; if(!t) return;
-  persist(); const n=novaEstimativa(arqCliSel,{nome:t.nome,demandas:clone(t.demandas)}); save(K_ARQ,arq); abrirEstimativa(n.id);
+  persist(); const n=novaEstimativa(arqCliSel,{nome:t.nome,demandas:clone(t.demandas),catalogo:t.catalogo||"promob"}); save(K_ARQ,arq); abrirEstimativa(n.id);
 };
 $("#arqList").addEventListener("click",async e=>{
   const ds=e.target.dataset;
@@ -1336,6 +1397,7 @@ $("#arqList").addEventListener("click",async e=>{
   }
 });
 $("#estBar").addEventListener("change",e=>{
+  if(e.target.id==="estCat"){est.catalogo=e.target.value;bancoCat=est.catalogo;persist();renderEst();renderProc();renderTpl();return}
   if(e.target.id==="estCli"){est.clienteId=e.target.value;arqCliSel=est.clienteId;persist();renderArquivo()}
 });
 $("#estBar").addEventListener("click",async e=>{
@@ -1348,9 +1410,18 @@ $("#estBar").addEventListener("click",async e=>{
     if(!await uiConfirm("Reabrir para edição? Se ela já foi enviada ao cliente, prefira “Nova versão” para manter o histórico.")) return;
     est.status="rascunho"; est.fechadaEm=null; persist(); renderEst();
   }else if(id==="btnNovaVersao") novaVersao(est.id);
+  else if(id==="btnAprov"){
+    if(est.aprovacao){
+      if(await uiConfirm(`Aprovada por ${est.aprovacao.nome} em ${new Date(est.aprovacao.em).toLocaleString("pt-BR")} (${est.aprovacao.canal||"—"}). Remover o registro?`,{ok:"Remover aprovação",cancel:"Manter"})){est.aprovacao=null;persist();renderEst();renderArquivo()}
+      return;
+    }
+    const nome=(await uiPrompt("Quem aprovou (nome do cliente)?")||"").trim(); if(!nome) return;
+    const canal=(await uiPrompt("Por onde (WhatsApp, e-mail, assinatura no PDF…)?","WhatsApp")||"").trim();
+    est.aprovacao={nome,canal,em:Date.now()}; persist(); renderEst(); renderArquivo(); uiAlert("Aprovação registrada. Próximo passo: enviar ao Zoho Projects e ao Toggl.");
+  }
   else if(id==="btnSalvarTpl"){
     const nome=(await uiPrompt("Nome do template:",est.nome)||"").trim(); if(!nome) return;
-    db.templates.unshift({id:uid(),nome,demandas:limparExecucao(est.demandas),criadoEm:Date.now()});
+    db.templates.unshift({id:uid(),nome,demandas:limparExecucao(est.demandas),criadoEm:Date.now(),catalogo:catAtual()});
     persist(); renderTpl(); renderArquivo(); uiAlert(`Template “${nome}” salvo. Use em Arquivo › “Nova a partir de template…” ou na aba Modelos.`);
   }
 });
@@ -1362,7 +1433,7 @@ function renderEstTpl(){
 }
 $("#estTplList").addEventListener("click",async e=>{
   const ds=e.target.dataset, ts=db.templates;
-  if(ds.tuse!==undefined){persist();const t=ts[+ds.tuse],n=novaEstimativa(arqCliSel||est.clienteId,{nome:t.nome,demandas:clone(t.demandas)});save(K_ARQ,arq);document.querySelector('nav button[data-tab="est"]').click();abrirEstimativa(n.id)}
+  if(ds.tuse!==undefined){persist();const t=ts[+ds.tuse],n=novaEstimativa(arqCliSel||est.clienteId,{nome:t.nome,demandas:clone(t.demandas),catalogo:t.catalogo||"promob"});save(K_ARQ,arq);document.querySelector('nav button[data-tab="est"]').click();abrirEstimativa(n.id)}
   else if(ds.tren!==undefined){const t=ts[+ds.tren],nome=(await uiPrompt("Novo nome:",t.nome)||"").trim();if(nome){t.nome=nome;persist();renderEstTpl();renderArquivo()}}
   else if(ds.tdel!==undefined){if(await uiConfirm(`Excluir o template “${ts[+ds.tdel].nome}”?`)){ts.splice(+ds.tdel,1);persist();renderEstTpl();renderArquivo()}}
 });
@@ -1371,7 +1442,8 @@ $("#estTplList").addEventListener("click",async e=>{
 function renderTpl(){
   renderEstTpl();
   const fq=norm(($("#tBusca")||{}).value||""), fqRaw=(($("#tBusca")||{}).value||"").trim();
-  const casaM=m=>!fq||norm(m.cod+" "+m.nome+" "+m.itens.map(([pc,q,det,min,desc])=>pc+" "+((proc(pc)||{}).nome||"")+" "+(desc||"")).join(" ")).includes(fq);
+  renderCatSelects();
+  const casaM=m=>(m.catalogo||"promob")===bancoCat&&(!fq||norm(m.cod+" "+m.nome+" "+m.itens.map(([pc,q,det,min,desc])=>pc+" "+((proc(pc)||{}).nome||"")+" "+(desc||"")).join(" ")).includes(fq));
   $("#tNovoBox").innerHTML=fqRaw&&!db.modelos.some(m=>norm(m.nome)===fq)?`<div class="card" style="padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="muted">${db.modelos.some(casaM)?"Nenhum modelo com esse nome exato.":"Nenhum modelo encontrado."}</span><button class="btn pri" id="tNovoBtn">＋ Criar modelo “${esc(fqRaw)}”</button></div>`:"";
   $("#tplList").innerHTML=db.modelos.map((m,mi)=>{
     if(!casaM(m)) return "";
@@ -1405,6 +1477,7 @@ $("#tplList").addEventListener("click",async e=>{
 
 });
 $("#tBusca").oninput=renderTpl;
+$("#tCat").onchange=e=>{bancoCat=e.target.value;renderTpl();renderProc()};
 $("#tNovoBox").addEventListener("click",e=>{
   if(e.target.id!=="tNovoBtn") return;
   criarModelo($("#tBusca").value.trim(),[]);
@@ -1412,7 +1485,7 @@ $("#tNovoBox").addEventListener("click",e=>{
 });
 $("#tAdd").onclick=()=>{
   let n=db.modelos.length+1, cod; do{cod="MD-"+String(n++).padStart(2,"0")}while(db.modelos.some(m=>m.cod===cod));
-  $("#tBusca").value=""; db.modelos.unshift({cod,nome:"Novo modelo",itens:[]}); persist(); renderTpl();
+  $("#tBusca").value=""; db.modelos.unshift({cod,nome:"Novo modelo",itens:[],catalogo:bancoCat||catAtual()}); persist(); renderTpl();
   const card=document.querySelector('[data-mcard="0"]'); card.scrollIntoView({behavior:"smooth",block:"center"});
   const inp=card.querySelector('[data-mk="nome"]'); setTimeout(()=>{inp.focus();inp.select()},250);
 };
@@ -1460,6 +1533,9 @@ const attr=(el,nomes)=>{for(const n of nomes){for(const v of [n,n.toLowerCase(),
 const ABREV=["Abbreviation","Abreviatura","Abrev","Abbrev","ShortName","Sigla"], DESCR=["Description","Descricao","Descrição"];
 const textoFilho=(el,nomes)=>{for(const c of el.children){if(nomes.some(n=>n.toLowerCase()===c.localName.toLowerCase())&&!c.children.length) return c.textContent.trim()}return null};
 const ehOculto=el=>{const v=attr(el,["Visible","Visivel","Visível"]);const h=attr(el,["Hidden","Invisible","Oculto"]);return (v!==null&&/^(false|0|n|nao|não)$/i.test(v))||(h!==null&&/^(true|1|s|sim|y)$/i.test(h))};
+// impressão digital do elemento quando o Promob não traz HASH: atributos + nº de filhos + tamanho do texto
+function impressao(el){let t="";for(const a of el.attributes) t+=a.name+"="+a.value+";";t+="|"+el.childElementCount+"|"+(el.textContent||"").length;
+  let h=2166136261;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)}
 function lerXml(sc,parts,txt,arq){
   const add=(k,v=1)=>sc.m[k]=(sc.m[k]||0)+v;
   const doc=parser.parseFromString(txt,"application/xml");
@@ -1478,7 +1554,7 @@ function lerXml(sc,parts,txt,arq){
         // Promob: <EXPLORERITEM TYPE="group|module" ID=".." DEF="Arquivo.group"> — o TYPE diferencia grupo de módulo
         const tipo=attr(c,["TYPE","Tipo"]), tag=tipo?`${c.localName}[${tipo}]`:c.localName;
         const n={label:(rot||id||c.localName).trim()||c.localName,id,tag,kind:"xml",oculto:ehOculto(c),children:[],def,dir:arq.dir,
-          abrev:attr(c,ABREV)??textoFilho(c,ABREV),desc:attr(c,DESCR)??textoFilho(c,DESCR)};
+          abrev:attr(c,ABREV)??textoFilho(c,ABREV),desc:attr(c,DESCR)??textoFilho(c,DESCR),hash:attr(c,["HASH"])||impressao(c)};
         sc.tags[tag]=(sc.tags[tag]||0)+1;
         pai.children.push(n); walk(c,n);
       }else walk(c,pai);
@@ -1660,10 +1736,54 @@ function renderSys(){
       </tbody></table></div>`;
   };
   $("#sysOut").innerHTML=`<p class="muted">Origem <b>${esc(s.raiz)}</b> (${s.origem==="lista"?"lista de arquivos — sem leitura de conteúdo":"pasta lida no navegador"}) · ${esc(s.quando)} · ${num(s.arquivos,0)} arquivos${s.bytes?` · ${num(s.bytes/1048576)} MB`:""}${s.origem!=="lista"?` · ${num(s.xmlLidos,0)} arquivos XML lidos${s.defsLigados?` · ${num(s.defsLigados,0)} referências DEF ligadas`:""}${s.xmlErro?` · ${s.xmlErro} ilegíveis`:""}`:""}${snap?` · retrato de base: ${esc(snap.quando)}`:""}</p>`
+    +renderDiff()
     +renderArvore()
     +sec("cad:","Cadastros identificados (elementos com ID, por pasta)",120,"É a métrica mais próxima de “itens cadastrados” em cada editor. Vincule as que representam trabalho.")
     +sec("pasta:","Arquivos por pasta",80)+sec("ext:","Arquivos por extensão",40)
     +(s.origem!=="lista"?sec("tag:","Todos os elementos XML (detalhe técnico)",60):"");
+}
+function itensDoScan(sc){
+  const out={}, vistos=new Set();
+  (function andar(n,path){
+    if(vistos.has(n)) return; vistos.add(n);
+    for(const c of n.children){
+      if(c.kind==="arquivo"&&c.ref) continue;
+      const p=c.kind==="arquivo"?path:[...path,c.label];
+      if(c.kind==="xml"&&c.id){const k=c.tag+"|"+c.id; if(!out[k]) out[k]={h:c.hash||"",l:c.desc||c.label,a:c.abrev||"",g:path.slice(0,3).join(" › ")||"(raiz)",t:c.tag}}
+      andar(c,p);
+    }
+  })(sc.tree,[]);
+  return out;
+}
+let sysDiffSoMod=true;
+function compararRetrato(){
+  const snap=load(K_SNAP,null); if(!snap||!snap.itens||!sysScan||sysScan.origem==="lista") return null;
+  const cur=itensDoScan(sysScan), ant=snap.itens, filtro=k=>!sysDiffSoMod||!sysTag||(cur[k]||ant[k]).t===sysTag;
+  const novos=[],alterados=[],removidos=[];
+  Object.keys(cur).filter(filtro).forEach(k=>{if(!ant[k]) novos.push(k); else if(ant[k].h&&cur[k].h&&ant[k].h!==cur[k].h) alterados.push(k)});
+  Object.keys(ant).filter(filtro).forEach(k=>{if(!cur[k]) removidos.push(k)});
+  return {cur,ant,novos,alterados,removidos,snap};
+}
+function renderDiff(){
+  const d=compararRetrato(); if(!d) return "";
+  const por={}; const add=(tipo,k,o)=>{const g=o.g;(por[g]=por[g]||{novos:[],alterados:[],removidos:[]})[tipo].push(o)};
+  d.novos.forEach(k=>add("novos",k,d.cur[k])); d.alterados.forEach(k=>add("alterados",k,d.cur[k])); d.removidos.forEach(k=>add("removidos",k,d.ant[k]));
+  const procOpts=sel=>procsCat("promob").map(p=>`<option value="${esc(p.cod)}" ${p.cod===sel?"selected":""}>${esc(p.cod)} · ${esc(p.nome)}</option>`).join("");
+  const lista=a=>a.map(o=>`${esc(o.a?o.a+" · ":"")}${esc(o.l)}`).join(" · ");
+  return `<h3 style="margin:18px 0 6px">O que mudou desde o retrato de ${esc(d.snap.quando)}</h3>
+    <div class="kpi" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:10px">
+      <div><span>Novos</span><b class="diff down">${d.novos.length}</b></div><div><span>Alterados</span><b style="color:#3b82c4">${d.alterados.length}</b></div><div><span>Removidos</span><b class="diff up">${d.removidos.length}</b></div></div>
+    <label style="flex-direction:row;align-items:center;gap:6px;margin-bottom:8px"><input type="checkbox" id="sysDiffMod" ${sysDiffSoMod?"checked":""}> somente ${sysTag?`&lt;${esc(sysTag)}&gt; (módulos)`:"módulos"}</label>
+    ${Object.keys(por).length?`<div class="tbl"><table><thead><tr><th>Grupo</th><th class="n">Novos</th><th class="n">Alterados</th><th class="n">Removidos</th></tr></thead><tbody>
+      ${Object.entries(por).sort((a,b)=>(b[1].novos.length+b[1].alterados.length)-(a[1].novos.length+a[1].alterados.length)).map(([g,o])=>`<tr><td><details><summary>${esc(g)}</summary>
+        ${o.novos.length?`<p class="muted"><b>Novos:</b> ${lista(o.novos)}</p>`:""}${o.alterados.length?`<p class="muted"><b>Alterados:</b> ${lista(o.alterados)}</p>`:""}${o.removidos.length?`<p class="muted"><b>Removidos:</b> ${lista(o.removidos)}</p>`:""}</details></td>
+        <td class="n">${o.novos.length||""}</td><td class="n">${o.alterados.length||""}</td><td class="n">${o.removidos.length||""}</td></tr>`).join("")}</tbody></table></div>
+      <div class="row" style="margin-top:10px">
+        <label>Processo para os novos<select id="sysDiffPN">${procOpts("MDL-14")}</select></label>
+        <label>Processo para os alterados<select id="sysDiffPA">${procOpts("MDL-14")}</select></label>
+        <button class="btn pri" id="sysDiffDem">Gerar demanda “Entregue”</button><button class="btn" id="sysDiffCsv">Relatório de entrega (CSV)</button></div>
+      <p class="muted">Use o relatório como prova de entrega para o cliente e a demanda gerada para comparar o entregue com o estimado.</p>`
+    :'<p class="muted">Nenhuma diferença encontrada.</p>'}`;
 }
 $("#sysAceitar").onclick=()=>{
   if(!sysScan) return; let n=0;
@@ -1671,6 +1791,7 @@ $("#sysAceitar").onclick=()=>{
   persist(); renderSys(); uiAlert(n+" vínculos sugeridos aplicados. Revise antes de gerar a demanda.");
 };
 $("#sysOut").addEventListener("change",e=>{
+  if(e.target.id==="sysDiffMod"){sysDiffSoMod=e.target.checked;renderSys();return}
   if(e.target.id==="sysTagSel"){sysTag=e.target.value;renderSys();return}
   if(e.target.id==="sysProcSel"){sysProcMod=e.target.value;return}
   const k=e.target.dataset.vinc; if(k===undefined) return;
@@ -1680,12 +1801,26 @@ $("#sysOut").addEventListener("change",e=>{
 $("#sysSnap").onclick=()=>{
   if(!sysScan) return; contar(sysScan.tree);
   const {tree,tags,...resto}=sysScan;
-  save(K_SNAP,{...resto,tag:sysTag,tm:mapaRetrato(tree,tree.label,{})});
+  save(K_SNAP,{...resto,tag:sysTag,tm:mapaRetrato(tree,tree.label,{}),itens:sysScan.origem!=="lista"?itensDoScan(sysScan):null});
   uiAlert("Retrato salvo como linha de base."); renderSys();
 };
 $("#sysOut").addEventListener("toggle",e=>{if(e.target.matches("details[data-ti]")&&e.target.open) abrirNo(e.target)},true);
 $("#sysOut").addEventListener("click",e=>{
   const t=e.target;
+  if(t.id==="sysDiffCsv"||t.id==="sysDiffDem"){
+    const d=compararRetrato(); if(!d) return;
+    if(t.id==="sysDiffCsv"){
+      const rows=[["Situação","Grupo","ID","Abreviatura","Descrição"]];
+      [["Novo",d.novos,d.cur],["Alterado",d.alterados,d.cur],["Removido",d.removidos,d.ant]].forEach(([s2,ks,src])=>ks.forEach(k=>{const o=src[k];rows.push([s2,o.g,k.split("|").slice(1).join("|"),o.a,o.l])}));
+      download("\ufeff"+toCsv(rows),`entrega-${hoje()}.csv`,"text/csv"); return;
+    }
+    const pn=proc($("#sysDiffPN").value), pa=proc($("#sysDiffPA").value), linhas=[];
+    if(pn&&d.novos.length) linhas.push({cod:pn.cod,det:`novos no System (${d.novos.length})`,qtd:d.novos.length,min:pn.min});
+    if(pa&&d.alterados.length) linhas.push({cod:pa.cod,det:`alterados no System (${d.alterados.length})`,qtd:d.alterados.length,min:pa.min});
+    if(!linhas.length){uiAlert("Nada para gerar.");return}
+    est.demandas.push({nome:`Entregue no System — ${hoje()}`,status:"estimar",obs:`Comparação com o retrato de ${d.snap.quando}. Compare com o estimado e use como prova de entrega.`,linhas,ignorada:true});
+    persist(); uiAlert("Demanda “Entregue” criada na estimativa aberta, já marcada como ignorada (não soma). Compare com o estimado e reative se quiser cobrar."); return;
+  }
   if(t.id==="sysEntCsv"){
     const es=entidades(sysScan.tree,sysScan.tree.label);
     download("\ufeff"+toCsv([["Grupo","ID","Abreviatura","Descrição","Oculto"],...es.map(e=>[e.grupo,e.id,e.abrev,e.desc,e.oculto?"sim":""])]),"entidades-"+sysScan.raiz+".csv","text/csv");
@@ -1989,7 +2124,7 @@ function linhasOrcamento(modo){
   const resumo=d=>d.linhas.map(l=>{const p=proc(l.cod);return `${l.qtd}× ${p?p.nome:l.desc}${l.det?" ("+l.det+")":""}`}).join("; ").slice(0,1900);
   if(modo==="unica"){
     const qt=Math.round(dems.reduce((s,d)=>s+h(minD(d),d),0)*100)/100, val=dems.reduce((s,d)=>s+h(minD(d),d)*(+perfilDe(d).preco||0),0);
-    return [{name:("Customização de biblioteca Promob — "+(est.nome||"")).slice(0,100),description:("Demandas: "+dems.map(d=>d.nome).join("; ")).slice(0,1900),quantity:qt,rate:qt?Math.round(val/qt*100)/100:0}]}
+    return [{name:(catNome(catAtual())+" — "+(est.nome||"")).slice(0,100),description:("Demandas: "+dems.map(d=>d.nome).join("; ")).slice(0,1900),quantity:qt,rate:qt?Math.round(val/qt*100)/100:0}]}
   return dems.map(d=>({name:d.nome.slice(0,100),description:resumo(d),quantity:h(minD(d),d),rate:+perfilDe(d).preco||0}));
 }
 function fallbackZoho(motivo){
@@ -2059,7 +2194,7 @@ $("#btnZoho").onclick=async()=>{
 
 /* ================= PARÂMETROS ================= */
 const CFG={cMargem:"margemAlvo",cHdia:"hdia",cEquipe:"equipe",cGest:"gest",cOti:"oti",cPes:"pes"};
-const EMP={eNome:"nome",eAss:"assinatura",eCargo:"cargo",eCont:"contato",eMantra:"mantra"};
+const EMP={eNome:"nome",eAss:"assinatura",eCargo:"cargo",eCont:"contato",eMantra:"mantra",eMail:"email",eZap:"whatsapp"};
 Object.entries(EMP).forEach(([id,k])=>$("#"+id).addEventListener("change",e=>{db.cfg.empresa[k]=e.target.value.trim();persist()}));
 $("#eFer").addEventListener("change",e=>{
   db.cfg.feriados=e.target.value.split(/\n|,|;/).map(x=>x.trim()).filter(Boolean).map(x=>{const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(x);return m?`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`:/^\d{4}-\d{2}-\d{2}$/.test(x)?x:null}).filter(Boolean);
@@ -2081,8 +2216,19 @@ function renderCfg(){
     ${c.riscos.map((x,i)=>`<tr><td><input value="${esc(x.nome)}" data-rk="nome" data-ri="${i}"></td><td class="n"><input type="number" min="0" step="1" value="${x.pct}" data-rk="pct" data-ri="${i}"></td>
       <td>${c.riscos.length>1?`<button class="x" data-ridel="${i}" title="Excluir">×</button>`:""}</td></tr>`).join("")}</tbody></table></div>
     <div class="toolbar" style="margin:8px 0 0"><button class="btn" id="riAdd">+ Nível de risco</button></div>`;
+  $("#catBox").innerHTML=`<div class="tbl"><table><thead><tr><th>Catálogo</th><th class="n">Processos</th><th class="n">Modelos</th><th class="n">Estimativas</th><th></th></tr></thead><tbody>
+    ${db.catalogos.map((x,i)=>{const np=procsCat(x.id).length, ne=Object.values(arq.estimativas).filter(e=>!e.excluida&&(e.catalogo||"promob")===x.id).length;
+      return `<tr><td><input value="${esc(x.nome)}" data-cti="${i}"></td><td class="n">${np}</td><td class="n">${db.modelos.filter(m=>(m.catalogo||"promob")===x.id).length}</td><td class="n">${ne}</td>
+      <td>${!np&&!ne&&x.id!=="promob"?`<button class="x" data-ctdel="${i}" title="Excluir">×</button>`:""}</td></tr>`}).join("")}</tbody></table></div>
+    <div class="toolbar" style="margin:8px 0 0"><button class="btn" id="ctAdd">+ Catálogo</button></div>`;
   renderLixeira();
 }
+$("#catBox").addEventListener("change",e=>{const i=e.target.dataset.cti;if(i===undefined) return;db.catalogos[+i].nome=e.target.value.trim()||db.catalogos[+i].nome;persist();render()});
+$("#catBox").addEventListener("click",async e=>{
+  if(e.target.id==="ctAdd"){const nome=(await uiPrompt("Nome do catálogo (ex.: Marcenaria de alto padrão, Assistência técnica):")||"").trim();if(!nome) return;
+    db.catalogos.push({id:"c"+uid(),nome});persist();render();uiAlert(`Catálogo “${nome}” criado. Cadastre os processos no Banco (seletor Catálogo).`)}
+  else if(e.target.dataset.ctdel!==undefined){const x=db.catalogos[+e.target.dataset.ctdel];if(await uiConfirm(`Excluir o catálogo “${x.nome}”?`)){db.catalogos.splice(+e.target.dataset.ctdel,1);persist();render()}}
+});
 $("#perfisBox").addEventListener("change",e=>{const t=e.target;if(t.dataset.pf===undefined) return;const p=db.cfg.perfis[+t.dataset.pf];p[t.dataset.pk]=t.dataset.pk==="nome"?t.value.trim():Math.max(0,+t.value||0);persist();renderCfg();renderEst()});
 $("#riscosBox").addEventListener("change",e=>{const t=e.target;if(t.dataset.ri===undefined) return;const x=db.cfg.riscos[+t.dataset.ri];x[t.dataset.rk]=t.dataset.rk==="nome"?t.value.trim():Math.max(0,+t.value||0);persist();renderCfg();renderEst()});
 $("#perfisBox").addEventListener("click",async e=>{
@@ -2172,8 +2318,32 @@ const DESC_FASE={"P&D":"Desenho, protótipo e definição técnica de soluções
   "Modulação":"Montagem das aplicações: caixas, modelos formatos, entidades finais e funções.",
   "Testes":"Validação em ambiente e teste de produção — a biblioteca só é entregue depois de funcionar na fábrica.",
   "Publicação":"Validação do sistema, geração de miniaturas e publicação para a equipe.",
-  "Administrativo":"Alinhamentos, comunicação e gestão da entrega."};
+  "Administrativo":"Alinhamentos, comunicação e gestão da entrega.",
+  "Briefing":"Escuta do cliente, levantamento de necessidades e medição.","Projeto":"Criação do layout e das imagens que traduzem a solução.",
+  "Apresentação":"Apresentação e rodadas de ajuste com o cliente.","Detalhamento":"Projeto executivo conferido, pronto para produção.",
+  "Preparação":"Preparação de máquinas e lotes.","Corte":"Corte otimizado das chapas.","Bordas":"Aplicação e acabamento de bordas.",
+  "Usinagem":"Furação e usinagens CNC.","Qualidade":"Inspeção de cada módulo antes da expedição.","Expedição":"Embalagem e identificação dos volumes.",
+  "Logística":"Recebimento e conferência na obra.","Acabamento":"Tampos, ajustes e arremates.","Entrega":"Limpeza e vistoria final com o cliente.",
+  "Diagnóstico":"Imersão na operação para encontrar o gargalo real.","Desenho":"Redesenho de processos e definição de indicadores.",
+  "Implantação":"Rotinas implantadas e equipe treinada.","Acompanhamento":"Ritmo de acompanhamento até a autonomia da equipe."};
+const PROP_CAT={
+  projeto:{titulo:"Proposta de projeto de ambientes",contexto:c=>`A ${c} precisa de um projeto que una estética, funcionalidade e viabilidade fabril — sem retrabalho entre o que foi vendido e o que será produzido.`,
+    objetivo:"Entregar o projeto completo, apresentado, revisado e detalhado para produção, com medidas conferidas e orçamento fechado.",
+    proximos:"Aprovação da proposta\nBriefing e medição\nApresentação do projeto\nRevisões e detalhamento executivo"},
+  producao:{titulo:"Proposta de produção",contexto:c=>`A ${c} precisa de previsibilidade de prazo e qualidade na fabricação, com cada etapa da fábrica dimensionada.`,
+    objetivo:"Produzir o lote com qualidade conferida, dentro do prazo, com rastreabilidade de cada etapa.",
+    proximos:"Aprovação da proposta\nLiberação do projeto executivo\nProdução e conferência\nExpedição"},
+  montagem:{titulo:"Proposta de montagem e instalação",contexto:c=>`A ${c} precisa de uma instalação limpa, no prazo e sem pendências — a última impressão é a que fica.`,
+    objetivo:"Montar e instalar todos os ambientes com acabamento conferido e vistoria final com o cliente.",
+    proximos:"Aprovação da proposta\nAgendamento e conferência de obra\nMontagem e acabamento\nVistoria final e entrega"},
+  consultoria:{titulo:"Proposta de consultoria",contexto:c=>`A ${c} cresceu apoiada no dono e em controles informais. Hoje isso trava margem, prazo e escala.`,
+    objetivo:"Implantar um modelo de gestão gerenciável — processos, indicadores e rotinas — que liberte o dono da operação e sustente o crescimento com margem.",
+    proximos:"Aprovação da proposta\nImersão e diagnóstico\nDesenho e implantação das rotinas\nAcompanhamento e relatório executivo"}
+};
 function propPadrao(){
+  const pc=PROP_CAT[catAtual()], cn=(arq.clientes[est.clienteId]||{}).nome||"empresa";
+  if(pc) return {titulo:pc.titulo,contexto:pc.contexto(cn),objetivo:pc.objetivo,condicoes:"50% na aprovação e 50% na entrega, via boleto ou PIX.",validade:15,
+    premissas:"Escopo conforme os itens desta proposta.\nUm ponto focal do cliente para validações em até 2 dias úteis.\nAlterações de escopo após a aprovação são orçadas à parte.",proximos:pc.proximos,mostrarHoras:false};
   return {titulo:"Proposta de customização de biblioteca Promob",
     contexto:`A ${(arq.clientes[est.clienteId]||{}).nome||"empresa"} precisa que a biblioteca Promob reflita com precisão o seu produto e o seu processo fabril. Cada item fora do padrão vira retrabalho de projeto, erro de orçamento e peça errada na produção.`,
     objetivo:"Entregar uma biblioteca padronizada, testada em ambiente e em produção, que permita ao time de projetos vender e detalhar com velocidade, sem depender de ajustes manuais.",
@@ -2216,8 +2386,10 @@ table{width:100%;border-collapse:collapse;font-family:system-ui,sans-serif;font-
 .n{text-align:right;white-space:nowrap}.tot td{font-weight:700;font-size:16px;border-top:2px solid var(--ink)}
 .fecho{margin-top:48px;padding:28px;background:var(--ink);color:#fff;border-radius:6px}.fecho p{margin:0}.fecho .m{font-size:20px;font-style:italic;margin-bottom:14px}
 .ass{font:13px/1.6 system-ui,sans-serif;color:#d8d3ca}
+.aceite{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 18px}.bt{display:inline-block;background:var(--acc);color:#fff;text-decoration:none;font:600 14px system-ui;padding:10px 16px;border-radius:6px}
+.assin{display:grid;grid-template-columns:1fr 1fr;gap:24px;font:13px/1.5 system-ui;color:var(--mut);margin-top:16px}
 .rasc{position:fixed;top:12px;right:12px;font:700 12px system-ui;background:#b4541a;color:#fff;padding:4px 10px;border-radius:4px}
-@media print{.capa{min-height:96vh;page-break-after:always}.dem{page-break-inside:avoid}.rasc{position:absolute}}
+@media print{.aceite{display:none}.capa{min-height:96vh;page-break-after:always}.dem{page-break-inside:avoid}.rasc{position:absolute}}
 </style></head><body>${rasc?'<div class="rasc">RASCUNHO</div>':""}
 <div class="pg"><div class="capa"><div class="emp">${e(emp.nome)}</div>
 <div><h1>${e(p.titulo)}</h1><div class="cli">${e(cli)} · ${e(est.nome)}</div></div>
@@ -2233,6 +2405,11 @@ table{width:100%;border-collapse:collapse;font-family:system-ui,sans-serif;font-
 <p><b>Condições:</b> ${e(p.condicoes)}</p>
 <h2>7 · Premissas</h2><ul>${li(p.premissas).map(x=>`<li>${e(x)}</li>`).join("")}</ul>
 <h2>8 · Próximos passos</h2><ol>${li(p.proximos).map(x=>`<li>${e(x)}</li>`).join("")}</ol>
+<h2>9 · Aceite</h2>
+<p>Para aprovar esta proposta, responda pelo canal de sua preferência ou assine abaixo.</p>
+<div class="aceite">${emp.whatsapp?`<a class="bt" href="https://wa.me/${e(String(emp.whatsapp).replace(/\D/g,""))}?text=${encodeURIComponent(`Aprovo a proposta "${p.titulo}" — ${cli} · ${est.nome} v${est.versao||1} (${brl(r.valor)}).`)}">Aprovar pelo WhatsApp</a>`:""}
+${emp.email?`<a class="bt" href="mailto:${e(emp.email)}?subject=${encodeURIComponent(`Aprovação — ${p.titulo} · ${est.nome} v${est.versao||1}`)}&body=${encodeURIComponent(`Aprovo a proposta "${p.titulo}" (${cli} · ${est.nome} v${est.versao||1}), no valor de ${brl(r.valor)}, nas condições: ${p.condicoes}\n\nNome:\nCargo:`)}">Aprovar por e-mail</a>`:""}</div>
+<div class="assin"><div>De acordo — ${e(cli)}<br><br>________________________________<br>Nome / data</div><div>${e(emp.nome)}<br><br>________________________________<br>${e(emp.assinatura||"")}</div></div>
 <div class="fecho"><p class="m">“${e(emp.mantra)}”</p><p class="ass">${e(emp.assinatura||emp.nome)}${emp.cargo?` · ${e(emp.cargo)}`:""}<br>${e(emp.nome)}</p></div>
 </div></body></html>`;
 }
@@ -2336,19 +2513,20 @@ function iaErro(e){
   if(c==="session_expired") return "Sua sessão expirou. Entre de novo no claude.ai.";
   return "Falha no assistente. Tente de novo.";
 }
-const catalogoIA=()=>db.processos.map(p=>`${p.cod}|${p.fase}|${p.grupo||""}|${p.nome}|${p.un}|${p.min}`).join("\n");
+const catalogoIA=()=>procsCat(catAtual()).map(p=>`${p.cod}|${p.fase}|${p.grupo||""}|${p.nome}|${p.un}|${p.min}`).join("\n");
 function promptMontar(brief){
-  return `Você é um orçamentista sênior de customização de bibliotecas Promob (Catalog/Builder) para a indústria moveleira.
+  const promob=catAtual()==="promob";
+  return `Você é um orçamentista sênior da indústria moveleira, especialista em: ${catNome(catAtual())}${promob?" (Promob Catalog/Builder)":""}.
 A partir do BRIEFING do cliente, monte demandas de trabalho usando SOMENTE os processos do CATÁLOGO quando houver correspondência.
 Regras:
 - Uma demanda por entrega/funcionalidade pedida (ex.: "Portas de alumínio", "Fita frontal").
 - Cada linha: código do catálogo, quantidade de unidades (na unidade do processo) e um detalhe curto (variante, ambiente). Estime quantidades plausíveis a partir do briefing; se não houver informação, use 1.
 - Se algo necessário não existir no catálogo, use "cod": null com "desc" descrevendo a atividade e "min" (minutos por unidade) estimado.
-- Toda demanda deve terminar com testes (TST-01 e, se houver produção, TST-02) e administrativo (ADM-01) quando esses códigos existirem.
+${promob?"- Toda demanda deve terminar com testes (TST-01 e, se houver produção, TST-02) e administrativo (ADM-01).":"- Inclua as etapas de fechamento/entrega do catálogo quando fizer sentido."}
 - "risco": "padrao" (já feito antes), "novo" (novo fabricante/linha) ou "inedito" (P&D, sem referência).
 - Liste em "perguntas" o que falta saber para fechar a estimativa e em "alertas" riscos de escopo.
 Responda APENAS com JSON neste formato:
-{"demandas":[{"nome":"","obs":"","risco":"padrao","linhas":[{"cod":"ENT-01","qtd":2,"det":"Afastador"},{"cod":null,"desc":"...","min":30,"qtd":1,"det":""}]}],"perguntas":[""],"alertas":[""]}
+{"demandas":[{"nome":"","obs":"","risco":"padrao","linhas":[{"cod":"${(procsCat(catAtual())[0]||{cod:"COD-01"}).cod}","qtd":2,"det":"variante"},{"cod":null,"desc":"...","min":30,"qtd":1,"det":""}]}],"perguntas":[""],"alertas":[""]}
 
 CATÁLOGO (código|fase|grupo|processo|unidade|min por unidade):
 ${catalogoIA()}
@@ -2359,7 +2537,7 @@ ${brief.slice(0,20000)}`;
 function promptRevisar(){
   const r=calc();
   const txt=est.demandas.filter(d=>contaDem(d)).map(d=>`## ${d.nome} (risco: ${riscoDe(d).nome})\n`+d.linhas.map(l=>{const p=proc(l.cod);return `- ${l.cod||"avulsa"} ${p?p.nome:l.desc}${l.det?" — "+l.det:""}: ${l.qtd} × ${l.min} min${p&&+l.min!==+p.min?` (padrão ${p.min})`:""}`}).join("\n")).join("\n\n");
-  return `Você é um revisor sênior de estimativas de customização de bibliotecas Promob. Revise a estimativa abaixo e aponte, em português, de forma direta e em tópicos curtos:
+  return `Você é um revisor sênior de estimativas na indústria moveleira (${catNome(catAtual())}). Revise a estimativa abaixo e aponte, em português, de forma direta e em tópicos curtos:
 1. Etapas que costumam faltar (testes, revisão de referência/orçamento, publicação, administrativo) por demanda.
 2. Quantidades ou tempos que parecem fora do padrão (compare com o padrão do catálogo).
 3. Riscos de escopo e premissas que deveriam ir para a proposta.
@@ -2465,6 +2643,32 @@ function renderCal(){
       <p class="muted">Estouro observado = quanto o realizado passou do estimado (sem reserva) nas demandas daquele nível. Use como reserva mínima; com poucas demandas, trate como indicação.</p>`:'<p class="muted">Sem demandas medidas.</p>'}`;
 }
 $("#calFech").onchange=renderCal;
+function renderBench(){
+  const box=$("#bmOut"); if(!box) return;
+  const bs=db.benchmarks||[];
+  if(!bs.length){box.innerHTML='<p class="empty" style="padding:12px">Nenhum benchmark importado.</p>';return}
+  const chave=x=>(x.cod||"")+"|"+norm(x.nome);
+  const rede={}; bs.forEach(b=>b.itens.forEach(x=>{const k1=x.cod, k2=norm(x.nome);(rede[k1]=rede[k1]||[]).push(+x.min);if(k2!==k1)(rede["n:"+k2]=rede["n:"+k2]||[]).push(+x.min)}));
+  const linhas=db.processos.map(p=>{const v=rede[p.cod]||rede["n:"+norm(p.nome)];if(!v||!v.length) return null;const m=v.reduce((a,b)=>a+b,0)/v.length;return {p,m,n:v.length,mn:Math.min(...v),mx:Math.max(...v),dif:m?(p.min/m-1)*100:0}}).filter(Boolean)
+    .sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif));
+  box.innerHTML=`<p class="muted">Benchmarks: ${bs.map((b,i)=>`<span class="pill">${esc(b.rotulo)} · ${b.itens.length} processos <button class="x" data-bmdel="${i}" title="Remover">×</button></span>`).join(" ")}</p>
+    ${linhas.length?`<div class="tbl"><table><thead><tr><th>Cód.</th><th>Processo</th><th class="n">Meu padrão</th><th class="n">Rede (média)</th><th class="n">Faixa</th><th class="n">Diferença</th></tr></thead><tbody>
+    ${linhas.slice(0,80).map(r=>`<tr><td>${esc(r.p.cod)}</td><td>${esc(r.p.nome)} <span class="pill ${r.p.fonte==="H"?"h":"w"}">${r.p.fonte==="H"?"Histórico":"Manual"}</span></td><td class="n">${num(r.p.min)}</td><td class="n"><b>${num(r.m)}</b> <span class="muted">(${r.n})</span></td>
+      <td class="n">${num(r.mn)}–${num(r.mx)}</td><td class="n ${r.dif>0?"diff up":"diff down"}">${r.dif>=0?"+":""}${num(r.dif,0)}%</td></tr>`).join("")}</tbody></table></div>
+      <p class="muted">Diferença positiva = você leva mais tempo que a média da rede. Investigue os maiores desvios: método, ferramenta ou padrão de entrega.</p>`:'<p class="muted">Nenhum processo em comum (compara por código ou nome).</p>'}`;
+}
+$("#bmExp").onclick=async()=>{
+  const rot=(await uiPrompt("Identificador anônimo para este arquivo (ex.: Marcenaria A):","Empresa "+uid().slice(-4).toUpperCase())||"").trim(); if(!rot) return;
+  renderCal(); const am={}; calRows.forEach(r=>am[r.cod]=r.linhas);
+  const itens=db.processos.map(p=>({cod:p.cod,nome:p.nome,catalogo:catNome(p.catalogo||"promob"),fase:p.fase,un:p.un,min:p.min,fonte:p.fonte,amostras:am[p.cod]||0}));
+  download(JSON.stringify({app:"EstimaCerto-benchmark",formato:1,rotulo:rot,geradoEm:new Date().toISOString(),itens},null,1),`benchmark-${rot.replace(/\s+/g,"-")}.json`,"application/json");
+};
+$("#bmImp").onclick=()=>pickFile(".json",async f=>{
+  const o=JSON.parse(await f.text()); if(o.app!=="EstimaCerto-benchmark"||!Array.isArray(o.itens)) throw new Error("arquivo não é um benchmark do EstimaCerto");
+  db.benchmarks.push({id:uid(),rotulo:o.rotulo||("Empresa "+(db.benchmarks.length+1)),em:Date.now(),itens:o.itens.map(x=>({cod:x.cod,nome:x.nome,un:x.un,min:+x.min||0,amostras:+x.amostras||0}))});
+  persist(); renderBench(); uiAlert(`Benchmark “${o.rotulo||"sem nome"}” importado (${o.itens.length} processos).`);
+});
+$("#bmOut").addEventListener("click",async e=>{const i=e.target.dataset.bmdel;if(i===undefined) return;if(await uiConfirm(`Remover o benchmark “${db.benchmarks[+i].rotulo}”?`)){db.benchmarks.splice(+i,1);persist();renderBench()}});
 $("#calOut").addEventListener("click",async e=>{
   if(e.target.id==="calAplicar"){
     const sel=calRows.filter((r,i)=>document.querySelector(`[data-calp="${i}"]`).checked); if(!sel.length){uiAlert("Nenhum processo marcado.");return}
@@ -2561,7 +2765,7 @@ function pickFile(accept,cb){
     try{await cb(f)}catch(err){uiAlert("Não foi possível importar: "+err.message)}};
   inp.click();
 }
-function render(){renderEst();renderArquivo();renderProc();renderTpl();renderCron();renderCal();renderSys();renderCfg()}
+function render(){renderEst();renderArquivo();renderProc();renderTpl();renderCron();renderCal();renderBench();renderSys();renderCfg()}
 render();
 Sync.init();
 </script>

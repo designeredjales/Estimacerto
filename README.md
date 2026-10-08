@@ -1,4 +1,4 @@
-# EstimaCerto — Estimativa de esforço para bibliotecas Promob
+# EstimaCerto — Estimativa de esforço por contagem (Promob, projeto, produção, montagem, consultoria)
 
 Estima o esforço de customização de bibliotecas Promob Catalog/Builder **por contagem**:
 cada trabalho que se repete é um processo padronizado com tempo-padrão em minutos, e a estimativa
@@ -166,6 +166,21 @@ quais tempos-padrão ajustar no banco.
 - **Assistente IA** (link publicado): “Montar demandas” a partir de um briefing colado, usando o
   catálogo do banco (com revisão antes de entrar), e “Revisar estimativa aberta” (etapas faltando,
   tempos fora do padrão, riscos de escopo).
+
+## Catálogos, comparação de versões, aprovação e benchmark (Onda 3)
+
+- **Catálogos de processos**: Customização Promob, Projeto de ambientes, Produção fabril, Montagem e
+  instalação e Consultoria Diâmetro (os novos vêm com processos de partida, fonte Manual). Cada
+  estimativa escolhe o catálogo; busca, Banco, Modelos, Assistente IA e textos da proposta seguem o
+  catálogo. Crie, renomeie e exclua catálogos em Parâmetros.
+- **Comparação de versões da biblioteca** (Leitor de System): o retrato guarda a assinatura de cada item
+  (`HASH` do Promob ou impressão dos atributos). Na leitura seguinte: novos, alterados e removidos por
+  grupo, relatório de entrega (CSV) e demanda “Entregue” para comparar com o estimado.
+- **Aprovação do cliente**: a proposta ganha a seção Aceite, com botões “Aprovar pelo WhatsApp” e
+  “Aprovar por e-mail” (dados em Parâmetros) e linhas de assinatura no PDF. Na estimativa fechada,
+  “Registrar aprovação” guarda quem aprovou, quando e por onde; o Arquivo mostra “aprovada”.
+- **Benchmark da rede** (Calibração): exporta seus tempos-padrão em arquivo anônimo (processos,
+  unidades, tempos e amostras, sem clientes nem valores) e compara com os arquivos de outras empresas.
 
 ## Fórmula
 
