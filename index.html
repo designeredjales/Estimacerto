@@ -81,6 +81,17 @@ td.acts{white-space:nowrap}td.acts .x{font-size:16px}
 .range{display:flex;justify-content:space-between;font-size:13px;margin-top:10px;color:var(--muted)}
 .range b{color:var(--text)}
 .empty{padding:20px;text-align:center;color:var(--muted)}
+.combo{position:relative;flex:1;min-width:240px}
+.combo.cm{flex:0 1 240px;min-width:180px}
+.combo input{width:100%}
+.cmenu{display:none;position:absolute;z-index:30;left:0;right:0;top:calc(100% + 2px);max-height:320px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 28px rgba(0,0,0,.18)}
+.combo.cm .cmenu{min-width:320px}
+.combo.open .cmenu{display:block}
+.copt{padding:7px 10px;cursor:pointer;font-size:13px;line-height:1.35}
+.copt.on,.copt:hover{background:var(--surface-2)}
+.copt.novo{color:var(--accent);font-weight:600;border-top:1px solid var(--line)}
+.copt.novo.alt{font-weight:500;border-top:0}
+.cgr{padding:4px 10px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;background:var(--surface-2)}
 select.and{width:auto;font-size:13px;font-weight:600;border-radius:99px;padding:4px 10px}
 span.and{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px}
 .and-nao_iniciada{background:var(--surface-2);color:var(--muted)}
@@ -605,7 +616,6 @@ function procOptions(sel){
   });
   return h;
 }
-const tplOptions=()=>'<option value="">Aplicar modelo…</option>'+db.modelos.map(t=>`<option value="${esc(t.cod)}">${esc(t.cod)} · ${esc(t.nome)}</option>`).join("");
 
 function renderEstBar(){
   const fechada=est.status==="fechada";
@@ -625,7 +635,7 @@ function renderEst(){
   renderEstBar();
   $("#pNome").value=est.nome||""; $("#pResp").value=est.resp||""; $("#pData").value=est.data||"";
   const r=calc();
-  const popts=procOptions(""), topts=tplOptions();
+
   $("#demList").innerHTML=est.demandas.map((d,di)=>{
     const disc=d.status==="discussao";
     if(d.ignorada&&!mostrarIgn) return "";
@@ -664,12 +674,12 @@ function renderEst(){
         <thead><tr><th>Cód.</th><th>Atividade</th><th>Unid.</th><th class="n">Qtd.</th><th class="n">min/unid.</th><th class="n">Total</th><th class="n noprint">Real (min)</th><th class="noprint"></th></tr></thead>
         <tbody>${rows}</tbody></table></div>`:""}
       <div class="addrow">
-        <select data-addp="${di}">${popts}</select>
-        <input placeholder="detalhe / descrição" data-adddet="${di}" style="width:170px">
+        <div class="combo" data-cb="p" data-d="${di}"><input class="cbi" placeholder="Processo: digite código ou nome…" autocomplete="off" spellcheck="false"><div class="cmenu"></div></div>
+        <input placeholder="detalhe / variante" data-adddet="${di}" style="width:150px">
         <input type="number" min="0" step="1" value="1" data-addq="${di}" title="Quantidade">
         <input type="number" min="0" step="1" placeholder="min" data-addm="${di}" title="Minutos por unidade (vazio = padrão do banco)">
         <button class="btn" data-add="${di}">Adicionar</button>
-        <select data-addt="${di}" style="flex:0 1 220px;min-width:160px">${topts}</select>
+        <div class="combo cm" data-cb="m" data-d="${di}"><input class="cbi" placeholder="Aplicar modelo: digite…" autocomplete="off" spellcheck="false"><div class="cmenu"></div></div>
         ${!d.obs&&!disc?`<button class="btn" data-obs="${di}">+ Obs.</button>`:""}
         ${d.linhas.length?`<button class="btn" data-dmod="${di}" title="Guardar esta demanda como modelo reutilizável">Salvar como modelo</button>`:""}
       </div>
@@ -712,28 +722,126 @@ dl.addEventListener("change",e=>{
   } else return;
   persist(); renderEst();
 });
-dl.addEventListener("change",e=>{
-  const t=e.target;
-  if(t.dataset.addt===undefined||!t.value) return;
-  const d=est.demandas[+t.dataset.addt], tp=db.modelos.find(x=>x.cod===t.value); if(!tp) return;
+function aplicarModelo(di,codModelo){
+  const d=est.demandas[di], tp=db.modelos.find(x=>x.cod===codModelo); if(!tp) return;
   tp.itens.forEach(([cod,q,det,min,desc])=>{
     if(cod){const p=proc(cod); if(p) d.linhas.push({cod,det:det||"",qtd:q,min:min??p.min})}
     else if(desc) d.linhas.push({cod:"",desc,det:"",qtd:q,min:+min||0});
   });
   persist(); renderEst();
+}
+/* ---------- Busca com cadastro rápido (processo e modelo) ---------- */
+function opcoesCombo(tipo,q,di){
+  const nq=norm(q), its=[];
+  if(tipo==="p"){
+    let ultFase="";
+    db.processos.filter(p=>!nq||norm(p.cod+" "+p.nome+" "+p.grupo+" "+p.fase).includes(nq)).slice(0,60).forEach(p=>{
+      if(p.fase!==ultFase){ultFase=p.fase;its.push({grupo:p.fase})}
+      its.push({v:p.cod,txt:`${p.cod} · ${p.nome}`,html:`<b>${esc(p.cod)}</b> ${esc(p.nome)} <span class="muted">${esc(p.grupo||"")} · ${num(p.min)} min/${esc(p.un)}</span>`});
+    });
+    if(q.trim()&&!db.processos.some(p=>norm(p.nome)===nq||norm(p.cod)===nq)){
+      its.push({v:"__novo",cls:"novo",html:`＋ Cadastrar novo processo “${esc(q.trim())}”`});
+      its.push({v:"__avulso",cls:"novo alt",html:`Usar como linha avulsa “${esc(q.trim())}” (sem cadastrar)`});
+    }
+  }else{
+    db.modelos.filter(m=>!nq||norm(m.cod+" "+m.nome).includes(nq)).forEach(m=>{
+      const tot=m.itens.reduce((s,[pc,qq,det,min])=>s+((min??(proc(pc)||{min:0}).min)*qq),0);
+      its.push({v:m.cod,html:`<b>${esc(m.cod)}</b> ${esc(m.nome)} <span class="muted">${m.itens.length} linhas · ${hm(tot)}</span>`});
+    });
+    if(q.trim()&&!db.modelos.some(m=>norm(m.nome)===nq||norm(m.cod)===nq)){
+      if(est.demandas[di]&&est.demandas[di].linhas.length) its.push({v:"__novomod",cls:"novo",html:`＋ Criar modelo “${esc(q.trim())}” com as linhas desta demanda`});
+      its.push({v:"__novomodvazio",cls:"novo alt",html:`＋ Criar modelo vazio “${esc(q.trim())}” (preencher na aba Modelos)`});
+    }
+  }
+  return its;
+}
+function abrirCombo(cb){
+  const inp=cb.querySelector("input"), its=opcoesCombo(cb.dataset.cb,inp.value,+cb.dataset.d);
+  cb._its=its.filter(x=>!x.grupo); let sel=+(cb.dataset.sel||0); if(sel>=cb._its.length) sel=0; cb.dataset.sel=sel;
+  let k=-1;
+  cb.querySelector(".cmenu").innerHTML=its.length?its.map(x=>x.grupo?`<div class="cgr">${esc(x.grupo)}</div>`:`<div class="copt ${x.cls||""} ${++k===sel?"on":""}" data-ci="${k}">${x.html}</div>`).join(""):'<div class="copt muted">Nenhum resultado</div>';
+  cb.classList.add("open");
+  const on=cb.querySelector(".copt.on"); if(on) on.scrollIntoView({block:"nearest"});
+}
+const fecharCombo=cb=>{cb.classList.remove("open");cb.dataset.sel=0};
+function criarModelo(nome,itens){
+  let n=db.modelos.length+1, cod; do{cod="MD-"+String(n++).padStart(2,"0")}while(db.modelos.some(m=>m.cod===cod));
+  db.modelos.unshift({cod,nome,itens}); persist(); renderTpl(); return cod;
+}
+async function escolherCombo(cb,x){
+  const inp=cb.querySelector("input"), di=+cb.dataset.d, q=inp.value.trim();
+  fecharCombo(cb);
+  if(cb.dataset.cb==="p"){
+    if(x.v==="__novo") return cadastrarProcessoRapido(q,di);
+    if(x.v==="__avulso"){inp.dataset.cod="__avulso";inp.dataset.txt=q;inp.value="Avulsa: "+q}
+    else{inp.dataset.cod=x.v;inp.value=x.txt}
+    const qi=document.querySelector(`[data-addq="${di}"]`); if(qi){qi.focus();qi.select()}
+  }else{
+    if(x.v==="__novomod"){
+      const d=est.demandas[di], cod=criarModelo(q,d.linhas.map(l=>[l.cod||"",l.qtd,l.det||"",l.min,l.cod?"":(l.desc||"")]));
+      inp.value=""; uiAlert(`Modelo ${cod} · “${q}” criado com ${d.linhas.length} linhas desta demanda.`);
+    }else if(x.v==="__novomodvazio"){
+      const cod=criarModelo(q,[]); inp.value="";
+      if(await uiConfirm(`Modelo ${cod} · “${q}” criado. Abrir a aba Modelos para adicionar os processos?`,{ok:"Abrir Modelos",cancel:"Depois"})){
+        document.querySelector('nav button[data-tab="tpl"]').click();
+        const card=document.querySelector('[data-mcard="0"]'); if(card) card.scrollIntoView({behavior:"smooth",block:"center"});
+      }
+    }else{inp.value="";aplicarModelo(di,x.v)}
+  }
+}
+function cadastrarProcessoRapido(nome,di){
+  const fase=fases().includes("Cadastros")?"Cadastros":fases()[0];
+  const p={cod:codigoLivre(fase,""),fase,grupo:"",nome,un:"unid.",min:10,fonte:"M",alias:[],desc:""};
+  db.processos.push(p);
+  editarProc(db.processos.length-1,true,pp=>{
+    const idx=db.processos.indexOf(pp); db.processos.splice(idx,1); db.processos.splice(posGrupo(pp.fase,pp.grupo),0,pp);
+    const det=(document.querySelector(`[data-adddet="${di}"]`)||{}).value||"";
+    const qtd=Math.max(0,+((document.querySelector(`[data-addq="${di}"]`)||{}).value)||1);
+    est.demandas[di].linhas.push({cod:pp.cod,det:det.trim(),qtd,min:pp.min});
+    persist(); renderEst(); renderProc();
+  });
+}
+dl.addEventListener("input",e=>{
+  const cb=e.target.closest(".combo"); if(!cb) return;
+  const inp=cb.querySelector("input"); delete inp.dataset.cod; delete inp.dataset.txt; cb.dataset.sel=0; abrirCombo(cb);
+});
+dl.addEventListener("focusin",e=>{const cb=e.target.closest(".combo"); if(cb&&e.target.classList.contains("cbi")) abrirCombo(cb)});
+dl.addEventListener("focusout",e=>{const cb=e.target.closest(".combo"); if(cb) setTimeout(()=>{if(!cb.contains(document.activeElement)) fecharCombo(cb)},150)});
+dl.addEventListener("mousedown",e=>{
+  const o=e.target.closest(".copt[data-ci]"); if(!o) return;
+  e.preventDefault(); const cb=o.closest(".combo"); escolherCombo(cb,cb._its[+o.dataset.ci]);
+});
+dl.addEventListener("keydown",e=>{
+  const cb=e.target.closest(".combo"); if(!cb||!e.target.classList.contains("cbi")) return;
+  if(!cb.classList.contains("open")&&(e.key==="ArrowDown"||e.key==="Enter")){abrirCombo(cb);if(e.key==="ArrowDown"){e.preventDefault();return}}
+  const n=(cb._its||[]).length; let sel=+(cb.dataset.sel||0);
+  if(e.key==="ArrowDown"){e.preventDefault();cb.dataset.sel=Math.min(n-1,sel+1);abrirCombo(cb)}
+  else if(e.key==="ArrowUp"){e.preventDefault();cb.dataset.sel=Math.max(0,sel-1);abrirCombo(cb)}
+  else if(e.key==="Enter"){e.preventDefault(); if(n) escolherCombo(cb,cb._its[sel])}
+  else if(e.key==="Escape"){fecharCombo(cb)}
 });
 dl.addEventListener("click",async e=>{
   const t=e.target, ds=t.dataset;
   if(ds.add!==undefined){
     const di=+ds.add, d=est.demandas[di];
-    const cod=document.querySelector(`[data-addp="${di}"]`).value;
+    const inp=document.querySelector(`.combo[data-cb="p"][data-d="${di}"] input`);
+    let cod=inp.dataset.cod||"", txt=inp.value.trim();
     const det=document.querySelector(`[data-adddet="${di}"]`).value.trim();
     const qtd=Math.max(0,+document.querySelector(`[data-addq="${di}"]`).value||0);
     const mIn=document.querySelector(`[data-addm="${di}"]`).value;
-    if(!cod){uiAlert("Escolha um processo.");return}
+    if(!cod&&txt){
+      const m=db.processos.filter(p=>norm(p.cod)===norm(txt)||norm(p.nome)===norm(txt));
+      if(m.length===1) cod=m[0].cod;
+      else{
+        const r=await uiConfirm(`“${txt}” não está no banco de processos.`,{ok:"Cadastrar novo processo",cancel:"Usar como linha avulsa"});
+        if(r) return cadastrarProcessoRapido(txt,di);
+        cod="__avulso"; inp.dataset.txt=txt;
+      }
+    }
+    if(!cod){uiAlert("Digite ou escolha um processo.");return}
     if(cod==="__avulso"){
-      if(!det){uiAlert("Descreva a linha avulsa no campo detalhe.");return}
-      d.linhas.push({cod:"",desc:det,det:"",qtd,min:Math.max(0,+mIn||0)});
+      const desc=inp.dataset.txt||det; if(!desc){uiAlert("Descreva a linha avulsa.");return}
+      d.linhas.push({cod:"",desc,det:inp.dataset.txt?det:"",qtd,min:Math.max(0,+mIn||0)});
     }else d.linhas.push({cod,det,qtd,min:mIn===""?proc(cod).min:Math.max(0,+mIn||0)});
     persist(); renderEst();
   }else if(ds.dell){
@@ -904,8 +1012,8 @@ function prefixoGrupo(fase,grupo){
   return Object.entries(cont).sort((a,b)=>b[1]-a[1])[0]?.[0]||prefixo(fase);
 }
 function codigoLivre(fase,grupo){let n=1,c;const pf=prefixoGrupo(fase,grupo);do{c=pf+"-"+String(n++).padStart(2,"0")}while(proc(c));return c}
-function editarProc(i,novo=false){
-  const p=db.processos[i];
+function editarProc(i,novo=false,aoSalvar=null){
+  const p=db.processos[i], codAuto=novo?p.cod:null;
   const usoM=db.modelos.filter(m=>m.itens.some(it=>it[0]===p.cod)).map(m=>m.cod);
   const usoE=est.demandas.reduce((s,d)=>s+d.linhas.filter(l=>l.cod===p.cod).length,0);
   abrirModal(novo?"Novo processo":"Editar processo "+p.cod,`
@@ -926,13 +1034,15 @@ function editarProc(i,novo=false){
     <datalist id="peFases">${fases().map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
     <datalist id="peGrupos">${[...new Set(db.processos.map(x=>x.grupo).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>`,
   [{label:"Salvar",pri:true,fn:()=>{
-      const cod=$("#peCod").value.trim();
+      let cod=$("#peCod").value.trim();
+      const nf=$("#peFase").value.trim()||"Cadastros", ng=$("#peGrupo").value.trim();
+      if(codAuto&&cod===codAuto&&(nf!==p.fase||ng!==(p.grupo||""))){db.processos.splice(db.processos.indexOf(p),1);cod=codigoLivre(nf,ng);db.processos.push(p)}
       if(!cod||(cod!==p.cod&&proc(cod))){uiAlert("Código vazio ou já usado por outro processo.");return}
       if(cod!==p.cod) renomearCodigo(p.cod,cod);
       Object.assign(p,{cod,fase:$("#peFase").value.trim()||"Cadastros",grupo:$("#peGrupo").value.trim(),nome:$("#peNome").value.trim()||"Processo",
         un:$("#peUn").value.trim()||"unid.",min:Math.max(0,+$("#peMin").value||0),fonte:$("#peFonte").value,desc:$("#peDesc").value.trim(),
         alias:$("#peAlias").value.split(/\n|;/).map(x=>x.trim()).filter(Boolean)});
-      persist(); render(); fecharModal();
+      fecharModal(); if(aoSalvar) aoSalvar(p); persist(); render();
     }},
    {label:"Duplicar",fn:()=>{fecharModal();duplicarProc(db.processos.indexOf(p))}},
    {label:novo?"Descartar":"Excluir",fn:async()=>{if(await excluirProc(db.processos.indexOf(p),novo)) fecharModal()}}]);

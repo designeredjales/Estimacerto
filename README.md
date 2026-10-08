@@ -23,6 +23,13 @@ No topo da aba Estimativa:
   modelos e templates ficam no banco de dados do artefato (recupera em qualquer aparelho). Aberto como
   arquivo local, fica no navegador.
 
+## Busca com cadastro rápido
+
+Em cada demanda, “Processo” e “Aplicar modelo” são campos de busca (código ou nome; setas + Enter).
+Se o texto não existir no banco, a busca oferece **＋ Cadastrar novo processo** (abre o editor já com o
+nome; ao salvar, o processo entra no grupo escolhido e a linha é adicionada à demanda) ou **linha
+avulsa**; para modelos, **＋ Criar modelo com as linhas desta demanda** ou **modelo vazio**.
+
 ## Status e demandas ignoradas
 
 Cada demanda tem um **status de andamento** (Não iniciada · Em andamento · Aguardando cliente ·
