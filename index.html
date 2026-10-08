@@ -91,6 +91,11 @@ td.acts{white-space:nowrap}td.acts .x{font-size:16px}
 #arqList tr.mes td{background:var(--surface-2);font-size:12px;font-weight:600;color:var(--muted);text-transform:capitalize}
 .lk{opacity:.92}
 dialog#modal{border:1px solid var(--line);border-radius:12px;padding:0;background:var(--surface);color:var(--text);width:min(980px,calc(100vw - 24px));max-height:calc(100vh - 32px)}
+dialog#ask{border:1px solid var(--line);border-radius:12px;padding:18px;background:var(--surface);color:var(--text);width:min(460px,calc(100vw - 32px))}
+dialog#ask::backdrop{background:rgba(0,0,0,.45)}
+#askMsg{white-space:pre-wrap;margin-bottom:12px;line-height:1.45}
+#askInp{width:100%;margin-bottom:12px}
+.askBtns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 dialog#modal::backdrop{background:rgba(0,0,0,.45)}
 .mbox{display:flex;flex-direction:column;max-height:calc(100vh - 34px)}
 .mhead{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
@@ -299,6 +304,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
 </main>
 
 <input type="file" id="fileIn" hidden>
+<dialog id="ask"><div class="mbox"><div id="askMsg"></div><input id="askInp"><div class="askBtns"><button class="btn" id="askCancel">Cancelar</button><button class="btn pri" id="askOk">OK</button></div></div></dialog>
 <dialog id="modal"><div class="mbox"><div class="mhead"><h2 id="mTit"></h2><button class="x" id="mClose" title="Fechar">×</button></div><div id="mBody"></div><div id="mFoot"></div></div></dialog>
 
 <script>
@@ -406,7 +412,7 @@ const SEED_TPL=[
   {cod:"MD-05",nome:"Nova linha completa (roteiro do manual Catalog Builder)",itens:[["SET-01",4],["GRP-01",9],["GRP-02",4],["GRP-03",5],["MAT-01",4],["MAT-02",3],["MAT-03",2],["MAT-04",4],["MAT-05",6],["CMP-01",7],["CMP-02",1],["MDL-12",5],["MDL-13",1],["MDL-14",14],["MDL-15",8],["MDL-16",3],["FER-01",4],["FER-02",3],["FER-03",5],["FER-04",4],["FER-05",2],["FER-06",1],["FER-07",1],["FER-08",8],["BLD-06",1],["ENT-04",7],["ENT-05",7],["MDL-17",6],["REF-02",3],["REF-03",2],["ORC-04",2],["ORC-05",3],["ORC-06",2],["ORC-07",1],["ORC-03",1],["CFG-01",13],["CFG-02",1],["MDL-18",3],["PUB-01",2],["PUB-02",1],["PUB-03",1],["PUB-04",1],["TST-01",1],["TST-02",1],["ADM-01",1]]}
 ];
 const SEED_CFG={valor:120,hdia:6,equipe:1,cont:10,gest:0,oti:0.85,pes:1.3};
-const seedDb=()=>({processos:SEED_PROC.map(p=>({...p,alias:[...p.alias]})),modelos:JSON.parse(JSON.stringify(SEED_TPL)),cfg:{...SEED_CFG},vinculos:{}});
+const seedDb=()=>({processos:SEED_PROC.map(p=>({...p,alias:[...p.alias]})),modelos:JSON.parse(JSON.stringify(SEED_TPL)),cfg:{...SEED_CFG},vinculos:{},templates:[]});
 
 /* Exemplo: mapa XMind "Estimativa LT" transcrito */
 const L=(cod,det,qtd,min)=>({cod,det,qtd,min});
@@ -689,7 +695,7 @@ dl.addEventListener("change",e=>{
   });
   persist(); renderEst();
 });
-dl.addEventListener("click",e=>{
+dl.addEventListener("click",async e=>{
   const t=e.target, ds=t.dataset;
   if(ds.add!==undefined){
     const di=+ds.add, d=est.demandas[di];
@@ -697,21 +703,21 @@ dl.addEventListener("click",e=>{
     const det=document.querySelector(`[data-adddet="${di}"]`).value.trim();
     const qtd=Math.max(0,+document.querySelector(`[data-addq="${di}"]`).value||0);
     const mIn=document.querySelector(`[data-addm="${di}"]`).value;
-    if(!cod){alert("Escolha um processo.");return}
+    if(!cod){uiAlert("Escolha um processo.");return}
     if(cod==="__avulso"){
-      if(!det){alert("Descreva a linha avulsa no campo detalhe.");return}
+      if(!det){uiAlert("Descreva a linha avulsa no campo detalhe.");return}
       d.linhas.push({cod:"",desc:det,det:"",qtd,min:Math.max(0,+mIn||0)});
     }else d.linhas.push({cod,det,qtd,min:mIn===""?proc(cod).min:Math.max(0,+mIn||0)});
     persist(); renderEst();
   }else if(ds.dell){
     const [di,li]=ds.dell.split(":").map(Number); est.demandas[di].linhas.splice(li,1); persist(); renderEst();
   }else if(ds.deld!==undefined){
-    if(confirm(`Excluir a demanda “${est.demandas[+ds.deld].nome}”?`)){est.demandas.splice(+ds.deld,1);persist();renderEst()}
+    if(await uiConfirm(`Excluir a demanda “${est.demandas[+ds.deld].nome}”?`)){est.demandas.splice(+ds.deld,1);persist();renderEst()}
   }else if(ds.dmod!==undefined){
-    const d=est.demandas[+ds.dmod], nome=(prompt("Nome do modelo:",d.nome)||"").trim(); if(!nome) return;
+    const d=est.demandas[+ds.dmod], nome=(await uiPrompt("Nome do modelo:",d.nome)||"").trim(); if(!nome) return;
     let n=db.modelos.length+1, cod; do{cod="MD-"+String(n++).padStart(2,"0")}while(db.modelos.some(m=>m.cod===cod));
     db.modelos.unshift({cod,nome,itens:d.linhas.map(l=>[l.cod||"",l.qtd,l.det||"",l.min,l.cod?"":(l.desc||"")])});
-    persist(); renderTpl(); alert(`Modelo ${cod} · “${nome}” salvo com ${d.linhas.length} linhas. Ele aparece em “Aplicar modelo…” e na aba Modelos.`);
+    persist(); renderTpl(); uiAlert(`Modelo ${cod} · “${nome}” salvo com ${d.linhas.length} linhas. Ele aparece em “Aplicar modelo…” e na aba Modelos.`);
   }else if(ds.up!==undefined){
     const i=+ds.up; if(i>0){[est.demandas[i-1],est.demandas[i]]=[est.demandas[i],est.demandas[i-1]];persist();renderEst()}
   }else if(ds.obs!==undefined){
@@ -724,8 +730,8 @@ dl.addEventListener("click",e=>{
 }));
 $("#btnNovaDem").onclick=()=>{est.demandas.push({nome:"Nova demanda",status:"estimar",obs:"",linhas:[]});persist();renderEst();
   const ins=document.querySelectorAll("#demList input.nome"); const last=ins[ins.length-1]; last.focus(); last.select()};
-$("#btnClear").onclick=()=>{if(confirm("Remover todas as demandas desta estimativa?")){est.demandas=[];persist();renderEst()}};
-$("#btnExemplo").onclick=()=>{if(confirm("Substituir as demandas desta estimativa pelo exemplo “Estimativa LT”?")){est.demandas=clone(EXEMPLO.demandas);persist();renderEst()}};
+$("#btnClear").onclick=async()=>{if(await uiConfirm("Remover todas as demandas desta estimativa?")){est.demandas=[];persist();renderEst()}};
+$("#btnExemplo").onclick=async()=>{if(await uiConfirm("Substituir as demandas desta estimativa pelo exemplo “Estimativa LT”?")){est.demandas=clone(EXEMPLO.demandas);persist();renderEst()}};
 $("#btnPrint").onclick=()=>window.print();
 $("#btnCsv").onclick=()=>{
   const r=calc(), c=db.cfg;
@@ -743,7 +749,7 @@ $("#btnLoadEst").onclick=()=>pickFile(".json",async f=>{
   const o=JSON.parse(await f.text()); if(!o.estimativa||!o.estimativa.demandas) throw new Error("Arquivo não é uma estimativa EstimaCerto v2");
   const t=Date.now(), id=uid();
   est={...clone(o.estimativa),id,familia:id,clienteId:arqCliSel||est.clienteId,versao:1,status:"rascunho",arquivada:false,criadoEm:t,atualizadoEm:t};
-  persist(); render(); alert("Estimativa importada como nova estimativa no cliente selecionado.");
+  persist(); render(); uiAlert("Estimativa importada como nova estimativa no cliente selecionado.");
 });
 
 /* ================= IMPORTAÇÃO XMIND ================= */
@@ -809,7 +815,7 @@ $("#btnXmind").onclick=()=>pickFile(".xmind",async f=>{
   const sheets=JSON.parse(txt), sh=sheets[0];
   const dems=xmindToDemandas(sh);
   const nLin=dems.reduce((s,d)=>s+d.linhas.length,0), nAv=dems.reduce((s,d)=>s+d.linhas.filter(l=>!l.cod).length,0);
-  const subst=est.demandas.length?confirm(`${dems.length} demandas e ${nLin} linhas lidas (${nAv} sem processo reconhecido, entram como avulsas).\n\nOK = substituir a estimativa atual · Cancelar = adicionar às demandas atuais`):true;
+  const subst=est.demandas.length?await uiConfirm(`${dems.length} demandas e ${nLin} linhas lidas (${nAv} sem processo reconhecido, entram como avulsas).\n\nSubstituir as demandas atuais ou adicionar a elas?`,{ok:"Substituir",cancel:"Adicionar às atuais"}):true;
   if(subst){est.demandas=dems; if(!est.demandas.length||!est.nome||est.nome==="Nova estimativa") est.nome=(sh.rootTopic.title||"").trim()||f.name.replace(/\.xmind$/i,"")}
   else est.demandas.push(...dems);
   persist(); renderEst();
@@ -889,7 +895,7 @@ function editarProc(i,novo=false){
     <datalist id="peGrupos">${[...new Set(db.processos.map(x=>x.grupo).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>`,
   [{label:"Salvar",pri:true,fn:()=>{
       const cod=$("#peCod").value.trim();
-      if(!cod||(cod!==p.cod&&proc(cod))){alert("Código vazio ou já usado por outro processo.");return}
+      if(!cod||(cod!==p.cod&&proc(cod))){uiAlert("Código vazio ou já usado por outro processo.");return}
       if(cod!==p.cod) renomearCodigo(p.cod,cod);
       Object.assign(p,{cod,fase:$("#peFase").value.trim()||"Cadastros",grupo:$("#peGrupo").value.trim(),nome:$("#peNome").value.trim()||"Processo",
         un:$("#peUn").value.trim()||"unid.",min:Math.max(0,+$("#peMin").value||0),fonte:$("#peFonte").value,desc:$("#peDesc").value.trim(),
@@ -897,7 +903,7 @@ function editarProc(i,novo=false){
       persist(); render(); fecharModal();
     }},
    {label:"Duplicar",fn:()=>{fecharModal();duplicarProc(db.processos.indexOf(p))}},
-   {label:novo?"Descartar":"Excluir",fn:()=>{if(excluirProc(db.processos.indexOf(p),novo)) fecharModal()}}]);
+   {label:novo?"Descartar":"Excluir",fn:async()=>{if(await excluirProc(db.processos.indexOf(p),novo)) fecharModal()}}]);
   setTimeout(()=>$(novo?"#peNome":"#peMin").select(),50);
 }
 function novoProc(fase,grupo){
@@ -908,10 +914,10 @@ function duplicarProc(i){
   const o=db.processos[i], c={...JSON.parse(JSON.stringify(o)),cod:codigoLivre(o.fase,o.grupo||""),nome:o.nome+" (cópia)",alias:[]};
   db.processos.splice(i+1,0,c); persist(); renderProc(); editarProc(i+1,true);
 }
-function excluirProc(i,semPerguntar){
+async function excluirProc(i,semPerguntar){
   const p=db.processos[i]; if(!p) return true;
   const usos=db.modelos.filter(m=>m.itens.some(it=>it[0]===p.cod)).map(m=>m.cod);
-  if(!semPerguntar&&!confirm(`Excluir ${p.cod} · ${p.nome}?`+(usos.length?`\nEle é usado nos modelos: ${usos.join(", ")} (será removido deles).`:""))) return false;
+  if(!semPerguntar&&!await uiConfirm(`Excluir ${p.cod} · ${p.nome}?`+(usos.length?`\nEle é usado nos modelos: ${usos.join(", ")} (será removido deles).`:""))) return false;
   db.modelos.forEach(m=>m.itens=m.itens.filter(it=>it[0]!==p.cod));
   db.processos.splice(i,1); persist(); render(); return true;
 }
@@ -920,7 +926,7 @@ $("#procBody").addEventListener("change",e=>{
   const p=db.processos[+t.dataset.i], k=t.dataset.k;
   p[k]=k==="min"?Math.max(0,+t.value||0):t.value.trim(); persist();
 });
-$("#procBody").addEventListener("click",e=>{
+$("#procBody").addEventListener("click",async e=>{
   const ds=e.target.dataset;
   if(ds.ped!==undefined) editarProc(+ds.ped);
   else if(ds.pdup!==undefined) duplicarProc(+ds.pdup);
@@ -932,19 +938,19 @@ $("#procBody").addEventListener("click",e=>{
     if(j<0||j>=db.processos.length) return;
     [db.processos[i],db.processos[j]]=[db.processos[j],db.processos[i]]; persist(); renderProc();
   }else if(ds.gadd!==undefined){
-    const g=(prompt(`Nome do novo grupo em “${ds.gadd}”:`)||"").trim(); if(g) novoProc(ds.gadd,g);
+    const g=(await uiPrompt(`Nome do novo grupo em “${ds.gadd}”:`)||"").trim(); if(g) novoProc(ds.gadd,g);
   }else if(ds.grn!==undefined){
-    const g=(prompt("Novo nome do grupo:",ds.pg)||"").trim(); if(!g||g===ds.pg) return;
+    const g=(await uiPrompt("Novo nome do grupo:",ds.pg)||"").trim(); if(!g||g===ds.pg) return;
     db.processos.forEach(p=>{if(p.fase===ds.grn&&p.grupo===ds.pg) p.grupo=g}); persist(); renderProc();
   }else if(ds.frn!==undefined){
-    const f=(prompt("Novo nome da fase:",ds.frn)||"").trim(); if(!f||f===ds.frn) return;
+    const f=(await uiPrompt("Novo nome da fase:",ds.frn)||"").trim(); if(!f||f===ds.frn) return;
     db.processos.forEach(p=>{if(p.fase===ds.frn) p.fase=f}); persist(); render();
   }
 });
 $("#pFiltro").oninput=renderProc;
-$("#pAdd").onclick=()=>{
-  const f=prompt("Fase do novo processo:",fases()[3]||"Cadastros"); if(!f) return;
-  const g=prompt("Grupo:",grupos(f.trim())[0]||""); if(g===null) return;
+$("#pAdd").onclick=async()=>{
+  const f=await uiPrompt("Fase do novo processo:",fases()[3]||"Cadastros"); if(!f) return;
+  const g=await uiPrompt("Grupo:",grupos(f.trim())[0]||""); if(g===null) return;
   $("#pFiltro").value=""; novoProc(f.trim(),g.trim());
 };
 $("#dbExport").onclick=()=>download(JSON.stringify(db,null,2),"banco-processos-promob.json","application/json");
@@ -956,14 +962,14 @@ $("#dbImport").onclick=()=>pickFile(".json,.csv",async f=>{
     const novos=linhas.slice(1).map(l=>l.split(sep).map(s=>s.trim().replace(/^"|"$/g,""))).filter(c=>c[0])
       .map(c=>({cod:c[0],fase:c[1]||"Cadastros",grupo:c[2]||"",nome:c[3]||c[0],un:c[4]||"unid.",min:+String(c[5]||"0").replace(",",".")||0}));
     novos.forEach(n=>{const ex=proc(n.cod); if(ex) Object.assign(ex,n); else db.processos.push({...n,fonte:"M",alias:[]})});
-    alert(novos.length+" processos importados/atualizados.");
+    uiAlert(novos.length+" processos importados/atualizados.");
   }else{
     const o=JSON.parse(txt); if(!o.processos) throw new Error("JSON sem lista de processos");
     db=Object.assign(seedDb(),o);
   }
   persist(); render();
 });
-$("#dbReset").onclick=()=>{if(confirm("Restaurar o banco padrão? Processos, modelos e vínculos personalizados serão substituídos.")){db=seedDb();persist();render()}};
+$("#dbReset").onclick=async()=>{if(await uiConfirm("Restaurar o banco padrão? Processos, modelos e vínculos personalizados serão substituídos.")){db={...seedDb(),templates:db.templates||[]};persist();render()}};
 
 /* ================= ARQUIVO DE ESTIMATIVAS ================= */
 let arqCliSel=null;
@@ -1010,13 +1016,13 @@ function novaVersao(id){
 }
 $("#arqCli").onchange=e=>{arqCliSel=e.target.value;renderArquivo()};
 $("#arqArq").onchange=renderArquivo;
-$("#arqCliNovo").onclick=()=>{
-  const nome=(prompt("Nome do cliente:")||"").trim(); if(!nome) return;
+$("#arqCliNovo").onclick=async()=>{
+  const nome=(await uiPrompt("Nome do cliente:")||"").trim(); if(!nome) return;
   const c={id:uid(),nome,criadoEm:Date.now()}; arq.clientes[c.id]=c; Sync.cli(c.id); arqCliSel=c.id; save(K_ARQ,arq); renderArquivo(); renderEstBar();
 };
-$("#arqCliRen").onclick=()=>{
+$("#arqCliRen").onclick=async()=>{
   const c=arq.clientes[arqCliSel]; if(!c) return;
-  const nome=(prompt("Novo nome do cliente:",c.nome)||"").trim(); if(!nome) return;
+  const nome=(await uiPrompt("Novo nome do cliente:",c.nome)||"").trim(); if(!nome) return;
   c.nome=nome; Sync.cli(c.id); save(K_ARQ,arq); renderArquivo(); renderEstBar();
 };
 $("#arqNova").onclick=()=>{persist(); const e=novaEstimativa(arqCliSel); save(K_ARQ,arq); abrirEstimativa(e.id); setTimeout(()=>{$("#pNome").focus();$("#pNome").select()},300)};
@@ -1024,11 +1030,11 @@ $("#arqTpl").onchange=e=>{
   const t=(db.templates||[]).find(x=>x.id===e.target.value); e.target.value=""; if(!t) return;
   persist(); const n=novaEstimativa(arqCliSel,{nome:t.nome,demandas:clone(t.demandas)}); save(K_ARQ,arq); abrirEstimativa(n.id);
 };
-$("#arqList").addEventListener("click",e=>{
+$("#arqList").addEventListener("click",async e=>{
   const ds=e.target.dataset;
   if(ds.aab){persist();abrirEstimativa(ds.aab)}
   else if(ds.aren){
-    const x=ds.aren===est.id?est:arq.estimativas[ds.aren], nome=(prompt("Novo nome da estimativa:",x.nome)||"").trim(); if(!nome) return;
+    const x=ds.aren===est.id?est:arq.estimativas[ds.aren], nome=(await uiPrompt("Novo nome da estimativa:",x.nome)||"").trim(); if(!nome) return;
     if(ds.aren===est.id){est.nome=nome;persist();renderEst()}else{x.nome=nome;x.atualizadoEm=Date.now();Sync.est(x.id);save(K_ARQ,arq);renderArquivo()}
   }
   else if(ds.aver) novaVersao(ds.aver);
@@ -1038,7 +1044,7 @@ $("#arqList").addEventListener("click",e=>{
   }
   else if(ds.adel){
     const x=arq.estimativas[ds.adel]||est;
-    if(!confirm(`Excluir definitivamente “${x.nome}” v${x.versao||1}? Prefira “Arquivar” se quiser guardar.`)) return;
+    if(!await uiConfirm(`Excluir definitivamente “${x.nome}” v${x.versao||1}? Prefira “Arquivar” se quiser guardar.`)) return;
     delete arq.estimativas[ds.adel]; Sync.del("estimativas/"+ds.adel); save(K_ARQ,arq);
     if(ds.adel===est.id){const outra=Object.values(arq.estimativas).filter(z=>z.clienteId===arqCliSel).sort((a,b)=>(b.atualizadoEm||0)-(a.atualizadoEm||0))[0]||novaEstimativa(arqCliSel);abrirEstimativa(outra.id)}
     else renderArquivo();
@@ -1047,20 +1053,20 @@ $("#arqList").addEventListener("click",e=>{
 $("#estBar").addEventListener("change",e=>{
   if(e.target.id==="estCli"){est.clienteId=e.target.value;arqCliSel=est.clienteId;persist();renderArquivo()}
 });
-$("#estBar").addEventListener("click",e=>{
+$("#estBar").addEventListener("click",async e=>{
   const id=e.target.id;
   if(id==="btnFechar"){
-    if(!est.demandas.some(d=>d.linhas.length)){alert("A estimativa não tem linhas.");return}
-    if(!confirm("Fechar a estimativa? Ela fica travada para edição (a coluna Real continua editável) e libera Toggl e Zoho Invoice. Para mudar depois: Reabrir ou Nova versão.")) return;
+    if(!est.demandas.some(d=>d.linhas.length)){uiAlert("A estimativa não tem linhas.");return}
+    if(!await uiConfirm("Fechar a estimativa? Ela fica travada para edição (a coluna Real continua editável) e libera Toggl e Zoho Invoice. Para mudar depois: Reabrir ou Nova versão.")) return;
     est.status="fechada"; est.fechadaEm=Date.now(); persist(); renderEst();
   }else if(id==="btnReabrir"){
-    if(!confirm("Reabrir para edição? Se ela já foi enviada ao cliente, prefira “Nova versão” para manter o histórico.")) return;
+    if(!await uiConfirm("Reabrir para edição? Se ela já foi enviada ao cliente, prefira “Nova versão” para manter o histórico.")) return;
     est.status="rascunho"; est.fechadaEm=null; persist(); renderEst();
   }else if(id==="btnNovaVersao") novaVersao(est.id);
   else if(id==="btnSalvarTpl"){
-    const nome=(prompt("Nome do template:",est.nome)||"").trim(); if(!nome) return;
+    const nome=(await uiPrompt("Nome do template:",est.nome)||"").trim(); if(!nome) return;
     db.templates.unshift({id:uid(),nome,demandas:limparExecucao(est.demandas),criadoEm:Date.now()});
-    persist(); renderTpl(); renderArquivo(); alert(`Template “${nome}” salvo. Use em Arquivo › “Nova a partir de template…” ou na aba Modelos.`);
+    persist(); renderTpl(); renderArquivo(); uiAlert(`Template “${nome}” salvo. Use em Arquivo › “Nova a partir de template…” ou na aba Modelos.`);
   }
 });
 function renderEstTpl(){
@@ -1069,11 +1075,11 @@ function renderEstTpl(){
     <td class="acts"><button class="btn sm pri" data-tuse="${i}">Usar no cliente atual</button><button class="btn sm" data-tren="${i}">Renomear</button><button class="x" data-tdel="${i}" title="Excluir">×</button></td></tr>`).join("")}</tbody></table></div>`
     :'<p class="empty" style="padding:12px">Nenhum template ainda. Na aba Estimativa, use “Salvar como template”.</p>';
 }
-$("#estTplList").addEventListener("click",e=>{
+$("#estTplList").addEventListener("click",async e=>{
   const ds=e.target.dataset, ts=db.templates;
   if(ds.tuse!==undefined){persist();const t=ts[+ds.tuse],n=novaEstimativa(arqCliSel||est.clienteId,{nome:t.nome,demandas:clone(t.demandas)});save(K_ARQ,arq);document.querySelector('nav button[data-tab="est"]').click();abrirEstimativa(n.id)}
-  else if(ds.tren!==undefined){const t=ts[+ds.tren],nome=(prompt("Novo nome:",t.nome)||"").trim();if(nome){t.nome=nome;persist();renderEstTpl();renderArquivo()}}
-  else if(ds.tdel!==undefined){if(confirm(`Excluir o template “${ts[+ds.tdel].nome}”?`)){ts.splice(+ds.tdel,1);persist();renderEstTpl();renderArquivo()}}
+  else if(ds.tren!==undefined){const t=ts[+ds.tren],nome=(await uiPrompt("Novo nome:",t.nome)||"").trim();if(nome){t.nome=nome;persist();renderEstTpl();renderArquivo()}}
+  else if(ds.tdel!==undefined){if(await uiConfirm(`Excluir o template “${ts[+ds.tdel].nome}”?`)){ts.splice(+ds.tdel,1);persist();renderEstTpl();renderArquivo()}}
 });
 
 /* ================= MODELOS ================= */
@@ -1104,9 +1110,9 @@ $("#tplList").addEventListener("change",e=>{
   else if(t.dataset.ii!==undefined) m.itens[+t.dataset.ii][1]=Math.max(0,+t.value||0);
   persist(); renderTpl();
 });
-$("#tplList").addEventListener("click",e=>{
+$("#tplList").addEventListener("click",async e=>{
   const t=e.target;
-  if(t.dataset.mdel!==undefined){if(confirm("Excluir este modelo?")){db.modelos.splice(+t.dataset.mdel,1);persist();renderTpl()}}
+  if(t.dataset.mdel!==undefined){if(await uiConfirm("Excluir este modelo?")){db.modelos.splice(+t.dataset.mdel,1);persist();renderTpl()}}
   else if(t.dataset.idel!==undefined){db.modelos[+t.dataset.mi].itens.splice(+t.dataset.idel,1);persist();renderTpl()}
   else if(t.dataset.madd!==undefined){
     const mi=+t.dataset.madd, pc=document.querySelector(`[data-maddsel="${mi}"]`).value, m=db.modelos[mi]; if(!pc) return;
@@ -1372,7 +1378,7 @@ function renderSys(){
 $("#sysAceitar").onclick=()=>{
   if(!sysScan) return; let n=0;
   Object.keys(sysScan.m).filter(k=>k.startsWith("cad:")&&!db.vinculos[k]).forEach(k=>{const sg=sugestao(k); if(sg){db.vinculos[k]=sg;n++}});
-  persist(); renderSys(); alert(n+" vínculos sugeridos aplicados. Revise antes de gerar a demanda.");
+  persist(); renderSys(); uiAlert(n+" vínculos sugeridos aplicados. Revise antes de gerar a demanda.");
 };
 $("#sysOut").addEventListener("change",e=>{
   if(e.target.id==="sysTagSel"){sysTag=e.target.value;renderSys();return}
@@ -1385,7 +1391,7 @@ $("#sysSnap").onclick=()=>{
   if(!sysScan) return; contar(sysScan.tree);
   const {tree,tags,...resto}=sysScan;
   save(K_SNAP,{...resto,tag:sysTag,tm:mapaRetrato(tree,tree.label,{})});
-  alert("Retrato salvo como linha de base."); renderSys();
+  uiAlert("Retrato salvo como linha de base."); renderSys();
 };
 $("#sysOut").addEventListener("toggle",e=>{if(e.target.matches("details[data-ti]")&&e.target.open) abrirNo(e.target)},true);
 $("#sysOut").addEventListener("click",e=>{
@@ -1403,7 +1409,7 @@ $("#sysOut").addEventListener("click",e=>{
     const {n,path}=nodeRef[+t.dataset.tadd], p=proc(sysProcMod); if(!p) return;
     const snap=load(K_SNAP,null), useDiff=$("#sysUseDiff").checked&&snap&&snap.tm&&snap.tag===sysTag;
     const q=useDiff?qtdNo(n)-(snap.tm[path]||0):qtdNo(n);
-    if(q<=0){alert("Quantidade zero"+(useDiff?" na diferença vs. retrato.":"."));return}
+    if(q<=0){uiAlert("Quantidade zero"+(useDiff?" na diferença vs. retrato.":"."));return}
     const nome="Módulos do System — "+sysScan.raiz;
     let d=est.demandas.find(x=>x.nome===nome);
     if(!d){d={nome,status:"estimar",obs:`Gerado pela árvore do Leitor de System (${sysScan.quando}).`,linhas:[]};est.demandas.push(d)}
@@ -1415,18 +1421,38 @@ $("#sysOut").addEventListener("click",e=>{
 $("#sysToEst").onclick=()=>{
   if(!sysScan) return;
   const useDiff=$("#sysUseDiff").checked, snap=load(K_SNAP,null);
-  if(useDiff&&!snap){alert("Salve um retrato antes para usar a diferença.");return}
+  if(useDiff&&!snap){uiAlert("Salve um retrato antes para usar a diferença.");return}
   const linhas=[];
   Object.entries(db.vinculos).forEach(([k,cod])=>{
     const p=proc(cod); if(!p||sysScan.m[k]===undefined) return;
     const q=useDiff?sysScan.m[k]-(snap.m[k]||0):sysScan.m[k];
     if(q>0) linhas.push({cod,det:"System: "+k,qtd:q,min:p.min});
   });
-  if(!linhas.length){alert("Nenhuma métrica vinculada com quantidade > 0.");return}
+  if(!linhas.length){uiAlert("Nenhuma métrica vinculada com quantidade > 0.");return}
   est.demandas.push({nome:(useDiff?"Produzido no System":"Inventário do System")+" — "+sysScan.raiz,status:"estimar",obs:`Gerado pelo Leitor de System em ${sysScan.quando}${useDiff?" (diferença vs. retrato de "+snap.quando+")":""}.`,linhas});
   persist(); document.querySelector('nav button[data-tab="est"]').click();
 };
 
+
+/* ================= PERGUNTAS (substituem alert/confirm/prompt, bloqueados no visualizador do claude.ai) ================= */
+let filaAsk=Promise.resolve();
+function uiAsk({msg,input=null,ok="OK",cancel="Cancelar",semCancel=false}){
+  const run=()=>new Promise(res=>{
+    const d=$("#ask"), inp=$("#askInp"), bOk=$("#askOk"), bC=$("#askCancel");
+    $("#askMsg").textContent=msg; inp.style.display=input===null?"none":""; inp.value=input??"";
+    bOk.textContent=ok; bC.textContent=cancel; bC.style.display=semCancel?"none":"";
+    const fim=v=>{d.oncancel=null;if(d.open) d.close();res(v)};
+    bOk.onclick=()=>fim(input===null?true:inp.value);
+    bC.onclick=()=>fim(input===null?false:null);
+    d.oncancel=e=>{e.preventDefault();fim(input===null?false:null)};
+    inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();bOk.click()}};
+    d.showModal(); setTimeout(()=>{if(input===null) bOk.focus(); else {inp.focus();inp.select()}},30);
+  });
+  const p=filaAsk.then(run); filaAsk=p.catch(()=>{}); return p;
+}
+const uiConfirm=(msg,o={})=>uiAsk({msg,...o});
+const uiPrompt=(msg,def="")=>uiAsk({msg,input:def??""});
+const uiAlert=msg=>uiAsk({msg,semCancel:true});
 
 /* ================= MODAL ================= */
 function abrirModal(titulo,corpo,botoes=[]){
@@ -1445,15 +1471,15 @@ async function copiar(id){
 
 /* ================= BANCO: XMIND, CALIBRAÇÃO, LOTE ================= */
 const filtrados=()=>{const f=norm($("#pFiltro").value);return db.processos.filter(p=>!f||norm(p.cod+" "+p.grupo+" "+p.nome+" "+p.un).includes(f))};
-$("#bulkPctBtn").onclick=()=>{
+$("#bulkPctBtn").onclick=async()=>{
   const pct=+$("#bulkPct").value||0, ps=filtrados(); if(!pct||!ps.length) return;
-  if(!confirm(`Ajustar ${pct>0?"+":""}${pct}% o tempo de ${ps.length} processos filtrados?`)) return;
+  if(!await uiConfirm(`Ajustar ${pct>0?"+":""}${pct}% o tempo de ${ps.length} processos filtrados?`)) return;
   ps.forEach(p=>p.min=Math.max(0,Math.round(p.min*(1+pct/100)*10)/10)); persist(); renderProc();
 };
-$("#bulkFaseBtn").onclick=()=>{
+$("#bulkFaseBtn").onclick=async()=>{
   let fase=$("#bulkFase").value, ps=filtrados(); if(!ps.length) return;
-  if(fase==="__nova"){fase=(prompt("Nome da nova fase:")||"").trim(); if(!fase) return}
-  if(!confirm(`Mover ${ps.length} processos filtrados para a fase “${fase}”?`)) return;
+  if(fase==="__nova"){fase=(await uiPrompt("Nome da nova fase:")||"").trim(); if(!fase) return}
+  if(!await uiConfirm(`Mover ${ps.length} processos filtrados para a fase “${fase}”?`)) return;
   ps.forEach(p=>p.fase=fase); persist(); renderProc();
 };
 const prefixo=f=>(norm(f).replace(/[^a-z]/g,"").slice(0,3)||"nov").toUpperCase();
@@ -1504,11 +1530,11 @@ $("#dbXmind").onclick=()=>pickFile(".xmind",async f=>{
     document.querySelectorAll("[data-xnk]").forEach(inp=>{const n=xmPend.novos[+inp.dataset.xi],k=inp.dataset.xnk;n[k]=k==="min"?Math.max(0,+inp.value||0):inp.value.trim()});
     xmPend.novos.forEach((n,i)=>{
       if(!document.querySelector(`[data-xn="${i}"]`).checked) return;
-      if(!n.cod||proc(n.cod)){alert(`Código ${n.cod||"(vazio)"} já existe; ajuste e aplique de novo.`);throw new Error("código duplicado")}
+      if(!n.cod||proc(n.cod)){uiAlert(`Código ${n.cod||"(vazio)"} já existe; ajuste e aplique de novo.`);throw new Error("código duplicado")}
       db.processos.push({cod:n.cod,fase:n.fase,grupo:n.grupo,nome:n.nome,un:"unid.",min:n.min,fonte:"H",alias:n.alias}); nN++;
     });
     xmPend.atual.forEach((a,i)=>{if(document.querySelector(`[data-xa="${i}"]`).checked){a.p.min=a.min;a.p.fonte="H";nA++}});
-    persist(); render(); fecharModal(); alert(`${nN} processos criados e ${nA} tempos atualizados.`);
+    persist(); render(); fecharModal(); uiAlert(`${nN} processos criados e ${nA} tempos atualizados.`);
   }}]);
   montarRevisaoXmind(true);
 });
@@ -1519,13 +1545,13 @@ $("#dbCalib").onclick=()=>{
     const a=acc[l.cod]||(acc[l.cod]={real:0,qtd:0,n:0}); a.real+=+l.real; a.qtd+=+l.qtd; a.n++;
   }));
   const rows=Object.entries(acc).map(([cod,a])=>({cod,p:proc(cod),min:Math.round(a.real/a.qtd*10)/10,n:a.n})).filter(r=>r.p);
-  if(!rows.length){alert("Nenhuma linha com “Real (min)” preenchido na estimativa atual.");return}
+  if(!rows.length){uiAlert("Nenhuma linha com “Real (min)” preenchido na estimativa atual.");return}
   abrirModal("Calibrar tempos pelo realizado",`<p class="muted">Tempo realizado por unidade = Σ real ÷ Σ quantidade, nas linhas da estimativa atual com realizado preenchido.</p>
     <div class="tbl"><table><thead><tr><th></th><th>Cód.</th><th>Processo</th><th class="n">Atual</th><th class="n">Realizado</th><th class="n">Desvio</th><th class="n">Linhas</th></tr></thead><tbody>
     ${rows.map((r,i)=>{const dv=r.p.min?(r.min/r.p.min-1)*100:0;return `<tr><td><input type="checkbox" data-cb="${i}" checked></td><td>${esc(r.cod)}</td><td>${esc(r.p.nome)}</td><td class="n">${num(r.p.min)}</td><td class="n"><b>${num(r.min)}</b></td><td class="n ${dv>0?"diff up":"diff down"}">${dv>0?"+":""}${num(dv,0)}%</td><td class="n">${r.n}</td></tr>`}).join("")}
     </tbody></table></div>`,[{label:"Aplicar",pri:true,fn:()=>{
       let n=0; rows.forEach((r,i)=>{if(document.querySelector(`[data-cb="${i}"]`).checked){r.p.min=r.min;r.p.fonte="H";n++}});
-      persist(); render(); fecharModal(); alert(n+" tempos-padrão calibrados.");
+      persist(); render(); fecharModal(); uiAlert(n+" tempos-padrão calibrados.");
     }}]);
 };
 
@@ -1632,7 +1658,7 @@ function importarTogglCsv(txt){
   return `${ok} tasks com realizado lançado na coluna Real.${semTask?` ${semTask} lançamentos sem task (só projeto) não puderam ser atribuídos a um passo.`:""}${semMatch?` ${semMatch} projetos/tasks do CSV não correspondem a esta estimativa.`:""}`;
 }
 $("#btnToggl").onclick=()=>{
-  if(!estruturaToggl().length){alert("Nenhuma demanda com linhas para enviar.");return}
+  if(!estruturaToggl().length){uiAlert("Nenhuma demanda com linhas para enviar.");return}
   persist();
   const corpo=`<p class="muted">Estrutura: <b>Cliente</b> “${esc(est.nome||"Estimativa")}” › <b>Projeto</b> = cada demanda › <b>Tasks</b> = o passo a passo (cada linha), com o tempo estimado. O Toggl não tem subtarefas; os passos viram tasks numeradas na ordem da demanda.</p>
     <div class="row"><label style="flex:1;min-width:240px">Token da API do Toggl (Profile › API Token) — não fica salvo<input id="tgTok" type="password" autocomplete="off" placeholder="opcional: entra no script/prompt"></label><button class="btn" id="tgGen">Gerar com o token</button></div>
@@ -1683,7 +1709,7 @@ function fallbackZoho(motivo){
   $("#zCp").onclick=()=>copiar("zTxt");
 }
 $("#btnZoho").onclick=async()=>{
-  if(!linhasOrcamento("demanda").length){alert("Nenhuma demanda com linhas para orçar.");return}
+  if(!linhasOrcamento("demanda").length){uiAlert("Nenhuma demanda com linhas para orçar.");return}
   zMcp=(window.claude&&window.claude.use)?await window.claude.use("mcp").catch(()=>null):null;
   if(!zMcp) return fallbackZoho("A criação automática funciona no link publicado em claude.ai com o conector Zoho Invoice. Aqui, copie as linhas.");
   abrirModal("Orçamento no Zoho Invoice",`<div id="zSt" class="msg">Conectando ao Zoho Invoice…</div><div id="zForm"></div>`);
@@ -1722,9 +1748,9 @@ $("#btnZoho").onclick=async()=>{
     buscar();
     $("#mFoot").insertAdjacentHTML("afterbegin",'<button class="btn pri" id="zCriar">Criar orçamento no Zoho</button>');
     $("#zCriar").onclick=async()=>{
-      const cli=$("#zCli").value, item=$("#zItem").value; if(!cli||!item){alert("Escolha o cliente e o item.");return}
+      const cli=$("#zCli").value, item=$("#zItem").value; if(!cli||!item){uiAlert("Escolha o cliente e o item.");return}
       const ls=linhasOrcamento($("#zModo").value), r=calc(), c=db.cfg;
-      if(!confirm(`Criar orçamento de ${brl(ls.reduce((s,l)=>s+l.quantity*l.rate,0))} (${ls.length} linhas) no Zoho Invoice?`)) return;
+      if(!await uiConfirm(`Criar orçamento de ${brl(ls.reduce((s,l)=>s+l.quantity*l.rate,0))} (${ls.length} linhas) no Zoho Invoice?`)) return;
       $("#zCriar").disabled=true; $("#zRes").innerHTML='<div class="msg">Criando orçamento…</div>';
       try{
         const out=await zCall("ZohoInvoice_Create_an_Estimate",{headers:zHead(),body:{
@@ -1757,7 +1783,7 @@ async function download(content,name,type){
     const dlCap=await dlReady;
     if(dlCap){
       try{await dlCap.save({filename:name,data:new Blob([content],{type})})}
-      catch(e){if(e&&e.code!=="declined") alert("Não foi possível salvar o arquivo ("+(e.code||"erro")+").")}
+      catch(e){if(e&&e.code!=="declined") uiAlert("Não foi possível salvar o arquivo ("+(e.code||"erro")+").")}
       return;
     }
   }
@@ -1769,7 +1795,7 @@ async function download(content,name,type){
 function pickFile(accept,cb){
   const inp=$("#fileIn"); inp.value=""; inp.accept=accept;
   inp.onchange=async()=>{const f=inp.files[0]; if(!f) return;
-    try{await cb(f)}catch(err){alert("Não foi possível importar: "+err.message)}};
+    try{await cb(f)}catch(err){uiAlert("Não foi possível importar: "+err.message)}};
   inp.click();
 }
 function render(){renderEst();renderArquivo();renderProc();renderTpl();renderSys();renderCfg()}
