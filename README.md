@@ -284,3 +284,14 @@ prazo (dias)    = total ÷ (horas produtivas/dia × pessoas)
   - copia, com código novo, ou move, mantendo o código, para outra fase, grupo ou catálogo;
   - ou adiciona o processo a qualquer grupo de um modelo.
 - As ações em lote do banco agora valem só para o catálogo aberto.
+
+## Editor de processo: fase, grupo e código
+
+- **Fase e Grupo** listam o que já existe; o grupo mostra só os grupos da fase escolhida, com a contagem de processos. Ao digitar um nome novo aparece **"＋ Criar fase / Criar grupo"**, e o editor avisa o que será criado ao salvar.
+- **Regra do código** (vale para todo o banco):
+  - **Automática:** segue o prefixo do grupo; grupo novo ganha sigla própria.
+  - **Prefixo da fase:** ex. DES-01.
+  - **Sigla do grupo:** ex. CEN-01 para "Cadastro de entidade".
+  - **Fase + grupo:** ex. CAD-CEN-01.
+- **Processo novo:** o código acompanha a regra enquanto você muda fase e grupo; se você digitar outro código, ele fica.
+- **Processo existente:** o código não muda sozinho. O editor mostra a sugestão e o botão **"usar"**, que renomeia o código também em modelos e estimativas.

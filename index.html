@@ -132,6 +132,8 @@ span.and{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px}
 .mdl-r td{background:color-mix(in srgb,var(--accent) 4%,transparent)}.mdl .ro td{color:var(--muted);font-weight:400;background:none}
 .gcod{width:70px;font:600 12px ui-monospace,monospace;padding:3px 5px}.gnome{width:min(320px,60%);font-weight:600;padding:3px 6px}
 .mdl-add{align-items:end}.mdl-add .combo{flex:1;min-width:220px}.card.flash{outline:2px solid var(--accent)}
+.mcombo{position:relative}.mcombo input{width:100%}.mcombo.open .cmenu{display:block}
+.cod-sug{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:12px;margin-top:6px}.cod-sug select{width:auto;font-size:12px;padding:3px 6px}
 .lblm{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}.chips{display:flex;flex-wrap:wrap;gap:4px}
 .escol{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px}.escol label{flex-direction:row;align-items:center;gap:5px}.escol select{width:auto;padding:3px 5px;font-size:13px}
 .eblk{border:1px solid var(--line);border-radius:6px;padding:6px;margin-bottom:6px;display:flex;flex-direction:column;gap:4px}.eblk.off{opacity:.55}
@@ -1432,21 +1434,52 @@ function posGrupo(fase,grupo){
   return pos<0?db.processos.length:pos+1;
 }
 // prefixo do código: o mais usado no grupo (ENT, MDL…), senão derivado da fase
-function prefixoGrupo(fase,grupo){
-  const cont={}; db.processos.filter(p=>p.fase===fase&&(p.grupo||"")===(grupo||"")).forEach(p=>{const m=/^([A-Za-z]+)-/.exec(p.cod);if(m) cont[m[1]]=(cont[m[1]]||0)+1});
-  return Object.entries(cont).sort((a,b)=>b[1]-a[1])[0]?.[0]||prefixo(fase);
+// Regra de código dos processos (Parâmetros do banco, escolhida no editor): o sistema sugere, você pode alterar.
+const REGRAS_COD={auto:"Automática: segue o prefixo do grupo (grupo novo ganha sigla própria)",fase:"Prefixo da fase (ex.: DES-01)",grupo:"Sigla do grupo (ex.: CEN-01)",fasegrupo:"Fase + grupo (ex.: DES-CEN-01)"};
+const STOP_SIGLA=new Set(["de","da","do","das","dos","e","em","com","para","por","a","o","as","os","no","na"]);
+// sigla: 1 palavra → 3 primeiras letras; 2 palavras → 1ª letra + 2 letras da 2ª; 3+ → iniciais
+function sigla(t){const w=norm(t||"").split(/[^a-z0-9]+/).filter(x=>x&&!STOP_SIGLA.has(x));
+  if(!w.length) return "";
+  return (w.length===1?w[0].slice(0,3):w.length===2?w[0][0]+w[1].slice(0,2):w.slice(0,3).map(x=>x[0]).join("")).toUpperCase()}
+function prefixoGrupo(fase,grupo,exc){
+  const regra=db.cfg.regraCod||"auto", pf=prefixo(fase), sg=sigla(grupo);
+  if(regra==="fase") return pf;
+  if(regra==="grupo") return sg||pf;
+  if(regra==="fasegrupo") return sg?pf+"-"+sg:pf;
+  const cont={}; db.processos.filter(p=>p!==exc&&p.fase===fase&&(p.grupo||"")===(grupo||"")).forEach(p=>{const m=/^(.+)-\d+$/.exec(p.cod);if(m) cont[m[1]]=(cont[m[1]]||0)+1});
+  return Object.entries(cont).sort((a,b)=>b[1]-a[1])[0]?.[0]||(grupo?sg||pf:pf);
 }
-function codigoLivre(fase,grupo){let n=1,c;const pf=prefixoGrupo(fase,grupo);do{c=pf+"-"+String(n++).padStart(2,"0")}while(proc(c));return c}
+function codigoLivre(fase,grupo,exc){let n=1,c;const pf=prefixoGrupo(fase,grupo,exc);do{c=pf+"-"+String(n++).padStart(2,"0")}while(proc(c)&&proc(c)!==exc);return c}
+// lista com opção de criar (fase e grupo no editor de processo)
+function miniCombo(inp,opcoes,rotCriar){
+  const box=document.createElement("div"); box.className="mcombo"; inp.parentNode.insertBefore(box,inp); box.appendChild(inp);
+  const mn=document.createElement("div"); mn.className="cmenu"; box.appendChild(mn); let sel=-1, its=[];
+  const draw=()=>{const q=inp.value.trim(), nq=norm(q), todas=opcoes(), exato=todas.some(o=>norm(o.v)===nq);
+    its=todas.filter(o=>!nq||exato||norm(o.v).includes(nq)).slice(0,40);
+    if(q&&!exato) its.push({v:q,novo:true});
+    mn.innerHTML=its.map((o,k)=>`<div class="copt${o.novo?" novo":""}${k===sel?" on":""}" data-k="${k}">${o.novo?`＋ ${esc(rotCriar)} “${esc(o.v)}”`:`${esc(o.v)}${o.info?` <span class="muted">${esc(o.info)}</span>`:""}`}</div>`).join("")||`<div class="copt muted">Digite um nome para criar</div>`;
+    box.classList.add("open")};
+  const pick=k=>{const o=its[k]; if(!o) return; inp.value=o.v; box.classList.remove("open"); inp.dispatchEvent(new Event("change",{bubbles:true}))};
+  inp.setAttribute("autocomplete","off");
+  inp.addEventListener("focus",()=>{sel=-1;draw()}); inp.addEventListener("input",()=>{sel=-1;draw()});
+  inp.addEventListener("keydown",e=>{if(!box.classList.contains("open")) return;
+    if(e.key==="ArrowDown"){sel=Math.min(its.length-1,sel+1);draw();e.preventDefault()} else if(e.key==="ArrowUp"){sel=Math.max(0,sel-1);draw();e.preventDefault()}
+    else if(e.key==="Enter"){if(sel>=0) pick(sel); else box.classList.remove("open"); e.preventDefault()} else if(e.key==="Escape"){box.classList.remove("open");e.stopPropagation()}});
+  inp.addEventListener("blur",()=>setTimeout(()=>box.classList.remove("open"),150));
+  mn.addEventListener("mousedown",e=>{const o=e.target.closest("[data-k]"); if(o){e.preventDefault();pick(+o.dataset.k)}});
+}
 function editarProc(i,novo=false,aoSalvar=null){
-  const p=db.processos[i], codAuto=novo?p.cod:null;
+  const p=db.processos[i], cc=p.catalogo||"promob";
   const usoM=db.modelos.filter(m=>usaProc(m.itens,p.cod)).map(m=>m.cod);
   const usoE=est.demandas.reduce((s,d)=>s+d.linhas.filter(l=>l.cod===p.cod).length,0);
   abrirModal(novo?"Novo processo":"Editar processo "+p.cod,`
     <div class="row">
-      <label style="width:110px">Código<input id="peCod" value="${esc(p.cod)}"></label>
-      <label style="flex:1;min-width:160px">Fase<input id="peFase" value="${esc(p.fase)}" list="peFases"></label>
-      <label style="flex:1;min-width:160px">Grupo<input id="peGrupo" value="${esc(p.grupo||"")}" list="peGrupos"></label>
+      <label style="width:130px">Código<input id="peCod" value="${esc(p.cod)}"></label>
+      <label style="flex:1;min-width:160px">Fase<input id="peFase" value="${esc(p.fase)}" placeholder="escolha ou crie uma fase"></label>
+      <label style="flex:1;min-width:160px">Grupo<input id="peGrupo" value="${esc(p.grupo||"")}" placeholder="escolha ou crie um grupo (opcional)"></label>
     </div>
+    <div class="cod-sug"><span>Regra do código</span><select id="peRegra" title="Vale para todo o banco">${Object.entries(REGRAS_COD).map(([k,v])=>`<option value="${k}" ${(db.cfg.regraCod||"auto")===k?"selected":""}>${esc(v)}</option>`).join("")}</select>
+      <span id="peSugTxt"></span><button class="btn sm" id="peUsar" type="button" hidden>usar</button><span id="peSugObs" class="muted"></span><span id="peNovos" class="muted"></span></div>
     <div class="row" style="margin-top:10px">
       <label style="flex:3;min-width:240px">Processo<input id="peNome" value="${esc(p.nome)}"></label>
       <label style="flex:1;min-width:100px">Unidade de contagem<input id="peUn" value="${esc(p.un)}"></label>
@@ -1455,14 +1488,12 @@ function editarProc(i,novo=false,aoSalvar=null){
     </div>
     <label style="margin-top:10px">Como executar / passo a passo (editor do Catalog, telas, critérios de pronto)<textarea id="peDesc" style="min-height:120px" placeholder="Ex.: Editor de Módulos › grupo › Novo módulo › aba Dimensionamento… Critério de pronto: inserido no ambiente sem erro, orçamento conferido.">${esc(p.desc||"")}</textarea></label>
     <label style="margin-top:10px">Reconhecimento no XMind — um trecho do caminho por linha (ex.: montagem aplicacao&gt;caixas)<textarea id="peAlias" style="min-height:60px">${esc((p.alias||[]).join("\n"))}</textarea></label>
-    <p class="muted" style="margin-top:8px">Usado em: ${usoM.length?`modelos ${esc(usoM.join(", "))}`:"nenhum modelo"} · ${usoE} linha(s) da estimativa atual.</p>
-    <datalist id="peFases">${fases().map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
-    <datalist id="peGrupos">${[...new Set(db.processos.map(x=>x.grupo).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>`,
+    <p class="muted" style="margin-top:8px">Usado em: ${usoM.length?`modelos ${esc(usoM.join(", "))}`:"nenhum modelo"} · ${usoE} linha(s) da estimativa atual.</p>`,
   [{label:"Salvar",pri:true,fn:()=>{
-      let cod=$("#peCod").value.trim();
-      const nf=$("#peFase").value.trim()||"Cadastros", ng=$("#peGrupo").value.trim();
-      if(codAuto&&cod===codAuto&&(nf!==p.fase||ng!==(p.grupo||""))){db.processos.splice(db.processos.indexOf(p),1);cod=codigoLivre(nf,ng);db.processos.push(p)}
+      const cod=$("#peCod").value.trim().toUpperCase();
       if(!cod||(cod!==p.cod&&proc(cod))){uiAlert("Código vazio ou já usado por outro processo.");return}
+      const nf=$("#peFase").value.trim()||"Cadastros", ng=$("#peGrupo").value.trim();
+      if(nf!==p.fase||ng!==(p.grupo||"")){db.processos.splice(db.processos.indexOf(p),1);db.processos.splice(posGrupo(nf,ng),0,p)}
       if(cod!==p.cod) renomearCodigo(p.cod,cod);
       Object.assign(p,{cod,fase:$("#peFase").value.trim()||"Cadastros",grupo:$("#peGrupo").value.trim(),nome:$("#peNome").value.trim()||"Processo",
         un:$("#peUn").value.trim()||"unid.",min:Math.max(0,+$("#peMin").value||0),fonte:$("#peFonte").value,desc:$("#peDesc").value.trim(),
@@ -1471,6 +1502,26 @@ function editarProc(i,novo=false,aoSalvar=null){
     }},
    {label:"Duplicar",fn:()=>{fecharModal();duplicarProc(db.processos.indexOf(p))}},
    {label:novo?"Descartar":"Excluir",fn:async()=>{if(await excluirProc(db.processos.indexOf(p),novo)) fecharModal()}}]);
+  // fase e grupo: escolher da lista ou criar; código: sugerido pela regra, editável
+  const qtdF=f=>db.processos.filter(x=>(x.catalogo||"promob")===cc&&x.fase===f).length;
+  miniCombo($("#peFase"),()=>fases().map(f=>({v:f,info:qtdF(f)?qtdF(f)+" processos":""})),"Criar fase");
+  miniCombo($("#peGrupo"),()=>{const f=$("#peFase").value.trim(), gs={};db.processos.forEach(x=>{if((x.catalogo||"promob")===cc&&x.fase===f&&x.grupo&&x!==p) gs[x.grupo]=(gs[x.grupo]||0)+1});
+    return Object.entries(gs).map(([g,n])=>({v:g,info:n+" processo"+(n>1?"s":"")}))},"Criar grupo");
+  let manual=!novo;
+  const sugere=()=>{
+    const f=$("#peFase").value.trim()||"Cadastros", g=$("#peGrupo").value.trim(), sg=codigoLivre(f,g,p), atual=$("#peCod").value.trim().toUpperCase();
+    if(!manual&&atual!==sg) $("#peCod").value=sg;
+    const v=$("#peCod").value.trim().toUpperCase();
+    const segue=v===sg; $("#peSugTxt").innerHTML=segue?`<span class="muted">código segue a regra</span>`:`sugestão <b>${esc(sg)}</b>`;
+    $("#peUsar").hidden=segue; $("#peSugObs").textContent=!segue&&!novo?"(muda o código em modelos e estimativas)":"";
+    const fNova=!fases().includes(f), gNovo=g&&!db.processos.some(x=>x!==p&&(x.catalogo||"promob")===cc&&x.fase===f&&x.grupo===g);
+    $("#peNovos").textContent=[fNova?`fase “${f}” será criada`:"",gNovo?`grupo “${g}” será criado`:""].filter(Boolean).join(" · ");
+  };
+  $("#peCod").addEventListener("input",()=>{manual=true;sugere()});
+  ["#peFase","#peGrupo"].forEach(id=>$(id).addEventListener("change",sugere));
+  $("#peRegra").onchange=e=>{db.cfg.regraCod=e.target.value;persist();if(novo) manual=false;sugere()};
+  $("#peUsar").onclick=()=>{manual=!novo;$("#peCod").value=codigoLivre($("#peFase").value.trim()||"Cadastros",$("#peGrupo").value.trim(),p);sugere()};
+  sugere();
   $(novo?"#peNome":"#peMin").select();
 }
 function novoProc(fase,grupo){
