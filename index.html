@@ -134,6 +134,9 @@ span.and{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px}
 .mdl-add{align-items:end}.mdl-add .combo{flex:1;min-width:220px}.card.flash{outline:2px solid var(--accent)}
 .mcombo{position:relative}.mcombo input{width:100%}.mcombo.open .cmenu{display:block}
 .cod-sug{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:12px;margin-top:6px}.cod-sug select{width:auto;font-size:12px;padding:3px 6px}
+.blk-h td{background:color-mix(in srgb,var(--accent) 9%,transparent);border-top:2px solid color-mix(in srgb,var(--accent) 45%,transparent)}
+.blk-h input{width:70px;font-weight:600}.blk-l td:first-child{border-left:3px solid color-mix(in srgb,var(--accent) 45%,transparent);padding-left:10px}
+.addmod{display:inline-flex;gap:4px;align-items:center}.addmod input[type=number]{width:62px}
 .lblm{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}.chips{display:flex;flex-wrap:wrap;gap:4px}
 .escol{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px}.escol label{flex-direction:row;align-items:center;gap:5px}.escol select{width:auto;padding:3px 5px;font-size:13px}
 .eblk{border:1px solid var(--line);border-radius:6px;padding:6px;margin-bottom:6px;display:flex;flex-direction:column;gap:4px}.eblk.off{opacity:.55}
@@ -1006,7 +1009,13 @@ function renderEstBar(){
   ["btnNovaDem","btnXmind","btnExemplo","btnClear","pNome","pResp","pData","btnIA","pPerfil"].forEach(id=>document.getElementById(id).disabled=fechada);
   {const b=document.getElementById("btnZProj");b.disabled=!fechada;b.title=fechada?"":"Feche a estimativa para liberar"}
 }
+// um campo editado que some durante o redesenho dispara "change" de novo: ignora a chamada aninhada
+let renderEstAtivo=false;
 function renderEst(){
+  if(renderEstAtivo) return; renderEstAtivo=true;
+  try{renderEstCorpo()}finally{renderEstAtivo=false}
+}
+function renderEstCorpo(){
   renderEstBar();
   if(migrarPerfil(est)|migrarComercial(est)) save(K_EST,est);
   {const pe=perfilEst(), exc=est.demandas.filter(d=>perfilProprio(d));
@@ -1022,11 +1031,18 @@ function renderEst(){
     if(d.ignorada) return `<div class="card dem ign"><div class="dem-h"><span class="nome-ign">${esc(d.nome)}</span>
       <span class="pill w">ignorada · não entra nos totais, Toggl e Zoho</span><span class="pill">${hm(r.porDem[di])}</span>
       <button class="btn sm" data-dign="${di}">Reativar</button><button class="x noprint" data-deld="${di}" title="Excluir demanda">×</button></div></div>`;
+    const blkTot={},blkN={}; d.linhas.forEach(l=>{if(l.blk){blkTot[l.blk]=(blkTot[l.blk]||0)+lineMin(l);blkN[l.blk]=(blkN[l.blk]||0)+1}});
+    let blkAnt=null;
     const rows=d.linhas.map((l,li)=>{
-      const p=proc(l.cod);
+      const p=proc(l.cod), b=l.blk&&blocoDe(d,l.blk);
+      const cab=b&&b.id!==blkAnt?`<tr class="blk-h"><td><span class="pill">modelo</span></td><td colspan="2"><b>${esc(b.cod)} · ${esc(b.nome)}</b> <span class="muted">${blkN[b.id]} processo${blkN[b.id]>1?"s":""}</span></td>
+        <td class="n"><input type="number" min="0" step="1" value="${b.qtd}" data-d="${di}" data-blkq="${esc(b.id)}" title="Quantidade do modelo: multiplica todas as linhas dele"></td><td class="muted" style="font-size:12px">× o modelo</td>
+        <td class="n"><b>${hm(blkTot[b.id])}</b></td><td class="noprint"></td>
+        <td class="noprint" style="white-space:nowrap"><button class="x" data-blkdes="${di}:${esc(b.id)}" title="Desagrupar: as linhas ficam soltas na demanda">⤫</button><button class="x" data-blkdel="${di}:${esc(b.id)}" title="Remover o modelo e todas as linhas dele">×</button></td></tr>`:"";
+      blkAnt=b?b.id:null;
       const desc=p?(p.desc?`<span title="${esc(p.desc)}" style="text-decoration:underline dotted">${esc(p.nome)}</span>`:esc(p.nome)):(l.desc?esc(l.desc):'<span class="muted">processo não encontrado</span>');
       const dif=p&&+l.min!==+p.min?`<div class="diff ${+l.min>p.min?"up":"down"}">padrão ${num(p.min)}</div>`:"";
-      return `<tr>
+      return cab+`<tr${b?' class="blk-l"':""}>
         <td>${p?esc(p.cod):'<span class="pill">avulso</span>'}</td>
         <td>${desc}<input class="det" placeholder="detalhe / variante" value="${esc(l.det)}" data-d="${di}" data-l="${li}" data-k="det" style="margin-top:3px;font-size:13px"></td>
         <td class="muted">${esc(p?p.un:(l.un||"unid."))}</td>
@@ -1064,7 +1080,7 @@ function renderEst(){
         <input type="number" min="0" step="1" value="1" data-addq="${di}" title="Quantidade">
         <input type="number" min="0" step="1" placeholder="min" data-addm="${di}" title="Minutos por unidade (vazio = padrão do banco)">
         <button class="btn" data-add="${di}">Adicionar</button>
-        <div class="combo cm" data-cb="m" data-d="${di}"><input class="cbi" placeholder="Aplicar modelo: digite…" autocomplete="off" spellcheck="false"><div class="cmenu"></div></div>
+        <span class="addmod"><div class="combo cm" data-cb="m" data-d="${di}"><input class="cbi" placeholder="Aplicar modelo: digite…" autocomplete="off" spellcheck="false"><div class="cmenu"></div></div><input type="number" min="0" step="1" value="1" data-addmq="${di}" title="Quantidade do modelo (multiplica todas as linhas dele)"></span>
         ${!d.obs&&!disc?`<button class="btn" data-obs="${di}">+ Obs.</button>`:""}
         ${d.linhas.length?`<button class="btn" data-dmod="${di}" title="Guardar esta demanda como modelo reutilizável">Salvar como modelo</button>`:""}
       </div>
@@ -1113,17 +1129,35 @@ dl.addEventListener("change",e=>{
     const l=d.linhas[+t.dataset.l], k=t.dataset.k;
     if(k==="det") l.det=t.value;
     else if(k==="real") l.real=t.value===""?undefined:Math.max(0,+t.value||0);
-    else l[k]=Math.max(0,+t.value||0);
-  } else return;
+    else{l[k]=Math.max(0,+t.value||0); const b=k==="qtd"&&l.blk&&blocoDe(d,l.blk); if(b) l.qb=b.qtd?l.qtd/b.qtd:l.qtd}
+  }
+  else if(t.dataset.blkq!==undefined){const b=blocoDe(d,t.dataset.blkq); if(b) qtdBloco(d,b,t.value)}
+  else return;
   persist(); renderEst();
 });
-function aplicarModelo(di,codModelo){
+// Modelo na estimativa = bloco: as linhas guardam a quantidade de 1 unidade (qb) e a quantidade do bloco multiplica todas
+const blocoDe=(d,id)=>(d.blocos||[]).find(b=>b.id===id);
+function qtdBloco(d,b,v){b.qtd=Math.max(0,Math.round((+v||0)*100)/100); d.linhas.forEach(l=>{if(l.blk===b.id) l.qtd=Math.round((l.qb??l.qtd)*b.qtd*100)/100})}
+function tirarBloco(d,id,comLinhas){if(comLinhas) d.linhas=d.linhas.filter(l=>l.blk!==id); else d.linhas.forEach(l=>{if(l.blk===id){delete l.blk;delete l.qb}}); d.blocos=(d.blocos||[]).filter(b=>b.id!==id)}
+// demanda → itens de modelo (blocos viram grupos, com a quantidade de 1 unidade e o multiplicador do bloco)
+function itensDaDemanda(d){
+  const out=[], vistos={};
+  d.linhas.forEach(l=>{const it=[l.cod||"",l.blk&&blocoDe(d,l.blk)?(l.qb??l.qtd):l.qtd,l.det||"",l.min,l.cod?"":(l.desc||"")], b=l.blk&&blocoDe(d,l.blk);
+    if(!b){out.push(it);return}
+    if(!vistos[b.id]){vistos[b.id]={tipo:"grupo",cod:(b.cod||"G").replace(/[^A-Za-z0-9.]/g,"").slice(0,8)||"G",nome:b.nome,qtd:b.qtd||1,itens:[]};out.push(vistos[b.id])}
+    vistos[b.id].itens.push(it)});
+  return out;
+}
+function aplicarModelo(di,codModelo,qtdM){
   const d=est.demandas[di], tp=db.modelos.find(x=>x.cod===codModelo); if(!tp) return;
+  const mq=qtdM!=null?Math.max(0,+qtdM||0):1, blk={id:uid(),cod:tp.cod,nome:tp.nome,qtd:mq};
+  (d.blocos=d.blocos||[]).push(blk);
   // grupos e modelos vinculados viram linhas; a quantidade é multiplicada pelos grupos e o detalhe leva o nome do grupo
   folhasDe(tp).forEach(({it:[cod,q0,det,min,desc],q,caminho})=>{
     const g=caminho[caminho.length-1]||"", dd=[g,det].filter(Boolean).join(" · ");
-    if(cod){const p=proc(cod); if(p) d.linhas.push({cod,det:dd,qtd:q,min:min??p.min})}
-    else if(desc) d.linhas.push({cod:"",desc,det:dd,qtd:q,min:+min||0});
+    const qt=Math.round(q*mq*100)/100;
+    if(cod){const p=proc(cod); if(p) d.linhas.push({cod,det:dd,qtd:qt,qb:q,blk:blk.id,min:min??p.min})}
+    else if(desc) d.linhas.push({cod:"",desc,det:dd,qtd:qt,qb:q,blk:blk.id,min:+min||0});
   });
   persist(); renderEst();
 }
@@ -1181,7 +1215,7 @@ async function escolherCombo(cb,x){
     const qi=document.querySelector(`[data-addq="${di}"]`); if(qi){qi.focus();qi.select()}
   }else{
     if(x.v==="__novomod"){
-      const d=est.demandas[di], cod=criarModelo(q,d.linhas.map(l=>[l.cod||"",l.qtd,l.det||"",l.min,l.cod?"":(l.desc||"")]));
+      const d=est.demandas[di], cod=criarModelo(q,itensDaDemanda(d));
       inp.value=""; uiAlert(`Modelo ${cod} · “${q}” criado com ${d.linhas.length} linhas desta demanda.`);
     }else if(x.v==="__novomodvazio"){
       const cod=criarModelo(q,[]); inp.value="";
@@ -1189,7 +1223,7 @@ async function escolherCombo(cb,x){
         document.querySelector('nav button[data-tab="tpl"]').click();
         const card=document.querySelector('[data-mcard="0"]'); if(card) card.scrollIntoView({behavior:"smooth",block:"center"});
       }
-    }else{inp.value="";aplicarModelo(di,x.v)}
+    }else{inp.value="";const mq=document.querySelector(`[data-addmq="${di}"]`);aplicarModelo(di,x.v,mq?mq.value:1);if(mq) mq.value=1}
   }
 }
 function addItemModelo(mi,cod){
@@ -1260,7 +1294,13 @@ dl.addEventListener("click",async e=>{
     }else d.linhas.push({cod,det,qtd,min:mIn===""?proc(cod).min:Math.max(0,+mIn||0)});
     persist(); renderEst();
   }else if(ds.dell){
-    const [di,li]=ds.dell.split(":").map(Number); est.demandas[di].linhas.splice(li,1); persist(); renderEst();
+    const [di,li]=ds.dell.split(":").map(Number), d=est.demandas[di], l=d.linhas.splice(li,1)[0];
+    if(l&&l.blk&&!d.linhas.some(x=>x.blk===l.blk)) tirarBloco(d,l.blk,false);
+    persist(); renderEst();
+  }else if(ds.blkdes||ds.blkdel){
+    const [di,id]=(ds.blkdes||ds.blkdel).split(":"), d=est.demandas[+di], b=blocoDe(d,id); if(!b) return;
+    if(ds.blkdel&&!await uiConfirm(`Remover o modelo “${b.cod} · ${b.nome}” e as ${d.linhas.filter(l=>l.blk===id).length} linhas dele desta demanda?`,{ok:"Remover",cancel:"Manter"})) return;
+    tirarBloco(d,id,!!ds.blkdel); persist(); renderEst();
   }else if(ds.deld!==undefined){
     if(await uiConfirm(`Excluir a demanda “${est.demandas[+ds.deld].nome}”? Ela fica 60 dias na lixeira (aba Parâmetros).`)){paraLixeira("demanda",est.demandas[+ds.deld],{estId:est.id,estNome:est.nome});est.demandas.splice(+ds.deld,1);persist();renderEst()}
   }else if(ds.dign!==undefined){
@@ -1270,7 +1310,7 @@ dl.addEventListener("click",async e=>{
   }else if(ds.dmod!==undefined){
     const d=est.demandas[+ds.dmod], nome=(await uiPrompt("Nome do modelo:",d.nome)||"").trim(); if(!nome) return;
     let n=db.modelos.length+1, cod; do{cod="MD-"+String(n++).padStart(2,"0")}while(db.modelos.some(m=>m.cod===cod));
-    db.modelos.unshift({cod,nome,itens:d.linhas.map(l=>[l.cod||"",l.qtd,l.det||"",l.min,l.cod?"":(l.desc||"")])});
+    db.modelos.unshift({cod,nome,itens:itensDaDemanda(d),catalogo:catAtual()});
     persist(); renderTpl(); uiAlert(`Modelo ${cod} · “${nome}” salvo com ${d.linhas.length} linhas. Ele aparece em “Aplicar modelo…” e na aba Modelos.`);
   }else if(ds.up!==undefined){
     const i=+ds.up; if(i>0){[est.demandas[i-1],est.demandas[i]]=[est.demandas[i],est.demandas[i-1]];persist();renderEst()}

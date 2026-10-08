@@ -295,3 +295,12 @@ prazo (dias)    = total ÷ (horas produtivas/dia × pessoas)
   - **Fase + grupo:** ex. CAD-CEN-01.
 - **Processo novo:** o código acompanha a regra enquanto você muda fase e grupo; se você digitar outro código, ele fica.
 - **Processo existente:** o código não muda sozinho. O editor mostra a sugestão e o botão **"usar"**, que renomeia o código também em modelos e estimativas.
+
+## Processos e modelos na estimativa, cada um com quantidade
+
+- **Processo:** entra como linha, com quantidade, detalhe e minutos.
+- **Modelo:** "Aplicar modelo" tem campo de **quantidade** e entra como **bloco** (cabeçalho "modelo · código · nome").
+  - Mudar a quantidade do bloco multiplica todas as linhas dele.
+  - Cada linha continua editável. A quantidade digitada vira a proporção daquela linha dentro do modelo, e o bloco segue multiplicando.
+  - **⤫ Desagrupar** solta as linhas. **×** remove o modelo e as linhas dele.
+- **Salvar como modelo** de uma demanda com blocos gera um modelo com os blocos como grupos, preservando quantidades e multiplicadores.
