@@ -41,6 +41,8 @@ input,select,textarea{font:inherit;color:var(--text);background:var(--surface);b
 input[type=number]{width:80px}
 textarea{width:100%;min-height:54px;resize:vertical}
 button.btn{font:inherit;border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:6px;padding:6px 11px;cursor:pointer;white-space:nowrap}
+button.btn:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.5;cursor:not-allowed}
+td.acts .btn{margin-right:4px}
 button.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
 button.x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:2px 6px}
 button.x:hover{color:var(--warn)}
@@ -79,6 +81,15 @@ td.acts{white-space:nowrap}td.acts .x{font-size:16px}
 .range{display:flex;justify-content:space-between;font-size:13px;margin-top:10px;color:var(--muted)}
 .range b{color:var(--text)}
 .empty{padding:20px;text-align:center;color:var(--muted)}
+.estbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed var(--line)}
+.estbar select{width:auto}
+.pill.st-r{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.pill.st-f{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.pill.st-a{background:var(--surface-2);color:var(--muted)}
+#arqList table td{vertical-align:middle}
+#arqList tr.cur td{background:color-mix(in srgb,var(--accent) 9%,transparent)}
+#arqList tr.mes td{background:var(--surface-2);font-size:12px;font-weight:600;color:var(--muted);text-transform:capitalize}
+.lk{opacity:.92}
 dialog#modal{border:1px solid var(--line);border-radius:12px;padding:0;background:var(--surface);color:var(--text);width:min(980px,calc(100vw - 24px));max-height:calc(100vh - 32px)}
 dialog#modal::backdrop{background:rgba(0,0,0,.45)}
 .mbox{display:flex;flex-direction:column;max-height:calc(100vh - 34px)}
@@ -140,9 +151,22 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
 <section id="est" class="tab on">
   <div class="grid">
     <div>
-      <div class="card">
+      <div class="card noprint" id="arqCard">
+        <div class="dem-h"><h2 style="margin:0;flex:1">Arquivo de estimativas</h2><span class="muted" id="arqSync"></span></div>
         <div class="row">
-          <label style="flex:1;min-width:200px">Projeto / cliente<input id="pNome" placeholder="Ex.: Estimativa LT – Fábrica X"></label>
+          <label style="flex:1;min-width:180px">Cliente (pasta)<select id="arqCli"></select></label>
+          <button class="btn" id="arqCliNovo">+ Cliente</button>
+          <button class="btn" id="arqCliRen">Renomear cliente</button>
+          <button class="btn pri" id="arqNova">+ Nova estimativa</button>
+          <select id="arqTpl" style="width:auto;max-width:240px"></select>
+          <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="arqArq"> mostrar arquivadas</label>
+        </div>
+        <div id="arqList"></div>
+      </div>
+      <div class="card">
+        <div class="estbar" id="estBar"></div>
+        <div class="row">
+          <label style="flex:1;min-width:200px">Nome da estimativa<input id="pNome" placeholder="Ex.: Linha Cozinha Prime"></label>
           <label>Responsável<input id="pResp" placeholder="Nome"></label>
           <label>Data<input id="pData" type="date"></label>
         </div>
@@ -220,8 +244,13 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
 <!-- ================= MODELOS ================= -->
 <section id="tpl" class="tab">
   <div class="card">
+    <h2>Templates de estimativa</h2>
+    <p class="muted">Uma estimativa inteira (todas as demandas e linhas) guardada para reaproveitar. Crie pelo botão “Salvar como template” na estimativa; use aqui ou em “Nova a partir de template” no Arquivo.</p>
+    <div id="estTplList"></div>
+  </div>
+  <div class="card">
     <h2>Modelos de demanda</h2>
-    <p class="muted">Pacotes de processos que se repetem em toda demanda (fechamento, orçamento, montagem de entidade…). Na estimativa, “Aplicar modelo” insere as linhas na demanda, já com as quantidades, e você ajusta.</p>
+    <p class="muted">Pacotes de processos que se repetem (fechamento, orçamento, montagem de entidade…). Crie aqui ou pelo botão “Salvar como modelo” de uma demanda pronta. Na estimativa, “Aplicar modelo” insere as linhas na demanda e você ajusta.</p>
     <div class="toolbar"><button class="btn pri" id="tAdd">+ Novo modelo</button></div>
     <div id="tplList"></div>
   </div>
@@ -417,7 +446,93 @@ function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 const hoje=()=>new Date().toISOString().slice(0,10);
 let db=load(K_DB,null)||seedDb();
 let est=load(K_EST,null)||Object.assign(clone(EXEMPLO),{data:hoje()});
-const persist=()=>{save(K_DB,db);save(K_EST,est)};
+/* ---------- Arquivo: clientes (pastas) e estimativas versionadas ---------- */
+const K_ARQ="estimacerto.arq.v1";
+const aparelhoNovo=load(K_ARQ,null)===null;
+let arq=load(K_ARQ,null)||{clientes:{},estimativas:{}};
+const semente={cli:null,est:null};  // criados localmente num aparelho novo; descartados se a nuvem já tiver dados
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const semTs=o=>JSON.stringify({...o,_ts:0,atualizadoEm:0});
+(function migrar(){
+  if(!db.templates) db.templates=[];
+  if(!Object.keys(arq.clientes).length){const c={id:uid(),nome:est.nome==="Estimativa LT"?"Exemplo":"Geral",criadoEm:Date.now()};arq.clientes[c.id]=c;if(aparelhoNovo) semente.cli=c.id}
+  if(!est.id){const t=Date.now();Object.assign(est,{id:uid(),clienteId:Object.keys(arq.clientes)[0],versao:1,status:"rascunho",arquivada:false,criadoEm:t,atualizadoEm:t});est.familia=est.id;if(aparelhoNovo) semente.est=est.id}
+  if(!arq.estimativas[est.id]) arq.estimativas[est.id]=clone(est);
+})();
+let dbJson=semTs(db);
+const persist=()=>{
+  const now=Date.now();
+  const j=semTs(db); if(j!==dbJson){dbJson=j;db._ts=now;Sync.banco()}
+  save(K_DB,db);
+  if(est.id){
+    const old=arq.estimativas[est.id];
+    if(!old||semTs(old)!==semTs(est)){est.atualizadoEm=now;arq.estimativas[est.id]=clone(est);Sync.est(est.id);if(typeof renderArquivo==="function") renderArquivo()}
+  }
+  save(K_EST,est); save(K_ARQ,arq);
+};
+/* ---------- Sincronização com o banco de dados do link publicado ---------- */
+const Sync={db:null,timers:{},last:{},chain:{},primeira:true,
+  status(t){const el=document.getElementById("arqSync"); if(el) el.textContent=t},
+  write(path,getter){
+    if(!this.db) return;
+    clearTimeout(this.timers[path]);
+    this.timers[path]=setTimeout(()=>{
+      const v=getter(); if(!v) return;
+      const j=JSON.stringify(v); if(this.last[path]===j) return; this.last[path]=j;
+      this.status("salvando…");
+      this.chain[path]=(this.chain[path]||Promise.resolve()).then(()=>this.db.doc(path).set(JSON.parse(j)))
+        .then(()=>this.status("salvo na nuvem ✓"),e=>{delete this.last[path];this.status(e&&e.code==="quota_exceeded"?"limite do banco de dados atingido":"falha ao salvar ("+(e&&e.code||"erro")+")")});
+    },800);
+  },
+  del(path){if(this.db){delete this.last[path];this.db.doc(path).delete().catch(()=>{})}},
+  banco(){this.write("config/banco",()=>({banco:db,_ts:db._ts||Date.now()}))},
+  est(id){this.write("estimativas/"+id,()=>arq.estimativas[id])},
+  cli(id){this.write("clientes/"+id,()=>arq.clientes[id])},
+  async init(){
+    if(!(window.claude&&window.claude.use)){this.status("salvo neste navegador");return}
+    const d=await window.claude.use("db").catch(()=>null);
+    if(!d){this.status("salvo neste navegador");return}
+    this.db=d; this.status("conectando…");
+    try{
+      const b=await d.doc("config/banco").get();
+      if(b.exists){const r=b.data(); this.last["config/banco"]=JSON.stringify(r);
+        if((r._ts||0)>(db._ts||0)){db=Object.assign(seedDb(),clone(r.banco));if(!db.templates)db.templates=[];dbJson=semTs(db);save(K_DB,db);render()}
+        else if((db._ts||0)>(r._ts||0)) this.banco();
+      }else this.banco();
+    }catch(e){}
+    const err=e=>this.status("sincronização interrompida ("+(e&&e.code||"erro")+")");
+    let pc=true;
+    d.collection("clientes").onSnapshot(sn=>{
+      sn.docChanges().forEach(ch=>{const r=ch.doc.data();
+        if(ch.type==="removed"){delete arq.clientes[ch.doc.id];return}
+        this.last["clientes/"+ch.doc.id]=JSON.stringify(r); arq.clientes[ch.doc.id]=clone(r)});
+      if(pc){pc=false;
+        if(semente.cli&&sn.docs.length&&!sn.docs.some(x=>x.id===semente.cli)){delete arq.clientes[semente.cli];clearTimeout(this.timers["clientes/"+semente.cli])}
+        Object.keys(arq.clientes).forEach(id=>{if(!sn.docs.some(x=>x.id===id)) this.cli(id)})}
+      save(K_ARQ,arq); renderArquivo();
+    },err);
+    let pe=true;
+    d.collection("estimativas").onSnapshot(sn=>{
+      sn.docChanges().forEach(ch=>{
+        const id=ch.doc.id;
+        if(ch.type==="removed"){delete arq.estimativas[id];return}
+        const r=ch.doc.data(), loc=arq.estimativas[id];
+        this.last["estimativas/"+id]=JSON.stringify(r);
+        if(!loc||(r.atualizadoEm||0)>=(loc.atualizadoEm||0)){
+          arq.estimativas[id]=clone(r);
+          if(est.id===id&&semTs(r)!==semTs(est)){est=clone(r);save(K_EST,est);renderEst()}
+        }else this.est(id);
+      });
+      if(pe){pe=false;
+        if(semente.est&&sn.docs.length&&!sn.docs.some(x=>x.id===semente.est)){
+          delete arq.estimativas[semente.est]; clearTimeout(this.timers["estimativas/"+semente.est]);
+          if(est.id===semente.est){const rec=Object.values(arq.estimativas).sort((a,b)=>(b.atualizadoEm||0)-(a.atualizadoEm||0))[0]; if(rec){est=clone(rec);arqCliSel=est.clienteId;save(K_EST,est);renderEst()}}
+        }
+        Object.keys(arq.estimativas).forEach(id=>{if(!sn.docs.some(x=>x.id===id)) this.est(id)})}
+      save(K_ARQ,arq); renderArquivo(); this.status("salvo na nuvem ✓");
+    },err);
+  }
+};
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -439,10 +554,10 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
 /* ================= CÁLCULO ================= */
 const lineMin=l=>(+l.qtd||0)*(+l.min||0);
 const lineFase=l=>(proc(l.cod)||{}).fase||l.fase||"Outros";
-function calc(){
+function calc(e=est){
   const c=db.cfg, porDem=[], porFase={};
   let base=0, real=0, estComReal=0;
-  est.demandas.forEach(d=>{
+  (e.demandas||[]).forEach(d=>{
     const t=d.linhas.reduce((s,l)=>s+lineMin(l),0);
     porDem.push(t);
     if(d.status==="discussao") return;
@@ -468,7 +583,22 @@ function procOptions(sel){
 }
 const tplOptions=()=>'<option value="">Aplicar modelo…</option>'+db.modelos.map(t=>`<option value="${esc(t.cod)}">${esc(t.cod)} · ${esc(t.nome)}</option>`).join("");
 
+function renderEstBar(){
+  const fechada=est.status==="fechada";
+  const clis=Object.values(arq.clientes).sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+  $("#estBar").innerHTML=`<span class="muted">Cliente</span><select id="estCli">${clis.map(c=>`<option value="${esc(c.id)}" ${c.id===est.clienteId?"selected":""}>${esc(c.nome)}</option>`).join("")}</select>
+    <span class="pill">v${est.versao||1}</span>
+    <span class="pill ${fechada?"st-f":"st-r"}">${fechada?"Fechada em "+new Date(est.fechadaEm||Date.now()).toLocaleDateString("pt-BR"):"Rascunho"}</span>
+    ${est.arquivada?'<span class="pill st-a">arquivada</span>':""}
+    <span style="flex:1"></span>
+    ${fechada?'<button class="btn" id="btnReabrir">Reabrir para edição</button>':'<button class="btn pri" id="btnFechar">Fechar estimativa</button>'}
+    <button class="btn" id="btnNovaVersao">Nova versão</button>
+    <button class="btn" id="btnSalvarTpl">Salvar como template</button>`;
+  ["btnToggl","btnZoho"].forEach(id=>{const b=document.getElementById(id);b.disabled=!fechada;b.title=fechada?"":"Feche a estimativa para liberar"});
+  ["btnNovaDem","btnXmind","btnExemplo","btnClear","pNome","pResp","pData"].forEach(id=>document.getElementById(id).disabled=fechada);
+}
 function renderEst(){
+  renderEstBar();
   $("#pNome").value=est.nome||""; $("#pResp").value=est.resp||""; $("#pData").value=est.data||"";
   const r=calc();
   const popts=procOptions(""), topts=tplOptions();
@@ -511,11 +641,16 @@ function renderEst(){
         <button class="btn" data-add="${di}">Adicionar</button>
         <select data-addt="${di}" style="flex:0 1 220px;min-width:160px">${topts}</select>
         ${!d.obs&&!disc?`<button class="btn" data-obs="${di}">+ Obs.</button>`:""}
+        ${d.linhas.length?`<button class="btn" data-dmod="${di}" title="Guardar esta demanda como modelo reutilizável">Salvar como modelo</button>`:""}
       </div>
       <div class="sub"><span class="muted">${d.linhas.length} linhas</span><span>Subtotal <b>${hm(r.porDem[di])}</b> (${hrs(r.porDem[di])})${disc?' <span class="pill w">não contabilizada</span>':""}</span></div>
     </div>`;
   }).join("")||'<div class="card empty">Nenhuma demanda. Crie uma, importe um XMind ou carregue o exemplo.</div>';
 
+  if(est.status==="fechada"){
+    $("#demList").querySelectorAll("input,select,textarea,button").forEach(el=>{if(el.dataset.k!=="real") el.disabled=true});
+    $("#demList").querySelectorAll(".addrow").forEach(el=>el.style.display="none");
+  }
   const c=db.cfg;
   $("#kTotal").textContent=hrs(r.total);
   $("#kBase").textContent=num(r.base/60);
@@ -548,7 +683,10 @@ dl.addEventListener("change",e=>{
   const t=e.target;
   if(t.dataset.addt===undefined||!t.value) return;
   const d=est.demandas[+t.dataset.addt], tp=db.modelos.find(x=>x.cod===t.value); if(!tp) return;
-  tp.itens.forEach(([cod,q])=>{const p=proc(cod); if(p) d.linhas.push({cod,det:"",qtd:q,min:p.min})});
+  tp.itens.forEach(([cod,q,det,min,desc])=>{
+    if(cod){const p=proc(cod); if(p) d.linhas.push({cod,det:det||"",qtd:q,min:min??p.min})}
+    else if(desc) d.linhas.push({cod:"",desc,det:"",qtd:q,min:+min||0});
+  });
   persist(); renderEst();
 });
 dl.addEventListener("click",e=>{
@@ -569,6 +707,11 @@ dl.addEventListener("click",e=>{
     const [di,li]=ds.dell.split(":").map(Number); est.demandas[di].linhas.splice(li,1); persist(); renderEst();
   }else if(ds.deld!==undefined){
     if(confirm(`Excluir a demanda “${est.demandas[+ds.deld].nome}”?`)){est.demandas.splice(+ds.deld,1);persist();renderEst()}
+  }else if(ds.dmod!==undefined){
+    const d=est.demandas[+ds.dmod], nome=(prompt("Nome do modelo:",d.nome)||"").trim(); if(!nome) return;
+    let n=db.modelos.length+1, cod; do{cod="MD-"+String(n++).padStart(2,"0")}while(db.modelos.some(m=>m.cod===cod));
+    db.modelos.unshift({cod,nome,itens:d.linhas.map(l=>[l.cod||"",l.qtd,l.det||"",l.min,l.cod?"":(l.desc||"")])});
+    persist(); renderTpl(); alert(`Modelo ${cod} · “${nome}” salvo com ${d.linhas.length} linhas. Ele aparece em “Aplicar modelo…” e na aba Modelos.`);
   }else if(ds.up!==undefined){
     const i=+ds.up; if(i>0){[est.demandas[i-1],est.demandas[i]]=[est.demandas[i],est.demandas[i-1]];persist();renderEst()}
   }else if(ds.obs!==undefined){
@@ -581,8 +724,8 @@ dl.addEventListener("click",e=>{
 }));
 $("#btnNovaDem").onclick=()=>{est.demandas.push({nome:"Nova demanda",status:"estimar",obs:"",linhas:[]});persist();renderEst();
   const ins=document.querySelectorAll("#demList input.nome"); const last=ins[ins.length-1]; last.focus(); last.select()};
-$("#btnClear").onclick=()=>{if(confirm("Limpar a estimativa atual?")){est={nome:"",resp:"",data:hoje(),demandas:[]};persist();renderEst()}};
-$("#btnExemplo").onclick=()=>{if(confirm("Substituir a estimativa atual pelo exemplo “Estimativa LT”?")){est=Object.assign(clone(EXEMPLO),{data:hoje()});persist();renderEst()}};
+$("#btnClear").onclick=()=>{if(confirm("Remover todas as demandas desta estimativa?")){est.demandas=[];persist();renderEst()}};
+$("#btnExemplo").onclick=()=>{if(confirm("Substituir as demandas desta estimativa pelo exemplo “Estimativa LT”?")){est.demandas=clone(EXEMPLO.demandas);persist();renderEst()}};
 $("#btnPrint").onclick=()=>window.print();
 $("#btnCsv").onclick=()=>{
   const r=calc(), c=db.cfg;
@@ -598,7 +741,9 @@ $("#btnCsv").onclick=()=>{
 $("#btnSaveEst").onclick=()=>download(JSON.stringify({estimativa:est,cfg:db.cfg},null,2),(est.nome||"estimativa")+".estimacerto.json","application/json");
 $("#btnLoadEst").onclick=()=>pickFile(".json",async f=>{
   const o=JSON.parse(await f.text()); if(!o.estimativa||!o.estimativa.demandas) throw new Error("Arquivo não é uma estimativa EstimaCerto v2");
-  est=o.estimativa; if(o.cfg) db.cfg=o.cfg; persist(); render();
+  const t=Date.now(), id=uid();
+  est={...clone(o.estimativa),id,familia:id,clienteId:arqCliSel||est.clienteId,versao:1,status:"rascunho",arquivada:false,criadoEm:t,atualizadoEm:t};
+  persist(); render(); alert("Estimativa importada como nova estimativa no cliente selecionado.");
 });
 
 /* ================= IMPORTAÇÃO XMIND ================= */
@@ -665,7 +810,7 @@ $("#btnXmind").onclick=()=>pickFile(".xmind",async f=>{
   const dems=xmindToDemandas(sh);
   const nLin=dems.reduce((s,d)=>s+d.linhas.length,0), nAv=dems.reduce((s,d)=>s+d.linhas.filter(l=>!l.cod).length,0);
   const subst=est.demandas.length?confirm(`${dems.length} demandas e ${nLin} linhas lidas (${nAv} sem processo reconhecido, entram como avulsas).\n\nOK = substituir a estimativa atual · Cancelar = adicionar às demandas atuais`):true;
-  if(subst) est={nome:(sh.rootTopic.title||"").trim()||f.name.replace(/\.xmind$/i,""),resp:est.resp||"",data:hoje(),demandas:dems};
+  if(subst){est.demandas=dems; if(!est.demandas.length||!est.nome||est.nome==="Nova estimativa") est.nome=(sh.rootTopic.title||"").trim()||f.name.replace(/\.xmind$/i,"")}
   else est.demandas.push(...dems);
   persist(); renderEst();
 });
@@ -820,12 +965,124 @@ $("#dbImport").onclick=()=>pickFile(".json,.csv",async f=>{
 });
 $("#dbReset").onclick=()=>{if(confirm("Restaurar o banco padrão? Processos, modelos e vínculos personalizados serão substituídos.")){db=seedDb();persist();render()}};
 
+/* ================= ARQUIVO DE ESTIMATIVAS ================= */
+let arqCliSel=null;
+const mesFmt=t=>new Date(t).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
+const dataDe=e=>e.data?new Date(e.data+"T12:00:00").getTime():(e.criadoEm||Date.now());
+function novaEstimativa(clienteId,base){
+  const t=Date.now(), id=uid();
+  const e={nome:"Nova estimativa",resp:est.resp||"",data:hoje(),demandas:[],...(base||{}),id,familia:id,clienteId,versao:1,status:"rascunho",arquivada:false,criadoEm:t,atualizadoEm:t,fechadaEm:null};
+  arq.estimativas[id]=clone(e); Sync.est(id); return e;
+}
+function abrirEstimativa(id){
+  const e=arq.estimativas[id]; if(!e) return;
+  est=clone(e); arqCliSel=est.clienteId; save(K_EST,est); renderEst(); renderArquivo();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+const limparExecucao=demandas=>clone(demandas).map(d=>({...d,toggl:undefined,linhas:d.linhas.map(l=>{const {real,toggl,path,...x}=l;return x})}));
+function renderArquivo(){
+  const clis=Object.values(arq.clientes).sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+  if(!arqCliSel||!arq.clientes[arqCliSel]) arqCliSel=est.clienteId&&arq.clientes[est.clienteId]?est.clienteId:(clis[0]||{}).id;
+  const conta=id=>Object.values(arq.estimativas).filter(e=>e.clienteId===id&&!e.arquivada).length;
+  $("#arqCli").innerHTML=clis.map(c=>`<option value="${esc(c.id)}" ${c.id===arqCliSel?"selected":""}>${esc(c.nome)} (${conta(c.id)})</option>`).join("");
+  $("#arqTpl").innerHTML='<option value="">Nova a partir de template…</option>'+(db.templates||[]).map(t=>`<option value="${esc(t.id)}">${esc(t.nome)}</option>`).join("");
+  const mostrarArq=$("#arqArq").checked;
+  const lista=Object.values(arq.estimativas).filter(e=>e.clienteId===arqCliSel&&(mostrarArq||!e.arquivada)).sort((a,b)=>dataDe(b)-dataDe(a)||(b.atualizadoEm||0)-(a.atualizadoEm||0));
+  if(!lista.length){$("#arqList").innerHTML='<p class="empty" style="padding:12px">Nenhuma estimativa neste cliente. Crie uma nova.</p>';return}
+  let mes="", h="";
+  lista.forEach(e=>{
+    const m=mesFmt(dataDe(e)); if(m!==mes){mes=m;h+=`<tr class="mes"><td colspan="6">${esc(m)}</td></tr>`}
+    const r=calc(e), st=e.arquivada?'<span class="pill st-a">arquivada</span>':e.status==="fechada"?'<span class="pill st-f">fechada</span>':'<span class="pill st-r">rascunho</span>';
+    h+=`<tr class="${e.id===est.id?"cur":""}"><td><b>${esc(e.nome||"(sem nome)")}</b> <span class="pill">v${e.versao||1}</span>${e.id===est.id?' <span class="muted">· aberta</span>':""}</td>
+      <td>${st}</td><td class="n">${hrs(r.total)}</td><td class="n">${brl(r.valor)}</td>
+      <td class="muted" title="Atualizada em ${new Date(e.atualizadoEm||0).toLocaleString("pt-BR")}">${e.data?new Date(e.data+"T12:00:00").toLocaleDateString("pt-BR"):""}</td>
+      <td class="acts">${e.id!==est.id?`<button class="btn sm pri" data-aab="${e.id}">Abrir</button>`:""}<button class="btn sm" data-aren="${e.id}">Renomear</button><button class="btn sm" data-aver="${e.id}">Nova versão</button><button class="btn sm" data-aarq="${e.id}">${e.arquivada?"Desarquivar":"Arquivar"}</button><button class="x" data-adel="${e.id}" title="Excluir">×</button></td></tr>`;
+  });
+  $("#arqList").innerHTML=`<div class="tbl"><table><thead><tr><th>Estimativa</th><th>Status</th><th class="n">Total</th><th class="n">Valor</th><th>Data</th><th>Ações</th></tr></thead><tbody>${h}</tbody></table></div>`;
+}
+function novaVersao(id){
+  const src=id===est.id?est:arq.estimativas[id]; if(!src) return;
+  if(id===est.id) persist();
+  const fam=src.familia||src.id, v=Math.max(...Object.values(arq.estimativas).filter(e=>(e.familia||e.id)===fam).map(e=>e.versao||1))+1;
+  const t=Date.now(), nid=uid();
+  arq.estimativas[nid]={...clone(src),id:nid,familia:fam,versao:v,status:"rascunho",fechadaEm:null,arquivada:false,data:hoje(),criadoEm:t,atualizadoEm:t,demandas:limparExecucao(src.demandas)};
+  Sync.est(nid); save(K_ARQ,arq); abrirEstimativa(nid);
+}
+$("#arqCli").onchange=e=>{arqCliSel=e.target.value;renderArquivo()};
+$("#arqArq").onchange=renderArquivo;
+$("#arqCliNovo").onclick=()=>{
+  const nome=(prompt("Nome do cliente:")||"").trim(); if(!nome) return;
+  const c={id:uid(),nome,criadoEm:Date.now()}; arq.clientes[c.id]=c; Sync.cli(c.id); arqCliSel=c.id; save(K_ARQ,arq); renderArquivo(); renderEstBar();
+};
+$("#arqCliRen").onclick=()=>{
+  const c=arq.clientes[arqCliSel]; if(!c) return;
+  const nome=(prompt("Novo nome do cliente:",c.nome)||"").trim(); if(!nome) return;
+  c.nome=nome; Sync.cli(c.id); save(K_ARQ,arq); renderArquivo(); renderEstBar();
+};
+$("#arqNova").onclick=()=>{persist(); const e=novaEstimativa(arqCliSel); save(K_ARQ,arq); abrirEstimativa(e.id); setTimeout(()=>{$("#pNome").focus();$("#pNome").select()},300)};
+$("#arqTpl").onchange=e=>{
+  const t=(db.templates||[]).find(x=>x.id===e.target.value); e.target.value=""; if(!t) return;
+  persist(); const n=novaEstimativa(arqCliSel,{nome:t.nome,demandas:clone(t.demandas)}); save(K_ARQ,arq); abrirEstimativa(n.id);
+};
+$("#arqList").addEventListener("click",e=>{
+  const ds=e.target.dataset;
+  if(ds.aab){persist();abrirEstimativa(ds.aab)}
+  else if(ds.aren){
+    const x=ds.aren===est.id?est:arq.estimativas[ds.aren], nome=(prompt("Novo nome da estimativa:",x.nome)||"").trim(); if(!nome) return;
+    if(ds.aren===est.id){est.nome=nome;persist();renderEst()}else{x.nome=nome;x.atualizadoEm=Date.now();Sync.est(x.id);save(K_ARQ,arq);renderArquivo()}
+  }
+  else if(ds.aver) novaVersao(ds.aver);
+  else if(ds.aarq){
+    const x=ds.aarq===est.id?est:arq.estimativas[ds.aarq]; x.arquivada=!x.arquivada;
+    if(ds.aarq===est.id){persist();renderEst()}else{x.atualizadoEm=Date.now();Sync.est(x.id);save(K_ARQ,arq);renderArquivo()}
+  }
+  else if(ds.adel){
+    const x=arq.estimativas[ds.adel]||est;
+    if(!confirm(`Excluir definitivamente “${x.nome}” v${x.versao||1}? Prefira “Arquivar” se quiser guardar.`)) return;
+    delete arq.estimativas[ds.adel]; Sync.del("estimativas/"+ds.adel); save(K_ARQ,arq);
+    if(ds.adel===est.id){const outra=Object.values(arq.estimativas).filter(z=>z.clienteId===arqCliSel).sort((a,b)=>(b.atualizadoEm||0)-(a.atualizadoEm||0))[0]||novaEstimativa(arqCliSel);abrirEstimativa(outra.id)}
+    else renderArquivo();
+  }
+});
+$("#estBar").addEventListener("change",e=>{
+  if(e.target.id==="estCli"){est.clienteId=e.target.value;arqCliSel=est.clienteId;persist();renderArquivo()}
+});
+$("#estBar").addEventListener("click",e=>{
+  const id=e.target.id;
+  if(id==="btnFechar"){
+    if(!est.demandas.some(d=>d.linhas.length)){alert("A estimativa não tem linhas.");return}
+    if(!confirm("Fechar a estimativa? Ela fica travada para edição (a coluna Real continua editável) e libera Toggl e Zoho Invoice. Para mudar depois: Reabrir ou Nova versão.")) return;
+    est.status="fechada"; est.fechadaEm=Date.now(); persist(); renderEst();
+  }else if(id==="btnReabrir"){
+    if(!confirm("Reabrir para edição? Se ela já foi enviada ao cliente, prefira “Nova versão” para manter o histórico.")) return;
+    est.status="rascunho"; est.fechadaEm=null; persist(); renderEst();
+  }else if(id==="btnNovaVersao") novaVersao(est.id);
+  else if(id==="btnSalvarTpl"){
+    const nome=(prompt("Nome do template:",est.nome)||"").trim(); if(!nome) return;
+    db.templates.unshift({id:uid(),nome,demandas:limparExecucao(est.demandas),criadoEm:Date.now()});
+    persist(); renderTpl(); renderArquivo(); alert(`Template “${nome}” salvo. Use em Arquivo › “Nova a partir de template…” ou na aba Modelos.`);
+  }
+});
+function renderEstTpl(){
+  const ts=db.templates||[];
+  $("#estTplList").innerHTML=ts.length?`<div class="tbl"><table><thead><tr><th>Template</th><th class="n">Demandas</th><th class="n">Horas</th><th>Criado em</th><th>Ações</th></tr></thead><tbody>${ts.map((t,i)=>`<tr><td><b>${esc(t.nome)}</b></td><td class="n">${t.demandas.length}</td><td class="n">${hrs(calc(t).base)}</td><td class="muted">${new Date(t.criadoEm).toLocaleDateString("pt-BR")}</td>
+    <td class="acts"><button class="btn sm pri" data-tuse="${i}">Usar no cliente atual</button><button class="btn sm" data-tren="${i}">Renomear</button><button class="x" data-tdel="${i}" title="Excluir">×</button></td></tr>`).join("")}</tbody></table></div>`
+    :'<p class="empty" style="padding:12px">Nenhum template ainda. Na aba Estimativa, use “Salvar como template”.</p>';
+}
+$("#estTplList").addEventListener("click",e=>{
+  const ds=e.target.dataset, ts=db.templates;
+  if(ds.tuse!==undefined){persist();const t=ts[+ds.tuse],n=novaEstimativa(arqCliSel||est.clienteId,{nome:t.nome,demandas:clone(t.demandas)});save(K_ARQ,arq);document.querySelector('nav button[data-tab="est"]').click();abrirEstimativa(n.id)}
+  else if(ds.tren!==undefined){const t=ts[+ds.tren],nome=(prompt("Novo nome:",t.nome)||"").trim();if(nome){t.nome=nome;persist();renderEstTpl();renderArquivo()}}
+  else if(ds.tdel!==undefined){if(confirm(`Excluir o template “${ts[+ds.tdel].nome}”?`)){ts.splice(+ds.tdel,1);persist();renderEstTpl();renderArquivo()}}
+});
+
 /* ================= MODELOS ================= */
 function renderTpl(){
+  renderEstTpl();
   const opts=procOptions("").replace('<option value="__avulso">Linha avulsa (fora do banco)</option>',"");
   $("#tplList").innerHTML=db.modelos.map((m,mi)=>{
-    const tot=m.itens.reduce((s,[pc,q])=>s+((proc(pc)||{min:0}).min*q),0);
-    return `<div class="card" style="background:var(--surface-2)">
+    const tot=m.itens.reduce((s,[pc,q,det,min])=>s+((min??(proc(pc)||{min:0}).min)*q),0);
+    return `<div class="card" style="background:var(--surface-2)" data-mcard="${mi}">
       <div class="row" style="margin-bottom:10px">
         <label style="width:90px">Código<input value="${esc(m.cod)}" data-mi="${mi}" data-mk="cod"></label>
         <label style="flex:1;min-width:200px">Nome do modelo<input value="${esc(m.nome)}" data-mi="${mi}" data-mk="nome"></label>
@@ -833,9 +1090,9 @@ function renderTpl(){
         <button class="btn" data-mdel="${mi}">Excluir</button>
       </div>
       <div class="tbl"><table><thead><tr><th>Processo</th><th class="n">Qtd.</th><th class="n">Total</th><th></th></tr></thead><tbody>
-      ${m.itens.map(([pc,q],ii)=>{const p=proc(pc);return `<tr><td>${esc(pc)} · ${p?esc(p.nome):'<span class="muted">não encontrado</span>'}</td>
+      ${m.itens.map(([pc,q,det,min,desc],ii)=>{const p=proc(pc), mm=min??(p?p.min:0);return `<tr><td>${pc?`${esc(pc)} · ${p?esc(p.nome):'<span class="muted">não encontrado</span>'}`:`<span class="pill">avulso</span> ${esc(desc||"")}`}${det?` <span class="muted">— ${esc(det)}</span>`:""}${p&&min!=null&&+min!==+p.min?` <span class="diff">${num(min)} min/unid.</span>`:""}</td>
         <td class="n"><input type="number" min="0" step="1" value="${q}" data-mi="${mi}" data-ii="${ii}"></td>
-        <td class="n">${hm(p?p.min*q:0)}</td><td><button class="x" data-mi="${mi}" data-idel="${ii}">×</button></td></tr>`}).join("")}
+        <td class="n">${hm(mm*q)}</td><td><button class="x" data-mi="${mi}" data-idel="${ii}">×</button></td></tr>`}).join("")||'<tr><td colspan="4" class="muted">Sem processos. Adicione abaixo.</td></tr>'}
       </tbody></table></div>
       <div class="row" style="margin-top:10px"><select data-maddsel="${mi}" style="flex:1;min-width:200px">${opts}</select><button class="btn" data-madd="${mi}">+ Adicionar processo</button></div>
     </div>`}).join("")||'<p class="empty">Nenhum modelo cadastrado.</p>';
@@ -859,7 +1116,9 @@ $("#tplList").addEventListener("click",e=>{
 });
 $("#tAdd").onclick=()=>{
   let n=db.modelos.length+1, cod; do{cod="MD-"+String(n++).padStart(2,"0")}while(db.modelos.some(m=>m.cod===cod));
-  db.modelos.push({cod,nome:"Novo modelo",itens:[]}); persist(); renderTpl();
+  db.modelos.unshift({cod,nome:"Novo modelo",itens:[]}); persist(); renderTpl();
+  const card=document.querySelector('[data-mcard="0"]'); card.scrollIntoView({behavior:"smooth",block:"center"});
+  const inp=card.querySelector('[data-mk="nome"]'); setTimeout(()=>{inp.focus();inp.select()},250);
 };
 
 /* ================= LEITOR DE SYSTEM ================= */
@@ -1481,8 +1740,9 @@ function pickFile(accept,cb){
     try{await cb(f)}catch(err){alert("Não foi possível importar: "+err.message)}};
   inp.click();
 }
-function render(){renderEst();renderProc();renderTpl();renderSys();renderCfg()}
+function render(){renderEst();renderArquivo();renderProc();renderTpl();renderSys();renderCfg()}
 render();
+Sync.init();
 </script>
 </body>
 </html>

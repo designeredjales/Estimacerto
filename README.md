@@ -7,6 +7,22 @@ de uma demanda é *Σ quantidade × minutos*, mais reservas.
 Abra `index.html` no navegador (Chrome/Edge). Não precisa de instalação nem de internet; os dados
 ficam no próprio navegador (localStorage) e podem ser exportados em JSON/CSV.
 
+## Arquivo de estimativas (por cliente, versionado)
+
+No topo da aba Estimativa:
+- **Cliente = pasta.** “+ Cliente”, renomear, e a lista das estimativas do cliente agrupada por mês,
+  com status, total, valor e data. Ações: Abrir, Renomear, **Nova versão** (v2, v3… mantendo o histórico),
+  **Arquivar/Desarquivar** (“mostrar arquivadas”) e excluir.
+- **Rascunho → Fechada.** “Fechar estimativa” trava a edição (a coluna Real continua editável para o
+  realizado) e **só então libera Toggl e Zoho Invoice**. Para mudar: “Reabrir” ou “Nova versão”.
+- **Templates de estimativa**: “Salvar como template” guarda todas as demandas (sem realizado);
+  “Nova a partir de template…” cria uma estimativa nova no cliente selecionado.
+- **Modelos de demanda**: “Salvar como modelo” em qualquer demanda guarda suas linhas (com detalhe e
+  minutos) para “Aplicar modelo…” em outras demandas.
+- **Onde fica salvo**: no link publicado em claude.ai, clientes, estimativas, banco de processos,
+  modelos e templates ficam no banco de dados do artefato (recupera em qualquer aparelho). Aberto como
+  arquivo local, fica no navegador.
+
 ## Estrutura
 
 **Estimativa → Demandas → Linhas.** Uma estimativa tem várias demandas (ex.: *Prateleira deslizante*,
