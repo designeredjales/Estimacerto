@@ -219,3 +219,10 @@ prazo (dias)    = total ÷ (horas produtivas/dia × pessoas)
   - **Escalonado:** cada faixa de horas no seu valor, como no IR.
 - **Proteção de degrau** (faixa única, ligada por padrão): o total nunca cai quando a estimativa passa de faixa. O editor mostra cada degrau, a margem de cada faixa contra a margem-alvo e um simulador de horas.
 - A estimativa mostra a faixa aplicada e quantas horas faltam para a próxima. Proposta, escopo e Zoho Invoice usam o valor/hora efetivo.
+
+## Perfil por estimativa, com exceção por demanda
+
+- O **Perfil da estimativa** (ao lado do prazo) vale para todas as demandas.
+- Numa demanda específica, troque "Da estimativa" por outro perfil. A demanda passa a mostrar **Perfil próprio** em destaque, e o topo lista as exceções com o botão **Usar o da estimativa em todas**.
+- Ao trocar o perfil da estimativa, as exceções continuam. Uma exceção igual ao novo perfil deixa de ser exceção.
+- Nova estimativa herda o perfil da aberta. Estimativas antigas são migradas sem mudar valores: o perfil mais usado vira o da estimativa e os demais ficam como exceção.

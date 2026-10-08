@@ -131,6 +131,7 @@ span.and{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px}
 .ebh{display:flex;gap:4px;align-items:center}.ebh input:not([type=checkbox]){flex:1;min-width:0;padding:4px 6px;font-weight:600}.eblk textarea{min-height:56px;font-size:13px}
 .sigmini{display:block;width:110px;background:#fff;border-radius:4px;margin-bottom:3px}
 .sgpad{width:100%;max-width:600px;aspect-ratio:600/170;background:#fff;border:1px dashed var(--line);border-radius:6px;touch-action:none;display:block;margin-top:8px}
+.pf-ovr{color:var(--accent);font-weight:600}.pf-ovr select{border-color:var(--accent)}
 .fxap{margin:0 0 6px;font-size:13px}.simfx{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--surface-2);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:13px}.simfx label{flex-direction:row;align-items:center;gap:6px}
 .ignbar{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin:-6px 0 10px}
 .estbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed var(--line)}
@@ -231,7 +232,9 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
           <label>Data<input id="pData" type="date"></label>
           <label>Início previsto<input id="pInicio" type="date"></label>
           <label>Prazo do cliente<input id="pPrazo" type="date" title="Opcional: data que o cliente precisa"></label>
+          <label>Perfil da estimativa<select id="pPerfil" title="Vale para todas as demandas; mude numa demanda específica só quando for exceção"></select></label>
         </div>
+        <div id="pPerfilInfo" class="muted" style="font-size:12px;margin-top:4px"></div>
         <div class="toolbar noprint" style="margin:12px 0 0">
           <button class="btn pri" id="btnNovaDem">+ Nova demanda</button>
           <button class="btn" id="btnXmind">Importar XMind</button>
@@ -774,7 +777,19 @@ const catNome=id=>(db.catalogos.find(c=>c.id===id)||{nome:id}).nome;
 const procsCat=c=>db.processos.filter(p=>(p.catalogo||"promob")===c);
 let bancoCat=null;  // catálogo exibido no Banco e em Modelos
 const temReal=l=>l.real!==undefined&&l.real!==""&&l.real!==null;
-const perfilDe=d=>db.cfg.perfis.find(p=>p.id===d.perfil)||db.cfg.perfis[0];
+// Perfil vem da estimativa; a demanda só guarda perfil quando é exceção
+const perfilEst=(e=est)=>db.cfg.perfis.find(p=>p.id===e.perfil)||db.cfg.perfis[0];
+const perfilDe=(d,e=est)=>(d.perfil&&db.cfg.perfis.find(p=>p.id===d.perfil))||perfilEst(e);
+const perfilProprio=(d,e=est)=>!!(d.perfil&&db.cfg.perfis.some(p=>p.id===d.perfil)&&d.perfil!==perfilEst(e).id);
+// estimativas antigas: o perfil mais usado nas demandas vira o da estimativa; os demais ficam como exceção
+function migrarPerfil(e){
+  if(e.perfil!==undefined) return false;
+  const cont={}; (e.demandas||[]).forEach(d=>{if(d.perfil&&db.cfg.perfis.some(p=>p.id===d.perfil)) cont[d.perfil]=(cont[d.perfil]||0)+1});
+  const top=Object.entries(cont).sort((a,b)=>b[1]-a[1])[0];
+  e.perfil=top?top[0]:db.cfg.perfis[0].id;
+  (e.demandas||[]).forEach(d=>{if(d.perfil===e.perfil||(d.perfil&&!db.cfg.perfis.some(p=>p.id===d.perfil))) delete d.perfil});
+  return true;
+}
 const riscoDe=d=>db.cfg.riscos.find(r=>r.id===d.risco)||db.cfg.riscos[0];
 const fatorDem=d=>1+((+riscoDe(d).pct||0)+(+db.cfg.gest||0))/100;   // reserva de risco da demanda + gestão extra
 function calc(e=est){
@@ -782,10 +797,10 @@ function calc(e=est){
   let base=0, res=0, valor=0, custo=0, real=0, estComReal=0, valReal=0, custoReal=0;
   // horas (com reservas) que decidem as faixas de preço
   const hDe=d=>d.linhas.reduce((s,l)=>s+lineMin(l),0)*fatorDem(d)/60, hTot={est:0};
-  (e.demandas||[]).forEach(d=>{if(!contaDem(d)) return;const h=hDe(d),id=perfilDe(d).id;hTot.est+=h;hTot[id]=(hTot[id]||0)+h});
+  (e.demandas||[]).forEach(d=>{if(!contaDem(d)) return;const h=hDe(d),id=perfilDe(d,e).id;hTot.est+=h;hTot[id]=(hTot[id]||0)+h});
   const faixasAplic={};
   (e.demandas||[]).forEach(d=>{
-    const t=d.linhas.reduce((s,l)=>s+lineMin(l),0), f=fatorDem(d), pf=perfilDe(d), hd=t*f/60;
+    const t=d.linhas.reduce((s,l)=>s+lineMin(l),0), f=fatorDem(d), pf=perfilDe(d,e), hd=t*f/60;
     porDem.push(t);
     const bH=pf.faixaBase==="demanda"?hd:pf.faixaBase==="perfil"?(contaDem(d)?hTot[pf.id]:(hTot[pf.id]||0)+hd):(contaDem(d)?hTot.est:hTot.est+hd), fx=precoFaixa(pf,bH), taxa=fx.taxa;
     if(fx.k!=null&&contaDem(d)&&hd>0){const ch=pf.id+"|"+(pf.faixaBase==="demanda"?d.nome:"");faixasAplic[ch]=faixasAplic[ch]||{perfil:pf.nome,base:pf.faixaBase||"estimativa",dem:pf.faixaBase==="demanda"?d.nome:"",fx}}
@@ -809,6 +824,7 @@ function calc(e=est){
 /* ================= PREÇO POR FAIXA DE HORAS ================= */
 const limF=f=>f.ate===""||f.ate==null?Infinity:+f.ate;
 const faixasOrd=pf=>(pf.faixas||[]).filter(f=>+f.preco>0).slice().sort((a,b)=>limF(a)-limF(b));
+const optPerfil=x=>`${x.tipo==="centro"?"◆ ":""}${esc(x.nome)} · ${faixasOrd(x).length?"por faixa":brl(+x.preco||0)+"/h"}`;
 const BASE_FX={estimativa:"horas da estimativa inteira",demanda:"horas da demanda",perfil:"horas deste perfil na estimativa"};
 // Decide o valor/hora do perfil para H horas (com reservas). Sem faixas = preço fixo.
 function precoFaixa(pf,H){
@@ -903,11 +919,15 @@ function renderEstBar(){
     <button class="btn" id="btnSalvarTpl">Salvar como template</button>
     ${fechada?`<button class="btn" id="btnAprov">${est.aprovacao?"Aprovação…":"Registrar aprovação"}</button>`:""}`;
   ["btnToggl","btnZoho"].forEach(id=>{const b=document.getElementById(id);b.disabled=!fechada;b.title=fechada?"":"Feche a estimativa para liberar"});
-  ["btnNovaDem","btnXmind","btnExemplo","btnClear","pNome","pResp","pData","btnIA"].forEach(id=>document.getElementById(id).disabled=fechada);
+  ["btnNovaDem","btnXmind","btnExemplo","btnClear","pNome","pResp","pData","btnIA","pPerfil"].forEach(id=>document.getElementById(id).disabled=fechada);
   {const b=document.getElementById("btnZProj");b.disabled=!fechada;b.title=fechada?"":"Feche a estimativa para liberar"}
 }
 function renderEst(){
   renderEstBar();
+  if(migrarPerfil(est)) save(K_EST,est);
+  {const pe=perfilEst(), exc=est.demandas.filter(d=>perfilProprio(d));
+   $("#pPerfil").innerHTML=db.cfg.perfis.map(x=>`<option value="${esc(x.id)}" ${x.id===pe.id?"selected":""}>${optPerfil(x)}</option>`).join("");
+   $("#pPerfilInfo").innerHTML=exc.length?`${exc.length} demanda${exc.length>1?"s":""} com perfil próprio: ${exc.map(d=>`<b>${esc(d.nome)}</b> (${esc(perfilDe(d).nome)})`).join(", ")}. ${est.status!=="fechada"?'<button class="btn sm" id="pPerfilLimpar">Usar o da estimativa em todas</button>':""}`:""}
   $("#pNome").value=est.nome||""; $("#pInicio").value=inicioDe(est); $("#pPrazo").value=est.prazo||""; $("#pResp").value=est.resp||""; $("#pData").value=est.data||"";
   const r=calc();
 
@@ -946,7 +966,7 @@ function renderEst(){
       </div>
       <div class="dem-meta">
         <label>Risco<select data-d="${di}" data-dk="risco">${db.cfg.riscos.map(x=>`<option value="${esc(x.id)}" ${riscoDe(d).id===x.id?"selected":""}>${esc(x.nome)} · ${num(x.pct)}%</option>`).join("")}</select></label>
-        <label>Perfil<select data-d="${di}" data-dk="perfil">${db.cfg.perfis.map(x=>`<option value="${esc(x.id)}" ${perfilDe(d).id===x.id?"selected":""}>${x.tipo==="centro"?"◆ ":""}${esc(x.nome)} · ${faixasOrd(x).length?"por faixa":brl(+x.preco||0)+"/h"}</option>`).join("")}</select></label>
+        <label class="${perfilProprio(d)?"pf-ovr":""}" title="${perfilProprio(d)?"Perfil próprio desta demanda (exceção)":"Segue o perfil da estimativa"}">${perfilProprio(d)?"Perfil próprio":"Perfil"}<select data-d="${di}" data-dk="perfil"><option value="">Da estimativa · ${esc(perfilEst().nome)}</option>${db.cfg.perfis.filter(x=>x.id!==perfilEst().id).map(x=>`<option value="${esc(x.id)}" ${perfilProprio(d)&&d.perfil===x.id?"selected":""}>${optPerfil(x)}</option>`).join("")}</select></label>
         ${contaDem(d)&&r.porDemVal[di].valor?`<span class="muted">valor <b>${brl(r.porDemVal[di].valor)}</b> · margem <b class="${r.porDemVal[di].margem<(+db.cfg.margemAlvo||0)?"diff up":"diff down"}">${num(r.porDemVal[di].margem,0)}%</b></span>`:""}
       </div>
       <textarea placeholder="Observações, escopo, premissas…" data-d="${di}" data-dk="obs" style="${d.obs||disc?"":"display:none"}">${esc(d.obs)}</textarea>
@@ -993,7 +1013,7 @@ function renderEst(){
   $("#barsDem").innerHTML=bars(est.demandas.map((d,i)=>[d.nome,r.porDem[i],!contaDem(d)]).filter((a,i)=>a[1]>0&&!est.demandas[i].ignorada));
   $("#andBox").innerHTML=r.base?ANDAMENTO.filter(([k])=>r.porAnd[k]).map(([k,l])=>`<div class="bar"><span><span class="and and-${k}">${esc(l)}</span></span><i style="width:${r.porAnd[k]/r.base*100}%"></i><span class="n" style="text-align:right">${num(r.porAnd[k]/r.base*100,0)}%</span></div>`).join(""):"";
   $("#barsFase").innerHTML=bars(Object.entries(r.porFase).sort((a,b)=>b[1]-a[1]));
-  $("#memo").textContent=r.base?`Memória: ${hrs(r.base)} estimadas + ${hrs(r.res)} de reservas (risco de cada demanda${c.gest?` + ${c.gest}% gestão`:""}) = ${hrs(r.total)} ÷ (${c.hdia} h/dia × ${c.equipe} pessoa${c.equipe>1?"s":""}). Valor pelo preço/hora do perfil de cada demanda.`:"";
+  $("#memo").textContent=r.base?`Memória: ${hrs(r.base)} estimadas + ${hrs(r.res)} de reservas (risco de cada demanda${c.gest?` + ${c.gest}% gestão`:""}) = ${hrs(r.total)} ÷ (${c.hdia} h/dia × ${c.equipe} pessoa${c.equipe>1?"s":""}). Valor pelo perfil da estimativa (${perfilEst().nome})${est.demandas.some(d=>perfilProprio(d))?", com exceções por demanda":""}.`:"";
 }
 
 const dl=$("#demList");
@@ -1001,7 +1021,8 @@ dl.addEventListener("change",e=>{
   const t=e.target, di=t.dataset.d;
   if(di===undefined) return;
   const d=est.demandas[+di];
-  if(t.dataset.dk){d[t.dataset.dk]=t.value}
+  if(t.dataset.dk==="perfil"){if(!t.value||t.value===perfilEst().id) delete d.perfil; else d.perfil=t.value}
+  else if(t.dataset.dk){d[t.dataset.dk]=t.value}
   else if(t.dataset.k){
     const l=d.linhas[+t.dataset.l], k=t.dataset.k;
     if(k==="det") l.det=t.value;
@@ -1171,6 +1192,10 @@ dl.addEventListener("click",async e=>{
   }
 });
 $("#pInicio").addEventListener("change",e=>{est.inicio=e.target.value||null;persist();renderEst();renderCron()});
+$("#pPerfil").addEventListener("change",e=>{est.perfil=e.target.value;est.demandas.forEach(d=>{if(d.perfil===est.perfil) delete d.perfil});persist();renderEst();renderArquivo();renderEsc()});
+$("#pPerfilInfo").addEventListener("click",async e=>{if(e.target.id!=="pPerfilLimpar") return;
+  if(!await uiConfirm(`Tirar o perfil próprio das demandas e usar “${perfilEst().nome}” em todas?`)) return;
+  est.demandas.forEach(d=>delete d.perfil);persist();renderEst();renderArquivo();renderEsc()});
 $("#pPrazo").addEventListener("change",e=>{est.prazo=e.target.value||null;persist();renderEst();renderCron()});
 ["pNome","pResp","pData"].forEach(id=>$("#"+id).addEventListener("input",e=>{
   est[{pNome:"nome",pResp:"resp",pData:"data"}[id]]=e.target.value; persist();
@@ -1435,7 +1460,7 @@ const mesFmt=t=>new Date(t).toLocaleDateString("pt-BR",{month:"long",year:"numer
 const dataDe=e=>e.data?new Date(e.data+"T12:00:00").getTime():(e.criadoEm||Date.now());
 function novaEstimativa(clienteId,base){
   const t=Date.now(), id=uid();
-  const e={nome:"Nova estimativa",resp:est.resp||"",data:hoje(),demandas:[],catalogo:catAtual(),...(base||{}),id,familia:id,clienteId,versao:1,status:"rascunho",arquivada:false,criadoEm:t,atualizadoEm:t,fechadaEm:null};
+  const e={nome:"Nova estimativa",resp:est.resp||"",data:hoje(),demandas:[],catalogo:catAtual(),perfil:perfilEst().id,...(base||{}),id,familia:id,clienteId,versao:1,status:"rascunho",arquivada:false,criadoEm:t,atualizadoEm:t,fechadaEm:null};
   arq.estimativas[id]=clone(e); Sync.est(id); return e;
 }
 function abrirEstimativa(id){
@@ -2350,7 +2375,7 @@ $("#riscosBox").addEventListener("change",e=>{const t=e.target;if(t.dataset.ri==
 $("#perfisBox").addEventListener("click",async e=>{
   if(e.target.dataset.pffx!==undefined) return editarFaixas(+e.target.dataset.pffx);
   if(e.target.id==="pfAdd"){const nome=(await uiPrompt("Nome do perfil (ex.: Sênior, Pleno, Júnior):")||"").trim();if(!nome) return;db.cfg.perfis.push({id:uid(),nome,tipo:"pessoa",custo:45,preco:+db.cfg.perfis[0].preco||120});persist();renderCfg();renderEst()}
-  else if(e.target.dataset.pfdel!==undefined){const p=db.cfg.perfis[+e.target.dataset.pfdel];if(await uiConfirm(`Excluir o perfil “${p.nome}”? Demandas que o usam passam para “${db.cfg.perfis.find(x=>x!==p).nome}”.`)){db.cfg.perfis.splice(+e.target.dataset.pfdel,1);persist();renderCfg();renderEst()}}
+  else if(e.target.dataset.pfdel!==undefined){const p=db.cfg.perfis[+e.target.dataset.pfdel];if(await uiConfirm(`Excluir o perfil “${p.nome}”? Estimativas e demandas que o usam passam para “${db.cfg.perfis.find(x=>x!==p).nome}”.`)){db.cfg.perfis.splice(+e.target.dataset.pfdel,1);persist();renderCfg();renderEst()}}
 });
 $("#riscosBox").addEventListener("click",async e=>{
   if(e.target.id==="riAdd"){const nome=(await uiPrompt("Nome do nível de risco:")||"").trim();if(!nome) return;db.cfg.riscos.push({id:uid(),nome,pct:15});persist();renderCfg();renderEst()}
