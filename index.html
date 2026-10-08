@@ -1489,7 +1489,38 @@ $("#btnNovaDem").onclick=()=>{est.demandas.push({nome:"Nova demanda",status:"est
   const ins=document.querySelectorAll("#demList input.nome"); const last=ins[ins.length-1]; last.focus(); last.select()};
 $("#btnClear").onclick=async()=>{if(await uiConfirm("Remover todas as demandas desta estimativa?")){est.demandas=[];persist();renderEst()}};
 $("#btnExemplo").onclick=async()=>{if(await uiConfirm("Substituir as demandas desta estimativa pelo exemplo “Estimativa LT”?")){est.demandas=clone(EXEMPLO.demandas);persist();renderEst()}};
-$("#btnPrint").onclick=()=>window.print();
+// Impressão: o visualizador do claude.ai bloqueia window.print() na página; geramos um relatório próprio (pré-visualização, imprimir pelo quadro ou baixar .html)
+function estimativaHTML(opc={}){
+  const r=calc(), e=esc, cli=(arq.clientes[est.clienteId]||{}).nome||"", emp=db.cfg.empresa, fe=r.fech, interno=opc.interno!==false;
+  const dems=est.demandas.map((d,i)=>({d,i})).filter(({d})=>!d.ignorada);
+  const lin=(l)=>{const p=proc(l.cod), md=medLinha(l), val=md&&md.tipo==="valor";
+    return `<tr><td>${p?e(p.cod):"avulso"}</td><td>${e(p?p.nome:(l.desc||""))}${l.det?`<div class="det">${e(l.det)}</div>`:""}</td><td class="n">${nCel(l.qtd)} ${e(p?p.un:(l.un||""))}</td>
+      <td class="n">${val?brl(valorUnit(l)):fmtT(l.min,md?md.sigla:"min")}</td><td class="n">${val?brl(lineValor(l)):hm(lineMin(l))}</td></tr>`};
+  const corpo=dems.map(({d,i})=>{const ex=d.escopo||{}, v=r.porDemVal[i];
+    return `<section><div class="dh"><h3>${e(d.nome)}</h3><span>${hm(r.porDem[i])}${contaDem(d)&&v.valor?` · ${brl(v.valor)}`:""}${d.status==="discussao"?" · em discussão (não soma)":""}</span></div>
+      ${ex.briefing?`<p>${e(ex.briefing).replace(/\n/g,"<br>")}</p>`:""}${ex.criterios?`<p class="mut"><b>Critérios de aceite:</b> ${e(ex.criterios)}</p>`:""}${interno&&d.obs?`<p class="mut"><b>Obs. interna:</b> ${e(d.obs)}</p>`:""}
+      ${d.linhas.length?`<table><thead><tr><th>Cód.</th><th>Atividade</th><th class="n">Qtd.</th><th class="n">Tempo/valor unid.</th><th class="n">Total</th></tr></thead><tbody>${d.linhas.map(lin).join("")}</tbody></table>`:""}</section>`}).join("");
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Estimativa — ${e(est.nome)}</title>
+<style>body{font:13px/1.5 system-ui,sans-serif;color:#1d1c1a;margin:0}.pg{max-width:900px;margin:0 auto;padding:28px}
+h1{font-size:22px;margin:0}h3{font-size:15px;margin:0}.top{border-bottom:2px solid #9a5b1e;padding-bottom:10px;margin-bottom:16px}.top .mut{margin-top:4px}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 18px}.kpi div{background:#f5f2ec;border-radius:6px;padding:8px}.kpi span{display:block;font-size:11px;color:#6b6862}.kpi b{font-size:15px}
+section{margin:0 0 18px;page-break-inside:avoid}.dh{display:flex;justify-content:space-between;border-bottom:1px solid #e3dfd7;padding-bottom:4px;margin-bottom:6px}.dh span{font-weight:600;color:#9a5b1e}
+table{width:100%;border-collapse:collapse}td,th{padding:4px 6px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}th{font-size:11px;color:#6b6862;text-transform:uppercase}.n{text-align:right;white-space:nowrap}
+.det{font-size:11px;color:#6b6862}.mut{color:#6b6862}p{margin:4px 0}@media print{.pg{padding:0}}</style></head><body><div class="pg">
+<div class="top"><h1>${e(est.nome||"Estimativa")}</h1><div class="mut">${e(cli)}${cli?" · ":""}v${est.versao||1} · ${est.status==="fechada"?"fechada":"rascunho"} · ${fmtD(est.data||hoje())}${est.resp?` · responsável ${e(est.resp)}`:""} · ${e(emp.nome||"")}</div></div>
+<div class="kpi"><div><span>Esforço total</span><b>${hrs(r.total)}</b></div><div><span>Horas + reservas</span><b>${num(r.base/60)} + ${num(r.res/60)} h</b></div>
+<div><span>Investimento</span><b>${brl(r.final)}</b>${r.desc?`<div class="mut">estimado ${brl(r.valor)} − ${brl(r.desc)}</div>`:""}</div>${interno?`<div><span>Margem</span><b>${num(r.margemPct,0)}%</b></div>`:`<div><span>Entrega prevista</span><b>${fmtD(cronograma().entrega)}</b></div>`}</div>
+${corpo}
+<p><b>Condições de pagamento:</b> ${e(condTexto(fe.pg))}</p></div></body></html>`;
+}
+$("#btnPrint").onclick=()=>{
+  let interno=true; const html=()=>estimativaHTML({interno});
+  abrirModal("Imprimir / PDF",`<label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="prInt" checked> incluir dados internos (margem e observações internas)</label>
+    <iframe id="prPrev" title="Pré-visualização" style="width:100%;height:65vh;border:1px solid var(--line);border-radius:8px;background:#fff;margin-top:8px"></iframe>`,
+    [{label:"Imprimir / Salvar PDF",pri:true,fn:()=>{const f=$("#prPrev");try{f.contentWindow.focus();f.contentWindow.print()}catch(e){uiAlert("Este visualizador não permite imprimir daqui. Use “Baixar (.html)”, abra o arquivo no navegador e imprima (Ctrl+P › Salvar como PDF).")}}},
+     {label:"Baixar (.html)",fn:()=>download(html(),`Estimativa - ${(arq.clientes[est.clienteId]||{}).nome||""} - ${est.nome} v${est.versao||1}.html`,"text/html")}]);
+  const pv=()=>{$("#prPrev").srcdoc=html()}; pv(); $("#prInt").onchange=e=>{interno=e.target.checked;pv()};
+};
 $("#btnCsv").onclick=()=>{
   const r=calc(), c=db.cfg;
   const rows=[["Projeto",est.nome],["Responsável",est.resp],["Data",est.data],[],
