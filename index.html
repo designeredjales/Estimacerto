@@ -126,7 +126,7 @@ span.and{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px}
 #ppPrev,#escPrev{width:100%;min-height:60vh;border:1px solid var(--line);border-radius:8px;background:#fff}
 @media (max-width:760px){.prop-grid{grid-template-columns:1fr}.g-row,.gh-row{grid-template-columns:190px minmax(380px,1fr)}}
 .eopts{display:flex;flex-direction:column;gap:3px}.eopt{flex-direction:row!important;align-items:flex-start;gap:7px!important;font-size:13px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;cursor:pointer;line-height:1.35}.eopt.on{border-color:var(--accent);background:var(--surface-2)}.eopt input{margin-top:2px;flex-shrink:0}
-.einv{display:flex;flex-direction:column;gap:5px;font-size:13px}.einv label{flex-direction:row;align-items:center;gap:6px}.einvd{display:flex;gap:4px;align-items:center}.pgcalc{font-size:12px;background:var(--surface-2);border-radius:6px;padding:5px 7px}
+.einv{display:flex;flex-direction:column;gap:5px;font-size:13px}.einv label{flex-direction:row;align-items:center;gap:6px}.einvd{display:flex;gap:4px;align-items:center}.cmf{display:flex;flex-direction:column;gap:5px;font-size:13px}.cml{width:62px;flex-shrink:0;font-size:12px;color:var(--muted)}#comBox .einvd input,#comBox .einvd select{font-size:13px;padding:4px 6px}.pgcalc{font-size:12px;background:var(--surface-2);border-radius:6px;padding:5px 7px}
 .lblm{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}.chips{display:flex;flex-wrap:wrap;gap:4px}
 .escol{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px}.escol label{flex-direction:row;align-items:center;gap:5px}.escol select{width:auto;padding:3px 5px;font-size:13px}
 .eblk{border:1px solid var(--line);border-radius:6px;padding:6px;margin-bottom:6px;display:flex;flex-direction:column;gap:4px}.eblk.off{opacity:.55}
@@ -274,6 +274,10 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
         <div id="margemBox"></div>
         <div id="realBox"></div>
         <hr>
+        <h3 style="margin-bottom:6px">Condições comerciais</h3>
+        <p class="muted" style="font-size:12px;margin:0 0 6px">Desconto e pagamento valem para o escopo, a proposta e o Zoho Invoice.</p>
+        <div id="comBox"></div>
+        <hr>
         <h3 style="margin-bottom:6px">Por demanda</h3>
         <div id="barsDem"></div>
         <hr>
@@ -382,7 +386,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
     <div class="row" style="margin-bottom:10px">
       <button class="btn pri" id="escBaixar">Baixar escopo (.html)</button><button class="btn" id="escPrint">Imprimir / PDF</button>
       <button class="btn" id="escAssinar">Coletar assinatura aqui</button><button class="btn" id="escImport">Importar escopo assinado</button>
-      <button class="btn" id="escPadrao">Salvar como padrão</button><button class="btn" id="escReset">Blocos padrão</button>
+      <select id="escTpl" style="width:auto" title="Aplicar um template de escopo"></select><button class="btn" id="escTplSalvar">Salvar como template</button><button class="btn" id="escTplGer">Templates…</button><button class="btn" id="escReset">Blocos padrão</button>
     </div>
     <div class="prop-grid"><div class="prop-form" id="escForm"></div><iframe id="escPrev" title="Pré-visualização do escopo"></iframe></div>
   </div>
@@ -603,6 +607,7 @@ function completarDb(){
   if(!Array.isArray(c.perfis)||!c.perfis.length) c.perfis=[{id:"pad",nome:"Padrão",custo:45,preco:+c.valor||120}];
   if(!Array.isArray(c.riscos)||!c.riscos.length) c.riscos=[{id:"padrao",nome:"Padrão (já feito antes)",pct:c.cont??10},{id:"novo",nome:"Novo fabricante / linha",pct:20},{id:"inedito",nome:"P&D / inédito",pct:35}];
   c.perfis.forEach(p=>{if(!p.tipo) p.tipo=p.id==="pad"?"centro":"pessoa"});
+  if(c.escopoPadrao){c.escopoTemplates=c.escopoTemplates||[];c.escopoTemplates.push({id:uid(),nome:"Padrão",padrao:!c.escopoTemplates.some(t=>t.padrao),cfg:c.escopoPadrao,pag:null,em:Date.now()});delete c.escopoPadrao}
   if(c.margemAlvo==null) c.margemAlvo=40;
   if(c.gest==null) c.gest=0;
   if(!c.empresa) c.empresa={nome:"Diâmetro Design for Business",assinatura:"",cargo:"Consultor estratégico",contato:"",mantra:"Viva para transformar, sonhe para realizar e firme que vai!"};
@@ -820,11 +825,77 @@ function calc(e=est){
       if(temReal(l)){real+=+l.real;estComReal+=lineMin(l);valReal+=lineMin(l)*f/60*taxa;custoReal+=(+l.real)/60*(+pf.custo||0)}
     });
   });
-  const total=base+res, margem=valor-custo, alvo=(+c.margemAlvo||0)/100;
-  return {base,res,total,porDem,porDemVal,porFase,porAnd,faixas:Object.values(faixasAplic),real,estComReal,valor,custo,margem,
-    margemPct:valor?margem/valor*100:0, valReal, custoReal, margemRealPct:valReal?(valReal-custoReal)/valReal*100:null,
-    precoMinAlvo:total&&alvo<1?custo/(1-alvo)/(total/60):0,
+  const total=base+res, fech=fechamento(valor,e), final=fech.final, margem=final-custo, alvo=(+c.margemAlvo||0)/100;
+  return {base,res,total,porDem,porDemVal,porFase,porAnd,faixas:Object.values(faixasAplic),real,estComReal,valor,custo,margem,fech,desc:fech.desc,final,
+    margemPct:final?margem/final*100:0, valReal, custoReal, margemRealPct:valReal?(valReal-custoReal)/valReal*100:null,
+    precoMinAlvo:total&&alvo<1&&fech.pct<100?custo/(1-alvo)/(total/60)/(1-fech.pct/100):0,
     dias:total/60/(c.hdia*c.equipe), min:total*c.oti, max:total*c.pes};
+}
+
+/* ================= CONDIÇÕES COMERCIAIS: fonte única (estimativa → escopo, proposta, Zoho Invoice) ================= */
+const COM_PADRAO={descTipo:"pct",desc:0,descRot:"Desconto",entTipo:"pct",ent:50,entQuando:"na aprovação",parcelas:1,restQuando:"na entrega",forma:"boleto ou PIX",obs:""};
+const COM_KEYS=Object.keys(COM_PADRAO), PAG_KEYS=["entTipo","ent","entQuando","parcelas","restQuando","forma","obs"];
+function comercialDe(e=est){
+  if(e.comercial) return Object.assign({},COM_PADRAO,e.comercial);
+  // migração: termos que antes ficavam no bloco Investimento do escopo
+  const b=e.escopo&&(e.escopo.blocos||[]).find(x=>x.tipo==="investimento"), v=b&&b.inv, o={...COM_PADRAO};
+  if(v){COM_KEYS.forEach(k=>{if(v[k]!==undefined) o[k]=v[k]}); if(v.modo!=="desconto") o.desc=0}
+  return o;
+}
+function migrarComercial(e){if(e.comercial) return false; e.comercial=comercialDe(e); return true}
+// valor bruto → desconto (em R$ é rateado quando o valor é só parte da estimativa) → valor final → pagamento
+function fechamento(bruto,e=est,totalEst){
+  const cm=comercialDe(e); bruto=Math.round(bruto); totalEst=totalEst==null?bruto:Math.round(totalEst);
+  let desc=cm.descTipo==="pct"?bruto*(+cm.desc||0)/100:(+cm.desc||0)*(totalEst?bruto/totalEst:1);
+  desc=Math.round(Math.min(bruto,Math.max(0,desc)));
+  const final=bruto-desc;
+  return {bruto,desc,final,pct:bruto?desc/bruto*100:0,descTipo:cm.descTipo,descRot:cm.descRot||"Desconto",pg:pagCalc(final,cm)};
+}
+function pagHTML(p){
+  if(!p.rest&&!p.ent) return "";
+  const ls=[];
+  if(p.ent) ls.push(`<li><b>Entrada${p.entTipo==="pct"?` (${num(p.entPct)}%)`:""}:</b> ${brl(p.ent)}${p.entQuando?` ${esc(p.entQuando)}`:""}</li>`);
+  if(p.rest) ls.push(`<li><b>${p.ent?"Restante":"Pagamento"}${p.ent&&p.entTipo==="pct"?` (${num(100-p.entPct)}%)`:""}:</b> ${parcTxt(p)}${p.restQuando?` ${esc(p.restQuando)}`:""}</li>`);
+  return `<h4>Condições de pagamento</h4><ul class="pag">${ls.join("")}</ul>${p.forma?`<p class="pagf">Forma de pagamento: ${esc(p.forma)}.</p>`:""}${p.obs?`<p class="pagf">${esc(p.obs)}</p>`:""}`;
+}
+function condTexto(p){
+  const ps=[];
+  if(p.ent) ps.push(`Entrada${p.entTipo==="pct"?` (${num(p.entPct)}%)`:""}: ${brl(p.ent)}${p.entQuando?" "+p.entQuando:""}`);
+  if(p.rest) ps.push(`${p.ent?"restante":"pagamento"}: ${parcTxt(p)}${p.restQuando?" "+p.restQuando:""}`);
+  return ps.join("; ")+"."+(p.forma?` Forma de pagamento: ${p.forma}.`:"")+(p.obs?" "+p.obs:"");
+}
+const cmResumo=fe=>`${fe.desc?`${brl(fe.bruto)} − ${brl(fe.desc)} = `:""}<b>${brl(fe.final)}</b> · ${fe.pg.ent?`entrada <b>${brl(fe.pg.ent)}</b>${fe.pg.entTipo==="rs"?` (${num(fe.pg.entPct)}%)`:""} + restante`:"pagamento"} <b>${parcTxt(fe.pg)}</b>`;
+function comercialForm(){
+  const cm=comercialDe(), fe=calc().fech, dis=est.status==="fechada"?" disabled":"";
+  const sel=(k,v)=>`<select data-cm="${k}" style="width:auto"${dis}><option value="pct" ${v==="pct"?"selected":""}>%</option><option value="rs" ${v==="rs"?"selected":""}>R$</option></select>`;
+  return `<div class="cmf">
+    <div class="einvd"><span class="cml">Desconto</span><input data-cm="descRot" value="${esc(cm.descRot)}" title="Nome do desconto" style="flex:1;min-width:80px"${dis}>
+      <input type="number" min="0" step="0.5" data-cm="desc" value="${cm.desc||""}" placeholder="0" style="width:72px"${dis}>${sel("descTipo",cm.descTipo)}</div>
+    <div class="einvd"><span class="cml">Entrada</span><input type="number" min="0" step="1" data-cm="ent" value="${cm.ent||""}" placeholder="0" style="width:72px"${dis}>${sel("entTipo",cm.entTipo)}
+      <input data-cm="entQuando" value="${esc(cm.entQuando)}" placeholder="quando (ex.: na aprovação)" style="flex:1;min-width:80px"${dis}></div>
+    <div class="einvd"><span class="cml">Restante</span><input type="number" min="1" step="1" data-cm="parcelas" value="${cm.parcelas||1}" style="width:56px" title="Número de parcelas"${dis}><span>×</span>
+      <input data-cm="restQuando" value="${esc(cm.restQuando)}" placeholder="quando (ex.: na entrega, 30/60/90 dias)" style="flex:1;min-width:80px"${dis}></div>
+    <div class="einvd"><span class="cml">Forma</span><input data-cm="forma" value="${esc(cm.forma)}" placeholder="boleto ou PIX" style="flex:1"${dis}></div>
+    <div class="einvd"><span class="cml">Obs.</span><input data-cm="obs" value="${esc(cm.obs)}" placeholder="opcional (ex.: NF emitida a cada pagamento)" style="flex:1"${dis}></div>
+    <div class="cmCalc pgcalc">${cmResumo(fe)}</div>${dis?'<span class="muted" style="font-size:12px">Estimativa fechada: para negociar outro valor ou condição, use Reabrir ou Nova versão.</span>':""}</div>`;
+}
+// qualquer formulário de condições (estimativa, escopo, proposta) grava no mesmo lugar
+document.addEventListener("change",e=>{
+  const t=e.target; if(!t.dataset||t.dataset.cm===undefined||est.status==="fechada") return;
+  migrarComercial(est); const k=t.dataset.cm;
+  est.comercial[k]=k==="desc"||k==="ent"?Math.max(0,+t.value||0):k==="parcelas"?Math.max(1,Math.round(+t.value||1)):t.value;
+  persist(); atualizarComercial();
+});
+// atualiza os formulários abertos sem recriá-los (recriar perderia o campo em que a pessoa está digitando)
+function syncComercialForms(){
+  const cm=comercialDe(), fe=calc().fech;
+  document.querySelectorAll("[data-cm]").forEach(x=>{if(x!==document.activeElement){const v=x.dataset.cm==="desc"||x.dataset.cm==="ent"?(cm[x.dataset.cm]||""):cm[x.dataset.cm];if(x.value!==String(v)) x.value=v}});
+  document.querySelectorAll(".cmCalc").forEach(x=>x.innerHTML=cmResumo(fe));
+}
+function atualizarComercial(){
+  syncComercialForms();
+  renderEst(); renderArquivo(); renderEscPrev(); renderEscAceites();
+  const pv=$("#ppPrev"); if(pv) pv.srcdoc=propostaHTML(Object.assign(propPadrao(),est.proposta||{}));
 }
 
 /* ================= PREÇO POR FAIXA DE HORAS ================= */
@@ -930,7 +1001,7 @@ function renderEstBar(){
 }
 function renderEst(){
   renderEstBar();
-  if(migrarPerfil(est)) save(K_EST,est);
+  if(migrarPerfil(est)|migrarComercial(est)) save(K_EST,est);
   {const pe=perfilEst(), exc=est.demandas.filter(d=>perfilProprio(d));
    $("#pResp").placeholder=respDe(pe)||"Nome";
    $("#pPerfil").innerHTML=db.cfg.perfis.map(x=>`<option value="${esc(x.id)}" ${x.id===pe.id?"selected":""}>${optPerfil(x)}</option>`).join("");
@@ -1001,16 +1072,17 @@ function renderEst(){
     $("#demList").querySelectorAll(".addrow").forEach(el=>el.style.display="none");
   }
   const c=db.cfg;
+  {const cb=$("#comBox"), k=est.id+"|"+est.status; if(cb){if(!cb.querySelector(".cmf")||cb.dataset.k!==k){cb.innerHTML=comercialForm();cb.dataset.k=k} else syncComercialForms()}}
   $("#kTotal").textContent=hrs(r.total);
   $("#kBase").textContent=num(r.base/60);
   $("#kRes").textContent=num(r.res/60);
   const crr=cronograma(); $("#kDias").textContent=crr.entrega?fmtD(crr.entrega):"—";
   $("#kDias").title=`${crr.dias} dias úteis a partir de ${fmtD(crr.ini)}`; $("#kDias").classList.toggle("diff",!!(est.prazo&&crr.entrega>est.prazo)); $("#kDias").classList.toggle("up",!!(est.prazo&&crr.entrega>est.prazo));
-  $("#kValor").textContent=brl(r.valor);
+  $("#kValor").textContent=brl(r.final); $("#kValor").title=r.desc?`Estimado ${brl(r.valor)} − ${r.fech.descRot} ${brl(r.desc)}`:"";
   $("#rMin").textContent=hrs(r.min); $("#rMax").textContent=hrs(r.max);
   const alvo=+c.margemAlvo||0, abaixo=r.valor&&r.margemPct<alvo;
   const fxTxt=r.faixas.map(a=>{const x=a.fx;return `<p class="muted fxap"><b>${esc(a.perfil)}</b>${a.dem?` · ${esc(a.dem)}`:""}: ${num(x.H)} h (${BASE_FX[a.base]}) → faixa ${x.k+1}/${x.n} (${x.de?"acima de "+num(x.de):"até"}${x.ate<Infinity?(x.de?" até ":" ")+num(x.ate)+" h":" h"}) · <b>${brl(x.taxa)}/h</b>${x.modo==="escalonada"?" efetivo (escalonado)":""}${x.protegido?` · degrau protegido: total mínimo ${brl(x.protegido)}`:""}${x.prox?` · faltam ${num(x.prox.em-x.H)} h para ${brl(x.prox.preco)}/h`:""}</p>`}).join("");
-  $("#margemBox").innerHTML=r.valor?fxTxt+`<div class="mgrid">
+  $("#margemBox").innerHTML=r.valor?fxTxt+(r.desc?`<p class="muted fxap">Valor estimado ${brl(r.valor)} · ${esc(r.fech.descRot)} ${r.fech.descTipo==="pct"?num(r.fech.pct)+"%":""} −${brl(r.desc)} → <b>${brl(r.final)}</b>. A margem abaixo já considera o desconto.</p>`:"")+`<div class="mgrid">
       <div><span>Custo interno</span><b>${brl(r.custo)}</b></div>
       <div><span>Margem</span><b class="${abaixo?"diff up":"diff down"}">${brl(r.margem)} · ${num(r.margemPct,0)}%</b></div></div>
     ${abaixo?`<p class="msg err" style="margin:8px 0 0">Margem abaixo do alvo de ${num(alvo,0)}%. Preço médio mínimo para o alvo: <b>${brl(r.precoMinAlvo)}/h</b>.</p>`:""}
@@ -1221,7 +1293,7 @@ $("#btnCsv").onclick=()=>{
     if(!d.linhas.length) rows.push([...dc,"","",d.obs]);
     d.linhas.forEach(l=>{const p=proc(l.cod);rows.push([...dc,lineFase(l),l.cod,p?p.nome:l.desc,l.det,p?p.un:"",l.qtd,l.min,lineMin(l),(lineMin(l)/60).toFixed(2),l.real??""])});
   });
-  rows.push([],["Horas estimadas",(r.base/60).toFixed(2)],["Reservas (h)",(r.res/60).toFixed(2)],["Gestão extra %",c.gest],["Total horas",(r.total/60).toFixed(2)],["Prazo dias úteis",r.dias.toFixed(1)],["Investimento",r.valor.toFixed(2)],["Custo interno",r.custo.toFixed(2)],["Margem %",r.margemPct.toFixed(1)]);
+  rows.push([],["Horas estimadas",(r.base/60).toFixed(2)],["Reservas (h)",(r.res/60).toFixed(2)],["Gestão extra %",c.gest],["Total horas",(r.total/60).toFixed(2)],["Prazo dias úteis",r.dias.toFixed(1)],["Valor estimado",r.valor.toFixed(2)],["Desconto",r.desc.toFixed(2)],["Investimento (valor final)",r.final.toFixed(2)],["Condições de pagamento",condTexto(r.fech.pg)],["Custo interno",r.custo.toFixed(2)],["Margem %",r.margemPct.toFixed(1)]);
   download("﻿"+toCsv(rows),(est.nome||"estimativa")+".csv","text/csv");
 };
 $("#btnSaveEst").onclick=()=>download(JSON.stringify({estimativa:est,cfg:db.cfg},null,2),(est.nome||"estimativa")+".estimacerto.json","application/json");
@@ -1467,7 +1539,7 @@ const mesFmt=t=>new Date(t).toLocaleDateString("pt-BR",{month:"long",year:"numer
 const dataDe=e=>e.data?new Date(e.data+"T12:00:00").getTime():(e.criadoEm||Date.now());
 function novaEstimativa(clienteId,base){
   const t=Date.now(), id=uid();
-  const e={nome:"Nova estimativa",resp:est.resp||"",data:hoje(),demandas:[],catalogo:catAtual(),perfil:perfilEst().id,...(base||{}),id,familia:id,clienteId,versao:1,status:"rascunho",arquivada:false,criadoEm:t,atualizadoEm:t,fechadaEm:null};
+  const e={nome:"Nova estimativa",resp:est.resp||"",data:hoje(),demandas:[],catalogo:catAtual(),perfil:perfilEst().id,...(((db.cfg.escopoTemplates||[]).find(t=>t.padrao)||{}).pag?{comercial:{...COM_PADRAO,...clone(db.cfg.escopoTemplates.find(t=>t.padrao).pag)}}:{}),...(base||{}),id,familia:id,clienteId,versao:1,status:"rascunho",arquivada:false,criadoEm:t,atualizadoEm:t,fechadaEm:null};
   arq.estimativas[id]=clone(e); Sync.est(id); return e;
 }
 function abrirEstimativa(id){
@@ -1490,7 +1562,7 @@ function renderArquivo(){
     const m=mesFmt(dataDe(e)); if(m!==mes){mes=m;h+=`<tr class="mes"><td colspan="6">${esc(m)}</td></tr>`}
     const r=calc(e), pc=r.base?Math.round((r.porAnd.concluida||0)/r.base*100):0, st=e.arquivada?'<span class="pill st-a">arquivada</span>':e.aprovacao?'<span class="pill h">aprovada</span>':e.status==="fechada"?'<span class="pill st-f">fechada</span>':'<span class="pill st-r">rascunho</span>';
     h+=`<tr class="${e.id===est.id?"cur":""}"><td><b>${esc(e.nome||"(sem nome)")}</b> <span class="pill">v${e.versao||1}</span>${e.id===est.id?' <span class="muted">· aberta</span>':""}</td>
-      <td>${st}${(e.catalogo||"promob")!=="promob"?` <span class="pill">${esc(catNome(e.catalogo))}</span>`:""}${pc?` <span class="muted">${pc}% concluído</span>`:""}</td><td class="n">${hrs(r.total)}${r.valor?`<div class="${r.margemPct<(+db.cfg.margemAlvo||0)?"diff up":"diff down"}">margem ${num(r.margemPct,0)}%</div>`:""}</td><td class="n">${brl(r.valor)}</td>
+      <td>${st}${(e.catalogo||"promob")!=="promob"?` <span class="pill">${esc(catNome(e.catalogo))}</span>`:""}${pc?` <span class="muted">${pc}% concluído</span>`:""}</td><td class="n">${hrs(r.total)}${r.valor?`<div class="${r.margemPct<(+db.cfg.margemAlvo||0)?"diff up":"diff down"}">margem ${num(r.margemPct,0)}%</div>`:""}</td><td class="n">${brl(r.final)}${r.desc?`<div class="muted" style="font-size:11px">com desconto</div>`:""}</td>
       <td class="muted" title="Atualizada em ${new Date(e.atualizadoEm||0).toLocaleString("pt-BR")}">${e.data?new Date(e.data+"T12:00:00").toLocaleDateString("pt-BR"):""}</td>
       <td class="acts">${e.id!==est.id?`<button class="btn sm pri" data-aab="${e.id}">Abrir</button>`:""}<button class="btn sm" data-aren="${e.id}">Renomear</button><button class="btn sm" data-aver="${e.id}">Nova versão</button><button class="btn sm" data-aarq="${e.id}">${e.arquivada?"Desarquivar":"Arquivar"}</button><button class="x" data-adel="${e.id}" title="Excluir">×</button></td></tr>`;
   });
@@ -2272,11 +2344,14 @@ function linhasOrcamento(modo){
     return [{name:(catNome(catAtual())+" — "+(est.nome||"")).slice(0,100),description:("Demandas: "+dems.map(d=>d.nome).join("; ")).slice(0,1900),quantity:qt,rate:qt?Math.round(val/qt*100)/100:0}]}
   return dems.map(d=>({name:d.nome.slice(0,100),description:resumo(d),quantity:h(minD(d),d),rate:Math.round(taxa(d)*100)/100}));
 }
+// desconto da estimativa aplicado sobre o subtotal das linhas do Zoho (valor fixo, 2 casas)
+function zDesconto(sub){const cm=comercialDe();const d=cm.descTipo==="pct"?sub*(+cm.desc||0)/100:Math.min(sub,+cm.desc||0);return Math.round(Math.max(0,d)*100)/100}
 function fallbackZoho(motivo){
   const ls=linhasOrcamento("demanda");
   abrirModal("Orçamento no Zoho Invoice",`<div class="msg">${esc(motivo)}</div>
     <p class="muted">Abra <a href="https://invoice.zoho.com/app#/quotes/new" target="_blank" rel="noopener">Zoho Invoice › Novo orçamento</a> e use as linhas abaixo (horas já com as reservas de risco; preço/hora do perfil de cada demanda):</p>
     <textarea class="code" id="zTxt" readonly style="min-height:160px">${esc(ls.map(l=>`${l.name}\t${String(l.quantity).replace(".",",")} h\t${l.rate}\t${l.description}`).join("\n"))}</textarea>
+    ${calc().desc?`<p class="muted">Desconto a lançar no orçamento: <b>${brl(zDesconto(ls.reduce((s,l)=>s+l.quantity*l.rate,0)))}</b>.</p>`:""}<p class="muted">Termos e condições: ${esc(condTexto(calc().fech.pg))}</p>
     <div class="row" style="margin-top:6px"><button class="btn" id="zCp">Copiar linhas</button></div>`);
   $("#zCp").onclick=()=>copiar("zTxt");
 }
@@ -2305,7 +2380,10 @@ $("#btnZoho").onclick=async()=>{
       </div>
       <p class="muted">Quantidade = horas com as reservas de risco · preço = preço/hora do perfil de cada demanda. Nome e descrição de cada linha vêm da demanda.</p>
       <div id="zPrev"></div><div id="zRes"></div>`;
-    const prev=()=>{const ls=linhasOrcamento($("#zModo").value);$("#zPrev").innerHTML=`<div class="tbl"><table><thead><tr><th>Linha</th><th class="n">Horas</th><th class="n">Valor</th></tr></thead><tbody>${ls.map(l=>`<tr><td>${esc(l.name)}</td><td class="n">${num(l.quantity,2)}</td><td class="n">${brl(l.quantity*l.rate)}</td></tr>`).join("")}<tr><td><b>Total</b></td><td class="n"><b>${num(ls.reduce((s,l)=>s+l.quantity,0),2)}</b></td><td class="n"><b>${brl(ls.reduce((s,l)=>s+l.quantity*l.rate,0))}</b></td></tr></tbody></table></div>`};
+    const prev=()=>{const ls=linhasOrcamento($("#zModo").value), sub=ls.reduce((s,l)=>s+l.quantity*l.rate,0), dz=zDesconto(sub), fe=calc().fech;
+      $("#zPrev").innerHTML=`<div class="tbl"><table><thead><tr><th>Linha</th><th class="n">Horas</th><th class="n">Valor</th></tr></thead><tbody>${ls.map(l=>`<tr><td>${esc(l.name)}</td><td class="n">${num(l.quantity,2)}</td><td class="n">${brl(l.quantity*l.rate)}</td></tr>`).join("")}<tr><td><b>Subtotal</b></td><td class="n"><b>${num(ls.reduce((s,l)=>s+l.quantity,0),2)}</b></td><td class="n"><b>${brl(sub)}</b></td></tr>
+        ${dz?`<tr><td>${esc(fe.descRot)}${fe.descTipo==="pct"?` (${num(fe.pct)}%)`:""}</td><td></td><td class="n">− ${brl(dz)}</td></tr><tr><td><b>Total</b></td><td></td><td class="n"><b>${brl(sub-dz)}</b></td></tr>`:""}</tbody></table></div>
+        <p class="muted" style="font-size:12px">Termos e condições no Zoho: ${esc(condTexto(fe.pg))}</p>`};
     prev(); $("#zModo").onchange=prev;
     if($("#zOrg")) $("#zOrg").onchange=e=>{zOrg=e.target.value};
     const buscar=async()=>{
@@ -2321,13 +2399,15 @@ $("#btnZoho").onclick=async()=>{
     $("#mFoot").insertAdjacentHTML("afterbegin",'<button class="btn pri" id="zCriar">Criar orçamento no Zoho</button>');
     $("#zCriar").onclick=async()=>{
       const cli=$("#zCli").value, item=$("#zItem").value; if(!cli||!item){uiAlert("Escolha o cliente e o item.");return}
-      const ls=linhasOrcamento($("#zModo").value), r=calc(), c=db.cfg;
-      if(!await uiConfirm(`Criar orçamento de ${brl(ls.reduce((s,l)=>s+l.quantity*l.rate,0))} (${ls.length} linhas) no Zoho Invoice?`)) return;
+      const ls=linhasOrcamento($("#zModo").value), r=calc(), c=db.cfg, sub=ls.reduce((s,l)=>s+l.quantity*l.rate,0), dz=zDesconto(sub);
+      if(!await uiConfirm(`Criar orçamento de ${brl(sub-dz)}${dz?` (com ${brl(dz)} de desconto)`:""} (${ls.length} linhas) no Zoho Invoice?`)) return;
       $("#zCriar").disabled=true; $("#zRes").innerHTML='<div class="msg">Criando orçamento…</div>';
       try{
         const out=await zCall("ZohoInvoice_Create_an_Estimate",{headers:zHead(),body:{
           customer_id:cli,date:hoje(),expiry_date:$("#zVenc").value,reference_number:(est.nome||"").slice(0,50),
           line_items:ls.map((l,i)=>({item_id:item,name:l.name,description:l.description,quantity:l.quantity,rate:l.rate,unit:"h",item_order:i+1})),
+          ...(dz?{discount:dz,discount_type:"entity_level",is_discount_before_tax:true}:{}),
+          terms:condTexto(r.fech.pg).slice(0,2000),
           notes:`Estimativa EstimaCerto: ${num(r.base/60)} h técnicas + ${num(r.res/60)} h de reservas de risco = ${num(r.total/60)} h. Prazo estimado: ${num(Math.ceil(r.dias*10)/10)} dias úteis.`
         }});
         const e=(out&&(out.estimate||out.data&&out.data.estimate))||{};
@@ -2606,7 +2686,8 @@ ul{margin:4px 0 0;padding-left:18px}li{margin:2px 0}
 .fases{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.fases div{background:var(--soft);padding:12px 14px;border-radius:6px}
 .fases b{display:block;font-family:system-ui,sans-serif;font-size:13px;color:var(--acc)}
 table{width:100%;border-collapse:collapse;font-family:system-ui,sans-serif;font-size:14px}td,th{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left}
-.n{text-align:right;white-space:nowrap}.tot td{font-weight:700;font-size:16px;border-top:2px solid var(--ink)}
+.n{text-align:right;white-space:nowrap}.tot td{font-weight:700;font-size:16px;border-top:2px solid var(--ink)}.sub td{border-top:2px solid var(--ink)}
+.ext{font-style:italic;color:var(--mut);margin:8px 0}.pag{margin:4px 0 6px;font-family:system-ui,sans-serif;font-size:14px}.pagf{margin:4px 0;font:14px/1.5 system-ui,sans-serif;color:var(--mut)}
 .fecho{margin-top:48px;padding:28px;background:var(--ink);color:#fff;border-radius:6px}.fecho p{margin:0}.fecho .m{font-size:20px;font-style:italic;margin-bottom:14px}
 .ass{font:13px/1.6 system-ui,sans-serif;color:#d8d3ca}
 .aceite{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 18px}.bt{display:inline-block;background:var(--acc);color:#fff;text-decoration:none;font:600 14px system-ui;padding:10px 16px;border-radius:6px}
@@ -2624,14 +2705,18 @@ table{width:100%;border-collapse:collapse;font-family:system-ui,sans-serif;font-
 <h2>4 · Escopo e entregáveis</h2>${escopo}
 <h2>5 · Cronograma</h2><p>Início previsto em <b>${fmtD(cr.ini)}</b> e entrega da biblioteca em <b>${fmtD(cr.entrega)}</b> (${cr.dias} dias úteis), contados a partir da aprovação e do recebimento dos materiais técnicos.</p>
 <h2>6 · Investimento</h2><table><thead><tr><th>Demanda</th>${p.mostrarHoras?'<th class="n">Esforço</th>':""}<th class="n">Valor</th></tr></thead><tbody>${inv}
-<tr class="tot"><td>Total</td>${p.mostrarHoras?`<td class="n">${num(r.total/60)} h</td>`:""}<td class="n">${brl(r.valor)}</td></tr></tbody></table>
-<p><b>Condições:</b> ${e(p.condicoes)}</p>
+${r.desc?`<tr class="sub"><td>Valor total</td>${p.mostrarHoras?`<td class="n">${num(r.total/60)} h</td>`:""}<td class="n">${brl(r.valor)}</td></tr>
+<tr><td>${e(r.fech.descRot)}${r.fech.descTipo==="pct"?` (${num(r.fech.pct)}%)`:""}</td>${p.mostrarHoras?"<td></td>":""}<td class="n">− ${brl(r.desc)}</td></tr>
+<tr class="tot"><td>Investimento final</td>${p.mostrarHoras?"<td></td>":""}<td class="n">${brl(r.final)}</td></tr>`
+:`<tr class="tot"><td>Total</td>${p.mostrarHoras?`<td class="n">${num(r.total/60)} h</td>`:""}<td class="n">${brl(r.final)}</td></tr>`}</tbody></table>
+${p.extenso!==false?`<p class="ext">${brl(r.final)} (${e(extenso(r.final))})</p>`:""}
+${pagHTML(r.fech.pg)}
 <h2>7 · Premissas</h2><ul>${li(p.premissas).map(x=>`<li>${e(x)}</li>`).join("")}</ul>
 <h2>8 · Próximos passos</h2><ol>${li(p.proximos).map(x=>`<li>${e(x)}</li>`).join("")}</ol>
 <h2>9 · Aceite</h2>
 <p>Para aprovar esta proposta, responda pelo canal de sua preferência ou assine abaixo.</p>
-<div class="aceite">${emp.whatsapp?`<a class="bt" href="https://wa.me/${e(String(emp.whatsapp).replace(/\D/g,""))}?text=${encodeURIComponent(`Aprovo a proposta "${p.titulo}" — ${cli} · ${est.nome} v${est.versao||1} (${brl(r.valor)}).`)}">Aprovar pelo WhatsApp</a>`:""}
-${emp.email?`<a class="bt" href="mailto:${e(emp.email)}?subject=${encodeURIComponent(`Aprovação — ${p.titulo} · ${est.nome} v${est.versao||1}`)}&body=${encodeURIComponent(`Aprovo a proposta "${p.titulo}" (${cli} · ${est.nome} v${est.versao||1}), no valor de ${brl(r.valor)}, nas condições: ${p.condicoes}\n\nNome:\nCargo:`)}">Aprovar por e-mail</a>`:""}</div>
+<div class="aceite">${emp.whatsapp?`<a class="bt" href="https://wa.me/${e(String(emp.whatsapp).replace(/\D/g,""))}?text=${encodeURIComponent(`Aprovo a proposta "${p.titulo}" — ${cli} · ${est.nome} v${est.versao||1} (${brl(r.final)}).`)}">Aprovar pelo WhatsApp</a>`:""}
+${emp.email?`<a class="bt" href="mailto:${e(emp.email)}?subject=${encodeURIComponent(`Aprovação — ${p.titulo} · ${est.nome} v${est.versao||1}`)}&body=${encodeURIComponent(`Aprovo a proposta "${p.titulo}" (${cli} · ${est.nome} v${est.versao||1}), no valor de ${brl(r.final)}, nas condições: ${condTexto(r.fech.pg)}\n\nNome:\nCargo:`)}">Aprovar por e-mail</a>`:""}</div>
 <div class="assin"><div>De acordo — ${e(cli)}<br><br>________________________________<br>Nome / data</div><div>${e(emp.nome)}<br><br>________________________________<br>${e(emp.assinatura||"")}</div></div>
 <div class="fecho"><p class="m">“${e(emp.mantra)}”</p><p class="ass">${e(emp.assinatura||emp.nome)}${emp.cargo?` · ${e(emp.cargo)}`:""}<br>${e(emp.nome)}</p></div>
 </div></body></html>`;
@@ -2643,19 +2728,20 @@ $("#btnProposta").onclick=()=>{
       <label>Título<input id="ppTit" value="${esc(p.titulo)}"></label>
       <label>Contexto (o problema do cliente)<textarea id="ppCtx">${esc(p.contexto)}</textarea></label>
       <label>Objetivo (a transformação)<textarea id="ppObj">${esc(p.objetivo)}</textarea></label>
-      <label>Condições de pagamento<textarea id="ppCond" style="min-height:44px">${esc(p.condicoes)}</textarea></label>
+      <div><span class="lblm">Desconto e condições de pagamento · valem também para o escopo e o Zoho Invoice</span><div class="cmBox">${comercialForm()}</div></div>
       <div class="row"><label>Validade (dias)<input id="ppVal" type="number" min="1" value="${p.validade}"></label>
-      <label style="flex-direction:row;align-items:center;gap:6px;margin-top:16px"><input type="checkbox" id="ppHoras" ${p.mostrarHoras?"checked":""}> mostrar horas</label></div>
+      <label style="flex-direction:row;align-items:center;gap:6px;margin-top:16px"><input type="checkbox" id="ppHoras" ${p.mostrarHoras?"checked":""}> mostrar horas</label>
+      <label style="flex-direction:row;align-items:center;gap:6px;margin-top:16px"><input type="checkbox" id="ppExt" ${p.extenso!==false?"checked":""}> valor por extenso</label></div>
       <label>Premissas (uma por linha)<textarea id="ppPrem">${esc(p.premissas)}</textarea></label>
       <label>Próximos passos (um por linha)<textarea id="ppProx">${esc(p.proximos)}</textarea></label>
     </div><iframe id="ppPrev" title="Pré-visualização"></iframe></div>`,
     [{label:"Baixar proposta (.html)",pri:true,fn:()=>{ler();download(propostaHTML(est.proposta),`Proposta - ${(arq.clientes[est.clienteId]||{}).nome||""} - ${est.nome} v${est.versao||1}.html`,"text/html")}},
      {label:"Imprimir / PDF",fn:()=>{ler();const f=$("#ppPrev");try{f.contentWindow.focus();f.contentWindow.print()}catch(e){uiAlert("Este visualizador não permite imprimir daqui. Baixe a proposta (.html), abra no navegador e use Imprimir › Salvar como PDF.")}}},
      {label:"Restaurar textos padrão",fn:()=>{delete est.proposta;persist();fecharModal();$("#btnProposta").click()}}]);
-  const ler=()=>{est.proposta={titulo:$("#ppTit").value,contexto:$("#ppCtx").value,objetivo:$("#ppObj").value,condicoes:$("#ppCond").value,validade:+$("#ppVal").value||15,
+  const ler=()=>{est.proposta={titulo:$("#ppTit").value,contexto:$("#ppCtx").value,objetivo:$("#ppObj").value,extenso:$("#ppExt").checked,validade:+$("#ppVal").value||15,
     premissas:$("#ppPrem").value,proximos:$("#ppProx").value,mostrarHoras:$("#ppHoras").checked};persist()};
   const prev=()=>{ler();$("#ppPrev").srcdoc=propostaHTML(est.proposta)};
-  prev(); $("#mBody").querySelectorAll(".prop-form input,.prop-form textarea").forEach(el=>el.addEventListener("change",prev));
+  prev(); $("#mBody").querySelectorAll(".prop-form input:not([data-cm]),.prop-form textarea").forEach(el=>el.addEventListener("change",prev));
 };
 
 /* ================= ESCOPO E BRIEFING ================= */
@@ -2669,7 +2755,7 @@ const ESC_PRESETS=[
   {id:"resumoDem",nome:"Demanda bullets com uma descrição resumida do passo a passo + valor por demanda e valor total",c:{resumo:true,valor:"dem"}},
   {id:"horasValorDem",nome:"Demanda bullets com horas/valor por demanda e valor total no final",c:{horas:true,valor:"dem"}}
 ];
-const INV_PADRAO={modo:"total",descTipo:"pct",desc:0,descRot:"Desconto",extenso:true,entTipo:"pct",ent:50,entQuando:"na aprovação",parcelas:1,restQuando:"na entrega",forma:"boleto ou PIX",obs:""};
+const INV_PADRAO={mostrarDesc:true,extenso:true};
 // valor por extenso (reais inteiros)
 function extenso(v){
   v=Math.round(Math.abs(+v||0)); if(!v) return "zero reais";
@@ -2702,8 +2788,8 @@ function escBlocosPadrao(){
 }
 function escCfg(){
   if(!est.escopo||!est.escopo.blocos){
-    const pd=db.cfg.escopoPadrao;
-    est.escopo=Object.assign({alcance:"",titulo:"",preset:"tot",col:clone(ESC_PRESETS[0].c),aceites:[]},est.escopo||{},pd?clone({preset:pd.preset,col:pd.col,blocos:pd.blocos}):{blocos:escBlocosPadrao()});
+    const tp=(db.cfg.escopoTemplates||[]).find(t=>t.padrao), pd=tp&&tp.cfg;
+    est.escopo=Object.assign({alcance:"",titulo:"",preset:"tot",col:clone(ESC_PRESETS[0].c),aceites:[]},est.escopo||{},pd?clone({preset:pd.preset,col:pd.col,blocos:pd.blocos,titulo:pd.titulo||""}):{blocos:escBlocosPadrao()});
   }
   const cf=est.escopo, pr=ESC_PRESETS.find(p=>p.id===cf.preset);
   if(!pr){cf.preset="tot";cf.col=clone(ESC_PRESETS[0].c)} else if(JSON.stringify(cf.col)!==JSON.stringify(pr.c)) cf.col=clone(pr.c);
@@ -2720,9 +2806,7 @@ function resumoPassos(d){
 }
 function invCalc(bruto,inv){
   inv=Object.assign({},INV_PADRAO,inv||{});
-  const desc=inv.modo==="desconto"?Math.min(bruto,Math.max(0,inv.descTipo==="pct"?bruto*(+inv.desc||0)/100:(+inv.desc||0))):0;
-  return {modo:inv.modo,bruto:Math.round(bruto),desc:Math.round(desc),pct:inv.descTipo==="pct"?(+inv.desc||0):(bruto?desc/bruto*100:0),descTipo:inv.descTipo,descRot:inv.descRot||"Desconto",
-    final:Math.round(bruto-desc),extenso:!!inv.extenso,pg:pagCalc(Math.round(bruto-desc),inv)};
+  return {...fechamento(bruto,est,calc().valor),mostrarDesc:inv.mostrarDesc!==false,extenso:!!inv.extenso};
 }
 // condições de pagamento: entrada (% ou R$) + restante em parcelas
 function pagCalc(final,inv){
@@ -2758,17 +2842,10 @@ function escopoHTML(cf=escCfg(),aceite=null){
   const totLinha=(m.totalH!=null||m.totalV!=null)?`<p class="totl">Total${m.dems.length>1?` (${m.dems.length} demandas)`:""}: ${[m.totalH!=null?`<b>${num(m.totalH)} h</b>`:"",m.totalV!=null?`<b>${brl(m.totalV)}</b>`:""].filter(Boolean).join(" · ")}</p>`:"";
   const cron=m.dems.some(x=>x.ini)?`${m.periodo?`<p>Início em <b>${fmtD(m.periodo.ini)}</b> e entrega em <b>${fmtD(m.periodo.fim)}</b>, contados a partir do aceite e do recebimento dos materiais.</p>`:""}
     ${m.dems.length>1?`<table><tbody>${m.dems.map(x=>`<tr><td>${e(x.nome)}</td><td class="n">${x.ini?fmtD(x.ini)+" a "+fmtD(x.fim):"—"}</td></tr>`).join("")}</tbody></table>`:""}`:"<p>A definir no início do projeto.</p>";
-  const inv=v=>`<table><tbody>${v.modo==="desconto"&&v.desc>0?`<tr><td>Valor total</td><td class="n">${brl(v.bruto)}</td></tr>
+  const inv=v=>`<table><tbody>${v.mostrarDesc&&v.desc>0?`<tr><td>Valor total</td><td class="n">${brl(v.bruto)}</td></tr>
       <tr><td>${e(v.descRot)}${v.descTipo==="pct"?` (${num(v.pct)}%)`:""}</td><td class="n">− ${brl(v.desc)}</td></tr>
       <tr class="tot"><td>Valor final</td><td class="n">${brl(v.final)}</td></tr>`:`<tr class="tot"><td>Investimento total</td><td class="n">${brl(v.final)}</td></tr>`}</tbody></table>
     ${v.extenso?`<p class="ext">${e(brl(v.final))} (${e(extenso(v.final))})</p>`:""}${pagHTML(v.pg)}`;
-  function pagHTML(p){
-    if(!p.rest&&!p.ent) return "";
-    const ls=[];
-    if(p.ent) ls.push(`<li><b>Entrada${p.entTipo==="pct"?` (${num(p.entPct)}%)`:""}:</b> ${brl(p.ent)}${p.entQuando?` ${e(p.entQuando)}`:""}</li>`);
-    if(p.rest) ls.push(`<li><b>${p.ent?"Restante":"Pagamento"}${p.ent&&p.entTipo==="pct"?` (${num(100-p.entPct)}%)`:""}:</b> ${parcTxt(p)}${p.restQuando?` ${e(p.restQuando)}`:""}</li>`);
-    return `<h4>Condições de pagamento</h4><ul class="pag">${ls.join("")}</ul>${p.forma?`<p class="pagf">Forma de pagamento: ${e(p.forma)}.</p>`:""}${p.obs?`<p class="pagf">${e(p.obs)}</p>`:""}`;
-  }
   const assinado=aceite?`<div class="assinado"><img src="${e(aceite.png)}" alt="Assinatura"><p><b>${e(aceite.nome)}</b>${aceite.doc?` · ${e(aceite.doc)}`:""}${aceite.cargo?` · ${e(aceite.cargo)}`:""}<br>
       Assinado eletronicamente em ${new Date(aceite.em).toLocaleString("pt-BR")}${aceite.canal?` · ${e(aceite.canal)}`:""}<br>Código da assinatura: <b>${e(aceite.cod)}</b></p></div>`:"";
   const aceiteSec=`<p>Declaro que li e concordo com o escopo, as premissas e as condições descritas neste documento.</p>
@@ -2893,31 +2970,20 @@ function renderEsc(){
     <div><span class="lblm">Blocos do documento</span>
     ${cf.blocos.map((b,k)=>`<div class="eblk${b.on?"":" off"}"><div class="ebh"><input type="checkbox" data-ebon="${k}" ${b.on?"checked":""} title="Incluir"><input data-ebtit="${k}" value="${esc(b.tit)}">
         <button class="btn sm" data-ebup="${k}" ${k?"":"disabled"}>↑</button><button class="btn sm" data-ebdn="${k}" ${k<cf.blocos.length-1?"":"disabled"}>↓</button>${b.tipo==="texto"?`<button class="x" data-ebdel="${k}" title="Excluir bloco">×</button>`:""}</div>
-      ${b.tipo==="texto"?(b.on?`<textarea data-ebtxt="${k}" placeholder="Uma linha por item (vira lista) ou um parágrafo.">${esc(b.txt||"")}</textarea>`:""):b.tipo==="investimento"&&b.on?invForm(b,k):`<span class="muted" style="font-size:12px">${{escopo:"Gerado das demandas, no nível de detalhe escolhido.",cronograma:"Gerado do cronograma (com seus ajustes).",investimento:"Valor total, desconto, valor por extenso e condições de pagamento (entrada e restante).",aceite:"Campos de aceite, assinatura desenhada e código de integridade."}[b.tipo]}</span>`}</div>`).join("")}
+      ${b.tipo==="texto"?(b.on?`<textarea data-ebtxt="${k}" placeholder="Uma linha por item (vira lista) ou um parágrafo.">${esc(b.txt||"")}</textarea>`:""):b.tipo==="investimento"&&b.on?invForm(b,k):`<span class="muted" style="font-size:12px">${{escopo:"Gerado das demandas, no nível de detalhe escolhido.",cronograma:"Gerado do cronograma (com seus ajustes).",investimento:"Valor final, desconto, valor por extenso e condições de pagamento da estimativa.",aceite:"Campos de aceite, assinatura desenhada e código de integridade."}[b.tipo]}</span>`}</div>`).join("")}
     <button class="btn sm" id="esAddB">+ Bloco de texto</button></div>`;
   renderEscPrev(); renderEscAceites();
 }
 function invForm(b,k){
-  const v=Object.assign({},INV_PADRAO,b.inv||{}), r=invCalc(escModelo().bruto,v);
+  const v=Object.assign({},INV_PADRAO,b.inv||{});
   return `<div class="einv">
-    <label><input type="radio" name="esInv${k}" data-einv="${k}" data-ik="modo" value="total" ${v.modo!=="desconto"?"checked":""}> O valor total</label>
-    <label><input type="radio" name="esInv${k}" data-einv="${k}" data-ik="modo" value="desconto" ${v.modo==="desconto"?"checked":""}> Valor total + desconto</label>
-    ${v.modo==="desconto"?`<div class="einvd"><input data-einv="${k}" data-ik="descRot" value="${esc(v.descRot)}" title="Nome do desconto" style="flex:1;min-width:110px">
-      <input type="number" min="0" step="0.5" data-einv="${k}" data-ik="desc" value="${v.desc||""}" placeholder="0" style="width:80px">
-      <select data-einv="${k}" data-ik="descTipo" style="width:auto"><option value="pct" ${v.descTipo==="pct"?"selected":""}>%</option><option value="rs" ${v.descTipo==="rs"?"selected":""}>R$</option></select></div>
-      <span class="muted" style="font-size:12px">${brl(r.bruto)} − ${brl(r.desc)} = <b>${brl(r.final)}</b></span>`:""}
+    <label><input type="radio" name="esInv${k}" data-einv="${k}" data-ik="mostrarDesc" value="1" ${v.mostrarDesc!==false?"checked":""}> Valor total + desconto (quando houver)</label>
+    <label><input type="radio" name="esInv${k}" data-einv="${k}" data-ik="mostrarDesc" value="" ${v.mostrarDesc===false?"checked":""}> Só o valor final</label>
     <label><input type="checkbox" data-einv="${k}" data-ik="extenso" ${v.extenso?"checked":""}> Valor por extenso</label>
-    <span class="lblm" style="margin-top:6px">Condições de pagamento</span>
-    <div class="einvd"><span style="width:62px">Entrada</span><input type="number" min="0" step="1" data-einv="${k}" data-ik="ent" value="${v.ent||""}" placeholder="0" style="width:80px">
-      <select data-einv="${k}" data-ik="entTipo" style="width:auto"><option value="pct" ${v.entTipo==="pct"?"selected":""}>%</option><option value="rs" ${v.entTipo==="rs"?"selected":""}>R$</option></select>
-      <input data-einv="${k}" data-ik="entQuando" value="${esc(v.entQuando)}" placeholder="quando (ex.: na aprovação)" style="flex:1;min-width:90px"></div>
-    <div class="einvd"><span style="width:62px">Restante</span><input type="number" min="1" step="1" data-einv="${k}" data-ik="parcelas" value="${v.parcelas||1}" style="width:56px" title="Número de parcelas"><span>×</span>
-      <input data-einv="${k}" data-ik="restQuando" value="${esc(v.restQuando)}" placeholder="quando (ex.: na entrega, 30/60/90 dias)" style="flex:1;min-width:90px"></div>
-    <div class="einvd"><span style="width:62px">Forma</span><input data-einv="${k}" data-ik="forma" value="${esc(v.forma)}" placeholder="boleto ou PIX" style="flex:1"></div>
-    <div class="einvd"><span style="width:62px">Obs.</span><input data-einv="${k}" data-ik="obs" value="${esc(v.obs)}" placeholder="opcional (ex.: NF emitida na entrada)" style="flex:1"></div>
-    <span class="pgcalc">${r.pg.ent?`Entrada <b>${brl(r.pg.ent)}</b>${r.pg.entTipo==="rs"?` (${num(r.pg.entPct)}%)`:""} + `:""}${r.pg.ent?"restante":"pagamento"} <b>${parcTxt(r.pg)}</b> = ${brl(r.final)}</span></div>`;
+    <span class="lblm" style="margin-top:6px">Desconto e condições de pagamento · valem também para a proposta e o Zoho Invoice</span>
+    <div class="cmBox">${comercialForm()}</div></div>`;
 }
-function renderEscPrev(){const f=$("#escPrev"); if(f) f.srcdoc=escopoHTML()}
+function renderEscPrev(){const f=$("#escPrev"); if(f) f.srcdoc=escopoHTML(); renderEscTpl()}
 function renderEscAceites(){
   const box=$("#escAceites"); if(!box) return; const ac=escCfg().aceites;
   box.innerHTML=ac.length?`<table><thead><tr><th>Quem</th><th>Abrangência</th><th>Quando · canal</th><th>Códigos</th><th></th></tr></thead><tbody>${ac.map((a,k)=>`<tr>
@@ -2943,7 +3009,7 @@ $("#escForm").addEventListener("change",e=>{
   if(t.id==="esAlc"){cf.alcance=t.value;escSalvar(false);renderEsc();return}
   if(t.name==="esPre"){const p=ESC_PRESETS.find(x=>x.id===t.value);cf.preset=p.id;cf.col=clone(p.c);escSalvar(false);renderEsc();return}
   if(ds.einv!==undefined){const b=cf.blocos[+ds.einv];b.inv=Object.assign({},INV_PADRAO,b.inv||{});const ik=ds.ik;
-    b.inv[ik]=ik==="extenso"?t.checked:ik==="desc"||ik==="ent"?Math.max(0,+t.value||0):ik==="parcelas"?Math.max(1,Math.round(+t.value||1)):t.value;escSalvar(false);renderEsc();return}
+    b.inv[ik]=ik==="extenso"?t.checked:ik==="mostrarDesc"?t.value==="1":t.value;escSalvar(false);renderEsc();return}
   if(t.id==="esTit") cf.titulo=t.value.trim();
   else if(ds.ebon!==undefined){cf.blocos[+ds.ebon].on=t.checked;escSalvar(false);renderEsc();return}
   else if(ds.ebtit!==undefined) cf.blocos[+ds.ebtit].tit=t.value.trim()||"Bloco";
@@ -2954,7 +3020,45 @@ $("#escForm").addEventListener("change",e=>{
 const escNomeArq=suf=>`${escModelo().titulo} - ${(arq.clientes[est.clienteId]||{}).nome||""} - ${est.nome} v${est.versao||1}${suf||""}.html`;
 $("#escBaixar").onclick=()=>download(escopoHTML(),escNomeArq(),"text/html");
 $("#escPrint").onclick=()=>{const f=$("#escPrev");try{f.contentWindow.focus();f.contentWindow.print()}catch(e){uiAlert("Este visualizador não permite imprimir daqui. Baixe o escopo (.html), abra no navegador e use Imprimir › Salvar como PDF.")}};
-$("#escPadrao").onclick=async()=>{const cf=escCfg();db.cfg.escopoPadrao=clone({preset:cf.preset,col:cf.col,blocos:cf.blocos});persist();uiAlert("Blocos e nível de detalhe salvos como padrão para as próximas estimativas.")};
+// templates de escopo: nível de detalhe, blocos e textos, título e (opcional) condições de pagamento
+const escTpls=()=>db.cfg.escopoTemplates||(db.cfg.escopoTemplates=[]);
+function renderEscTpl(){const sl=$("#escTpl"); if(!sl) return;
+  sl.innerHTML=`<option value="">${escTpls().length?"Aplicar template…":"Sem templates salvos"}</option>`+escTpls().map(t=>`<option value="${esc(t.id)}">${t.padrao?"★ ":""}${esc(t.nome)}${t.pag?" · com pagamento":""}</option>`).join("")}
+function aplicarTplEscopo(t){
+  const cf=escCfg(); Object.assign(cf,clone({preset:t.cfg.preset,col:t.cfg.col,blocos:t.cfg.blocos,titulo:t.cfg.titulo||""}));
+  if(t.pag&&est.status!=="fechada"){migrarComercial(est);Object.assign(est.comercial,clone(t.pag))}
+  escCfg(); persist(); renderEsc(); renderEst();
+}
+$("#escTpl").addEventListener("change",async e=>{const t=escTpls().find(x=>x.id===e.target.value); e.target.value=""; if(!t) return;
+  if(!await uiConfirm(`Aplicar o template “${t.nome}”? Substitui o nível de detalhe, os blocos e os textos do escopo desta estimativa${t.pag?" e as condições de pagamento":""}. Abrangência e aceites ficam.`,{ok:"Aplicar",cancel:"Cancelar"})) return;
+  aplicarTplEscopo(t)});
+$("#escTplSalvar").onclick=async()=>{
+  const cf=escCfg(), nome=((await uiPrompt("Nome do template de escopo (ex.: Escopo enxuto · valor total):",cf.titulo||""))||"").trim(); if(!nome) return;
+  const pag=await uiConfirm("Incluir as condições de pagamento atuais (entrada, parcelas, forma e observação) no template? O desconto não entra: ele é de cada negociação.",{ok:"Incluir pagamento",cancel:"Só o escopo"});
+  const ex=escTpls().find(t=>t.nome.toLowerCase()===nome.toLowerCase());
+  if(ex&&!await uiConfirm(`Já existe o template “${ex.nome}”. Substituir?`,{ok:"Substituir",cancel:"Cancelar"})) return;
+  const cm=comercialDe(), t={id:ex?ex.id:uid(),nome,padrao:ex?ex.padrao:!escTpls().length,cfg:clone({preset:cf.preset,col:cf.col,blocos:cf.blocos,titulo:cf.titulo||""}),
+    pag:pag?Object.fromEntries(PAG_KEYS.map(k=>[k,cm[k]])):null,em:Date.now()};
+  if(ex) Object.assign(ex,t); else escTpls().push(t);
+  persist(); renderEscTpl(); uiAlert(`Template “${nome}” salvo${t.padrao?" e definido como padrão das novas estimativas":""}.`)};
+$("#escTplGer").onclick=()=>{
+  const lista=()=>escTpls().length?`<table><thead><tr><th>Template</th><th>Padrão</th><th>Conteúdo</th><th></th></tr></thead><tbody>${escTpls().map((t,i)=>`<tr>
+      <td><input data-tgn="${i}" value="${esc(t.nome)}"></td><td><input type="radio" name="tgPad" data-tgp="${i}" ${t.padrao?"checked":""} title="Usado nas novas estimativas"></td>
+      <td class="muted" style="font-size:12px">${esc((ESC_PRESETS.find(p=>p.id===t.cfg.preset)||{nome:""}).nome)} · ${t.cfg.blocos.filter(b=>b.on).length} blocos${t.pag?` · entrada ${t.pag.ent}${t.pag.entTipo==="pct"?"%":" R$"}, ${t.pag.parcelas}× ${esc(t.pag.restQuando||"")}`:""}</td>
+      <td class="acts"><button class="btn sm" data-tga="${i}">Aplicar</button><button class="btn sm" data-tgu="${i}" title="Substitui pelo escopo aberto agora">Atualizar</button><button class="x" data-tgd="${i}" title="Excluir">×</button></td></tr>`).join("")}</tbody></table>
+      <p class="muted" style="font-size:12px">O template ★ padrão monta o escopo e as condições de pagamento das novas estimativas.</p>`:'<p class="empty">Nenhum template. Configure o escopo e use “Salvar como template”.</p>';
+  abrirModal("Templates de escopo",`<div id="tgBox">${lista()}</div>`,[{label:"Sem padrão",fn:()=>{escTpls().forEach(t=>t.padrao=false);persist();$("#tgBox").innerHTML=lista();renderEscTpl()}}]);
+  const box=$("#tgBox");
+  box.addEventListener("change",e=>{const d=e.target.dataset;
+    if(d.tgn!==undefined){escTpls()[+d.tgn].nome=e.target.value.trim()||escTpls()[+d.tgn].nome}
+    else if(d.tgp!==undefined){escTpls().forEach((t,i)=>t.padrao=i===+d.tgp)}
+    persist();renderEscTpl()});
+  box.addEventListener("click",async e=>{const d=e.target.dataset;
+    if(d.tga!==undefined){aplicarTplEscopo(escTpls()[+d.tga]);fecharModal()}
+    else if(d.tgu!==undefined){const t=escTpls()[+d.tgu], cf=escCfg();if(!await uiConfirm(`Atualizar “${t.nome}” com o escopo aberto agora?`)) return;
+      t.cfg=clone({preset:cf.preset,col:cf.col,blocos:cf.blocos,titulo:cf.titulo||""});if(t.pag){const cm=comercialDe();t.pag=Object.fromEntries(PAG_KEYS.map(k=>[k,cm[k]]))}t.em=Date.now();persist();box.innerHTML=lista();renderEscTpl()}
+    else if(d.tgd!==undefined){const t=escTpls()[+d.tgd];if(!await uiConfirm(`Excluir o template “${t.nome}”?`,{ok:"Excluir",cancel:"Manter"})) return;escTpls().splice(+d.tgd,1);persist();box.innerHTML=lista();renderEscTpl()}});
+};
 $("#escReset").onclick=async()=>{if(!await uiConfirm("Voltar os blocos e o nível de detalhe ao padrão de fábrica? Os aceites registrados ficam.")) return;
   const cf=escCfg();cf.blocos=escBlocosPadrao();cf.preset="tot";cf.col=clone(ESC_PRESETS[0].c);cf.titulo="";escSalvar(false);renderEsc()};
 $("#escAssinar").onclick=()=>{

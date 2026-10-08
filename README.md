@@ -249,3 +249,19 @@ prazo (dias)    = total ÷ (horas produtivas/dia × pessoas)
 - Em Parâmetros › Perfis, a coluna **Responsável** define a pessoa da equipe que responde pelo perfil. Num centro de custo, é quem coordena. Num perfil do tipo pessoa, o padrão é a própria pessoa.
 - Ao escolher o perfil da estimativa, o **Responsável** da estimativa é preenchido sozinho, sem sobrescrever um nome digitado à mão.
 - Demandas com perfil próprio mostram o responsável. O cronograma mostra o responsável de cada demanda. O CSV e as tarefas do Zoho Projects levam o nome.
+
+## Condições comerciais unificadas
+
+- **Uma fonte só por estimativa:** desconto (% ou R$, com nome), entrada (% ou R$), restante em parcelas, forma de pagamento e observação.
+- **Onde editar:** no card **Condições comerciais** da aba Estimativa, no bloco Investimento do Escopo ou na Proposta premium. Os três editam o mesmo dado.
+- **O que usa:**
+  - **KPI Investimento, margem e Arquivo:** mostram o valor final. A margem já considera o desconto.
+  - **Escopo e proposta:** mostram valor total, desconto, valor final, valor por extenso e as condições com valores.
+  - **Zoho Invoice:** recebe o desconto (valor fixo, no orçamento todo) e as condições em "Termos e condições".
+- Estimativa fechada trava as condições: use Reabrir ou Nova versão para negociar.
+
+## Templates de escopo
+
+- **Salvar como template** guarda nível de detalhe, blocos, textos e título. Opcionalmente leva as condições de pagamento; o desconto fica de fora, porque é de cada negociação.
+- **Aplicar:** escolha o template no seletor da aba Escopo. Abrangência e aceites são mantidos.
+- **Templates…** permite renomear, definir o ★ padrão (monta o escopo e as condições das novas estimativas), atualizar com o escopo aberto ou excluir.
