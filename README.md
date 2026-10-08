@@ -41,10 +41,20 @@ como linha avulsa. Demandas sem tempos viram “Em discussão”, com as anotaç
 
 ## Leitor de System
 
-Selecione a pasta `System` da biblioteca. O leitor inventaria arquivos por pasta e extensão e conta
-os elementos dos arquivos XML/config. Cada métrica pode ser vinculada a um processo do banco (o vínculo
-fica salvo). Com **Salvar retrato** antes da customização e uma nova leitura depois, a **diferença**
-mostra o que foi produzido, que pode virar uma demanda para comparar estimado × realizado.
+Duas formas de ler a biblioteca (ex.: `D:\Setor\...\Promob Studio Start Projetto One SV1\System`):
+
+1. **Selecionar pasta System** (Chrome/Edge): lê o conteúdo no navegador, sem enviar nada. Os editores
+   do Catalog gravam XML, inclusive em extensões próprias (`.attributes`, `.category`, `.material`…).
+   Todo arquivo de texto que começa com `<` é lido, e **cada elemento com ID conta como um cadastro**,
+   agrupado por pasta (Atributos, Materiais, Modelos, Portas, Travessas, Regras de Orçamento,
+   Estruturas, módulos).
+2. **Importar lista**: dentro da pasta System, rode `tree /f /a > estrutura.txt` (ou
+   `dir /s /b > lista.txt`) e importe o `.txt`. Conta arquivos por pasta e extensão, sem ler conteúdo.
+
+Cada métrica pode ser vinculada a um processo do banco; os vínculos ficam salvos, e existem sugestões
+por pasta (ex.: Atributos → CFG-03, Materiais → MAT-02). Com **Salvar retrato** antes da customização e
+uma nova leitura depois, a **diferença** mostra o que foi produzido e vira uma demanda para comparar
+estimado × realizado.
 
 ## Calibração
 
