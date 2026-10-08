@@ -80,6 +80,10 @@ Duas formas de ler a biblioteca (ex.: `D:\Setor\...\Promob Studio Start Projetto
 2. **Importar lista**: dentro da pasta System, rode `tree /f /a > estrutura.txt` (ou
    `dir /s /b > lista.txt`) e importe o `.txt`. Conta arquivos por pasta e extensão, sem ler conteúdo.
 
+**Arquivos `.group` do Promob**: itens como `<EXPLORERITEM TYPE="group" ID="BAN" DEF="Banheiros.group"/>`
+são ligados ao arquivo apontado em `DEF`, montando a árvore como no Editor de Módulos; o `TYPE`
+distingue grupo de módulo (escolha `EXPLORERITEM[module]` em “Contar como módulo”).
+
 **Árvore da biblioteca**: as entidades (módulos) aparecem com ID, **Abreviatura** e **Descrição**, e
 podem ser exportadas em CSV. Mostra pastas, arquivos e grupos XML como no Editor de Módulos do Catalog,
 com a contagem de módulos em cada grupo (grupos ocultos em cinza). Escolha qual elemento XML é o

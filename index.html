@@ -1136,7 +1136,7 @@ const SUGESTOES=[
 const sugestao=k=>{const pasta=k.split(":")[1]||"";for(const [rx,cod] of SUGESTOES) if(rx.test(pasta)&&proc(cod)) return cod;return ""};
 
 function novoScan(raiz,origem){return {raiz,origem,quando:new Date().toLocaleString("pt-BR"),arquivos:0,bytes:0,xmlLidos:0,xmlErro:0,m:{},
-  tree:{label:raiz,kind:"pasta",children:[],idx:{}},tags:{}}}
+  tree:{label:raiz,kind:"pasta",children:[],idx:{}},tags:{},files:{}}}
 // Árvore: pastas › arquivos › elementos XML com ID ou nome (grupos, subgrupos, módulos)
 function noPasta(sc,parts){
   let n=sc.tree;
@@ -1151,7 +1151,8 @@ function addArquivo(sc,parts,size){
   // parts: caminho relativo à pasta System, sem o nome da raiz
   const add=(k,v=1)=>sc.m[k]=(sc.m[k]||0)+v, nome=parts[parts.length-1], ext=extOf(nome);
   sc.arquivos++; sc.bytes+=size||0;
-  const arq={label:nome,kind:"arquivo",children:[]}; noPasta(sc,parts.slice(0,-1)).children.push(arq);
+  const arq={label:nome,kind:"arquivo",children:[],dir:parts.slice(0,-1).join("/")}; noPasta(sc,parts.slice(0,-1)).children.push(arq);
+  (sc.files[nome.toLowerCase()]||(sc.files[nome.toLowerCase()]=[])).push(arq);
   add("ext:"+ext);
   add("pasta:"+(parts.length>1?parts[0]:"(raiz)"));
   if(parts.length>2) add("pasta:"+parts[0]+"/"+parts[1]);
@@ -1176,11 +1177,13 @@ function lerXml(sc,parts,txt,arq){
   if(!arq) return;
   (function walk(el,pai){
     for(const c of el.children){
-      const id=attr(c,["ID"]), rot=attr(c,ROTULO);
-      if(id!==null||rot!==null){
-        const n={label:(rot||id||c.localName).trim()||c.localName,id,tag:c.localName,kind:"xml",oculto:ehOculto(c),children:[],
+      const id=attr(c,["ID"]), rot=attr(c,ROTULO), def=attr(c,["DEF","Definition"]);
+      if(id!==null||rot!==null||def!==null){
+        // Promob: <EXPLORERITEM TYPE="group|module" ID=".." DEF="Arquivo.group"> — o TYPE diferencia grupo de módulo
+        const tipo=attr(c,["TYPE","Tipo"]), tag=tipo?`${c.localName}[${tipo}]`:c.localName;
+        const n={label:(rot||id||c.localName).trim()||c.localName,id,tag,kind:"xml",oculto:ehOculto(c),children:[],def,dir:arq.dir,
           abrev:attr(c,ABREV)??textoFilho(c,ABREV),desc:attr(c,DESCR)??textoFilho(c,DESCR)};
-        sc.tags[c.localName]=(sc.tags[c.localName]||0)+1;
+        sc.tags[tag]=(sc.tags[tag]||0)+1;
         pai.children.push(n); walk(c,n);
       }else walk(c,pai);
     }
@@ -1202,8 +1205,32 @@ $("#sysDir").onchange=async()=>{
     }
     if(i%100===0){info.textContent=`Lendo ${i+1}/${files.length}…`;await new Promise(r=>setTimeout(r))}
   }
+  resolverDefs(sc);
   info.textContent=""; sysScan=sc; sysTag=adivinhaTag(sc); renderSys();
 };
+// Liga cada item que aponta para outro arquivo (DEF="Banheiros.group") ao conteúdo desse arquivo,
+// montando a árvore como o Editor de Módulos. O arquivo referenciado deixa de aparecer solto na pasta.
+function resolverDefs(sc){
+  const vistos=new Set(), base=d=>d.split(/[\\/]/).pop().toLowerCase();
+  const todos=[]; (function col(n){for(const c of n.children){if(c.kind==="xml"&&!vistos.has(c)){vistos.add(c);todos.push(c)}col(c)}})(sc.tree);
+  let ligados=0;
+  todos.forEach(n=>{
+    if(!n.def) return;
+    const cands=sc.files[base(n.def)]; if(!cands) return;
+    const alvo=cands.find(a=>a.dir===n.dir)||cands[0]; if(!alvo||!alvo.children.length) return;
+    alvo.ref=true; ligados++;
+    const raizes=alvo.children;
+    if(raizes.length===1&&raizes[0].kind==="xml"){
+      const r=raizes[0];
+      n.children.push(...r.children);
+      if(!n.abrev) n.abrev=r.abrev;
+      if(!n.desc) n.desc=r.desc||(r.label!==r.id?r.label:null);
+      if((n.label===n.id||!n.label)&&(r.desc||r.label!==r.id)) n.label=r.desc||r.label;
+      if(r.oculto) n.oculto=true;
+    }else n.children.push(...raizes);
+  });
+  sc.defsLigados=ligados;
+}
 // Importa a lista gerada no Windows: "tree /f /a > estrutura.txt" ou "dir /s /b > lista.txt"
 function parseListagem(txt,nomeArq){
   const linhas=txt.replace(/^\ufeff/,"").split(/\r?\n/).filter(l=>l.trim());
@@ -1244,6 +1271,7 @@ $("#sysTree").onclick=()=>pickFile(".txt",async f=>{
   let buf=await f.arrayBuffer(), txt=new TextDecoder("utf-8").decode(buf);
   if(txt.includes("\ufffd")) txt=new TextDecoder("windows-1252").decode(buf);
   if(/^\xff\xfe|\u0000/.test(txt.slice(0,4))) txt=new TextDecoder("utf-16le").decode(buf);
+  if(txt.replace(/^\ufeff/,"").trimStart().startsWith("<")) throw new Error("este arquivo é um XML do Promob (ex.: .group), não uma lista. Use “Selecionar pasta System” (no computador, Chrome/Edge) para ler a biblioteca com a árvore completa.");
   const sc=parseListagem(txt,f.name);
   if(!sc.arquivos) throw new Error("nenhum arquivo reconhecido. Gere com: tree /f /a > estrutura.txt  (ou dir /s /b > lista.txt)");
   sysScan=sc; sysTag=""; renderSys();
@@ -1256,9 +1284,12 @@ function adivinhaTag(sc){
   return t.find(x=>/m[oó]dul/i.test(x))||t.find(x=>/^item$/i.test(x))||"";
 }
 // conta módulos (elementos com a tag escolhida) ou, sem tag, arquivos
-function contar(n){
+function contar(n,pilha=new Set()){
+  if(pilha.has(n)) return {mods:0,arqs:0};  // proteção contra referências circulares
+  pilha.add(n);
   let mods=0, arqs=n.kind==="arquivo"?1:0;
-  for(const c of n.children){const r=contar(c);mods+=r.mods+(c.kind==="xml"&&c.tag===sysTag?1:0);arqs+=r.arqs}
+  for(const c of n.children){if(c.kind==="arquivo"&&c.ref) continue;const r=contar(c,pilha);mods+=r.mods+(c.kind==="xml"&&c.tag===sysTag?1:0);arqs+=r.arqs}
+  pilha.delete(n);
   if(n.kind==="xml"&&!n.children.length) arqs=0;
   n.mods=mods; n.arqs=arqs; return {mods,arqs};
 }
@@ -1268,20 +1299,21 @@ const unidade=(q=2)=>sysTag?(q===1?"módulo":"módulos"):(q===1?"arquivo":"arqui
 function filhosVisiveis(n){
   // arquivo com um único grupo raiz aparece direto como o grupo (como no Editor de Módulos)
   const ch=n.children.map(c=>c.kind==="arquivo"&&c.children.length===1&&c.children[0].kind==="xml"&&c.children[0].tag!==sysTag?c.children[0]:c);
-  return ch.filter(c=>ehEntidade(c)||qtdNo(c)>0||c.kind!=="xml");
+  return ch.filter(c=>!(c.kind==="arquivo"&&c.ref)&&(ehEntidade(c)||qtdNo(c)>0||c.kind!=="xml"));
 }
 const ehEntidade=n=>n.kind==="xml"&&sysTag&&n.tag===sysTag;
-function mapaRetrato(n,path,out){if(ehEntidade(n)) return out;out[path]=qtdNo(n);filhosVisiveis(n).forEach(c=>mapaRetrato(c,path+" › "+c.label,out));return out}
+function mapaRetrato(n,path,out,prof=0){if(ehEntidade(n)||prof>40) return out;out[path]=qtdNo(n);filhosVisiveis(n).forEach(c=>mapaRetrato(c,path+" › "+c.label,out,prof+1));return out}
 // linha de uma entidade (módulo): ID · Abreviatura · Descrição
 function linhaEntidade(n){
   return `<div class="tleaf tent"><i class="ic-ent"></i><span class="muted tid">${esc(n.id||"—")}</span>
     <b class="eab">${esc(n.abrev||"")}</b><span class="tl">${esc(n.desc||n.label)}</span>${n.oculto?'<span class="pill">oculto</span>':""}</div>`;
 }
-function entidades(n,path,out=[]){
-  n.children.forEach(c=>{const p=c.kind==="arquivo"?path:path+" › "+c.label;
+function entidades(n,path,out=[],pilha=new Set()){
+  if(pilha.has(n)) return out; pilha.add(n);
+  n.children.forEach(c=>{if(c.kind==="arquivo"&&c.ref) return;const p=c.kind==="arquivo"?path:path+" › "+c.label;
     if(ehEntidade(c)) out.push({grupo:path,id:c.id||"",abrev:c.abrev||"",desc:c.desc||c.label,oculto:c.oculto});
-    entidades(c,ehEntidade(c)?path:p,out)});
-  return out;
+    entidades(c,ehEntidade(c)?path:p,out,pilha)});
+  pilha.delete(n); return out;
 }
 function linhaNo(n,path,snapTm){
   if(ehEntidade(n)) return linhaEntidade(n);
@@ -1331,7 +1363,7 @@ function renderSys(){
         <td><select data-vinc="${esc(k)}">${opts(db.vinculos[k]||"")}</select></td></tr>`}).join("")}
       </tbody></table></div>`;
   };
-  $("#sysOut").innerHTML=`<p class="muted">Origem <b>${esc(s.raiz)}</b> (${s.origem==="lista"?"lista de arquivos — sem leitura de conteúdo":"pasta lida no navegador"}) · ${esc(s.quando)} · ${num(s.arquivos,0)} arquivos${s.bytes?` · ${num(s.bytes/1048576)} MB`:""}${s.origem!=="lista"?` · ${num(s.xmlLidos,0)} arquivos XML lidos${s.xmlErro?` · ${s.xmlErro} ilegíveis`:""}`:""}${snap?` · retrato de base: ${esc(snap.quando)}`:""}</p>`
+  $("#sysOut").innerHTML=`<p class="muted">Origem <b>${esc(s.raiz)}</b> (${s.origem==="lista"?"lista de arquivos — sem leitura de conteúdo":"pasta lida no navegador"}) · ${esc(s.quando)} · ${num(s.arquivos,0)} arquivos${s.bytes?` · ${num(s.bytes/1048576)} MB`:""}${s.origem!=="lista"?` · ${num(s.xmlLidos,0)} arquivos XML lidos${s.defsLigados?` · ${num(s.defsLigados,0)} referências DEF ligadas`:""}${s.xmlErro?` · ${s.xmlErro} ilegíveis`:""}`:""}${snap?` · retrato de base: ${esc(snap.quando)}`:""}</p>`
     +renderArvore()
     +sec("cad:","Cadastros identificados (elementos com ID, por pasta)",120,"É a métrica mais próxima de “itens cadastrados” em cada editor. Vincule as que representam trabalho.")
     +sec("pasta:","Arquivos por pasta",80)+sec("ext:","Arquivos por extensão",40)
