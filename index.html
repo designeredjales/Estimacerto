@@ -7,8 +7,7 @@
 <style>
 :root{
   --bg:#f6f5f2; --surface:#ffffff; --surface-2:#f0eee9; --text:#1d1c1a; --muted:#6b6862;
-  --line:#e0ddd6; --accent:#9a5b1e; --accent-ink:#ffffff; --ok:#2f7a4b; --warn:#b4541a;
-  --bar:#c98a4b;
+  --line:#e0ddd6; --accent:#9a5b1e; --accent-ink:#ffffff; --ok:#2f7a4b; --warn:#b4541a; --bar:#c98a4b;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -22,56 +21,70 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-header{padding:20px 16px 0;max-width:1180px;margin:0 auto}
+header{padding:20px 16px 0;max-width:1240px;margin:0 auto}
 h1{font-size:22px;margin:0}
 h1 small{font-weight:400;color:var(--muted);font-size:14px;margin-left:6px}
 h2{font-size:17px;margin:0 0 12px}
+h3{font-size:15px;margin:0}
 nav{display:flex;gap:4px;margin-top:14px;border-bottom:1px solid var(--line);overflow-x:auto}
 nav button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;color:var(--muted);font:inherit;cursor:pointer;white-space:nowrap}
 nav button.on{color:var(--text);border-color:var(--accent);font-weight:600}
-main{max-width:1180px;margin:0 auto;padding:16px}
+main{max-width:1240px;margin:0 auto;padding:16px}
 .tab{display:none}.tab.on{display:block}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
-.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
-@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;align-items:start}
+.grid aside{position:sticky;top:12px}
+@media (max-width:960px){.grid{grid-template-columns:minmax(0,1fr)}.grid aside{position:static}}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:end}
 label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
-input,select,textarea{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:0}
-input[type=number]{width:90px}
-button.btn{font:inherit;border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:6px;padding:7px 12px;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
+input[type=number]{width:80px}
+textarea{width:100%;min-height:54px;resize:vertical}
+button.btn{font:inherit;border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:6px;padding:6px 11px;cursor:pointer;white-space:nowrap}
 button.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
 button.x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:2px 6px}
 button.x:hover{color:var(--warn)}
 .tbl{width:100%;overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:14px}
-th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
-th{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
-td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
-td input,td select{width:100%}
+th,td{text-align:left;padding:6px 7px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 td:first-child{white-space:nowrap}
-td select{min-width:96px}
-td input[type=number]{width:80px}
+td input,td select{width:100%}
+td input[type=number]{width:72px}
 tr.cat td{background:var(--surface-2);font-weight:600;font-size:13px}
+.dem-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.dem-h input.nome{font-weight:600;font-size:16px;flex:1;min-width:200px}
+.dem.disc{opacity:.85;border-style:dashed}
+.addrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.addrow select{flex:1;min-width:220px}
+.sub{display:flex;justify-content:flex-end;gap:16px;margin-top:8px;font-size:14px}
 .kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .kpi div{background:var(--surface-2);border-radius:8px;padding:10px}
-.kpi b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.kpi b{display:block;font-size:21px;font-variant-numeric:tabular-nums}
 .kpi span{font-size:12px;color:var(--muted)}
 .kpi .big{grid-column:1/-1}
 .kpi .big b{font-size:30px;color:var(--accent)}
-.bars{margin-top:12px}
-.bar{display:grid;grid-template-columns:110px 1fr 56px;gap:8px;align-items:center;font-size:13px;margin:5px 0}
+.bar{display:grid;grid-template-columns:120px 1fr 62px;gap:8px;align-items:center;font-size:13px;margin:5px 0}
+.bar>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bar i{display:block;height:10px;background:var(--bar);border-radius:3px}
 .muted{color:var(--muted);font-size:13px}
-.pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;background:var(--surface-2);color:var(--muted);margin-left:6px}
+.pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;background:var(--surface-2);color:var(--muted);margin-left:6px;white-space:nowrap}
+.pill.h{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.pill.w{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
 .range{display:flex;justify-content:space-between;font-size:13px;margin-top:10px;color:var(--muted)}
 .range b{color:var(--text)}
-.empty{padding:24px;text-align:center;color:var(--muted)}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.empty{padding:20px;text-align:center;color:var(--muted)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.diff{font-size:12px;color:var(--muted)}
+.diff.up{color:var(--warn)}.diff.down{color:var(--ok)}
+hr{border:0;border-top:1px solid var(--line);margin:14px 0}
 @media print{
-  nav,.toolbar,.noprint,button{display:none!important}
+  nav,.toolbar,.noprint,.addrow,button{display:none!important}
   .grid{grid-template-columns:1fr}
   body{background:#fff;color:#000}
   .card{border:0;padding:0}
+  input,select,textarea{border:0;padding:0;background:none}
 }
 </style>
 </head>
@@ -81,7 +94,8 @@ tr.cat td{background:var(--surface-2);font-weight:600;font-size:13px}
   <nav>
     <button data-tab="est" class="on">Estimativa</button>
     <button data-tab="proc">Banco de processos</button>
-    <button data-tab="kits">Kits (composições)</button>
+    <button data-tab="tpl">Modelos de demanda</button>
+    <button data-tab="sys">Leitor de System</button>
     <button data-tab="cfg">Parâmetros</button>
   </nav>
 </header>
@@ -93,36 +107,22 @@ tr.cat td{background:var(--surface-2);font-weight:600;font-size:13px}
     <div>
       <div class="card">
         <div class="row">
-          <label style="flex:1;min-width:200px">Projeto / cliente<input id="pNome" placeholder="Ex.: Linha Cozinha Prime – Fábrica X"></label>
+          <label style="flex:1;min-width:200px">Projeto / cliente<input id="pNome" placeholder="Ex.: Estimativa LT – Fábrica X"></label>
           <label>Responsável<input id="pResp" placeholder="Nome"></label>
           <label>Data<input id="pData" type="date"></label>
         </div>
-      </div>
-
-      <div class="card noprint">
-        <h2>Adicionar à contagem</h2>
-        <div class="row">
-          <label style="flex:1;min-width:220px">Processo ou kit<select id="addItem"></select></label>
-          <label>Qtd.<input id="addQtd" type="number" min="0" step="1" value="1"></label>
-          <label>Complexidade<select id="addCx"></select></label>
-          <button class="btn pri" id="addBtn">Adicionar</button>
-        </div>
-        <p class="muted" style="margin:10px 0 0">Kits explodem automaticamente nos processos que os compõem; a quantidade do kit multiplica cada processo.</p>
-      </div>
-
-      <div class="card">
-        <div class="toolbar">
+        <div class="toolbar noprint" style="margin:12px 0 0">
+          <button class="btn pri" id="btnNovaDem">+ Nova demanda</button>
+          <button class="btn" id="btnXmind">Importar XMind</button>
           <button class="btn" id="btnCsv">Exportar CSV</button>
           <button class="btn" id="btnPrint">Imprimir / PDF</button>
-          <button class="btn" id="btnSaveEst">Salvar estimativa (.json)</button>
-          <button class="btn" id="btnLoadEst">Abrir estimativa</button>
+          <button class="btn" id="btnSaveEst">Salvar (.json)</button>
+          <button class="btn" id="btnLoadEst">Abrir (.json)</button>
+          <button class="btn" id="btnExemplo">Carregar exemplo</button>
           <button class="btn" id="btnClear">Limpar</button>
         </div>
-        <div class="tbl"><table>
-          <thead><tr><th>Cód.</th><th>Processo</th><th>Unid.</th><th class="n">Qtd.</th><th>Complex.</th><th class="n">h/unid.</th><th class="n">Horas</th><th class="noprint"></th></tr></thead>
-          <tbody id="estBody"></tbody>
-        </table></div>
       </div>
+      <div id="demList"></div>
     </div>
 
     <aside>
@@ -130,7 +130,7 @@ tr.cat td{background:var(--surface-2);font-weight:600;font-size:13px}
         <h2>Resultado</h2>
         <div class="kpi">
           <div class="big"><span>Esforço total (com reservas)</span><b id="kTotal">0 h</b></div>
-          <div><span>Horas técnicas</span><b id="kBase">0</b></div>
+          <div><span>Horas estimadas</span><b id="kBase">0</b></div>
           <div><span>Reservas</span><b id="kRes">0</b></div>
           <div><span>Prazo (dias úteis)</span><b id="kDias">0</b></div>
           <div><span>Investimento</span><b id="kValor">R$ 0</b></div>
@@ -139,7 +139,13 @@ tr.cat td{background:var(--surface-2);font-weight:600;font-size:13px}
           <span>Otimista <b id="rMin">0 h</b></span>
           <span>Pessimista <b id="rMax">0 h</b></span>
         </div>
-        <div class="bars" id="bars"></div>
+        <div id="realBox"></div>
+        <hr>
+        <h3 style="margin-bottom:6px">Por demanda</h3>
+        <div id="barsDem"></div>
+        <hr>
+        <h3 style="margin-bottom:6px">Por fase</h3>
+        <div id="barsFase"></div>
         <p class="muted" id="memo" style="margin-top:12px"></p>
       </div>
     </aside>
@@ -150,7 +156,9 @@ tr.cat td{background:var(--surface-2);font-weight:600;font-size:13px}
 <section id="proc" class="tab">
   <div class="card">
     <h2>Banco de processos repetitivos</h2>
-    <p class="muted">Cada processo é uma unidade de trabalho que se repete. O tempo-padrão é o esforço de 1 unidade em complexidade normal. Calibre com o histórico real da equipe.</p>
+    <p class="muted">Classificação: <b>Fase › Grupo › Processo</b>. O tempo-padrão é em minutos por unidade.
+      <span class="pill h">Histórico</span> = medido nas estimativas reais da equipe.
+      <span class="pill w">Manual</span> = derivado do guia Catalog Builder; calibrar com o histórico.</p>
     <div class="toolbar">
       <button class="btn pri" id="pAdd">+ Novo processo</button>
       <input id="pFiltro" placeholder="Filtrar…" style="flex:1;min-width:160px">
@@ -159,19 +167,39 @@ tr.cat td{background:var(--surface-2);font-weight:600;font-size:13px}
       <button class="btn" id="dbReset">Restaurar padrão</button>
     </div>
     <div class="tbl"><table>
-      <thead><tr><th style="width:90px">Código</th><th style="width:150px">Categoria</th><th>Processo</th><th style="width:110px">Unidade</th><th class="n" style="width:100px">h/unid.</th><th></th></tr></thead>
+      <thead><tr><th style="width:80px">Código</th><th style="width:130px">Fase</th><th style="width:150px">Grupo</th><th>Processo</th><th style="width:100px">Unidade</th><th class="n" style="width:90px">min/unid.</th><th style="width:100px">Fonte</th><th></th></tr></thead>
       <tbody id="procBody"></tbody>
     </table></div>
   </div>
 </section>
 
-<!-- ================= KITS ================= -->
-<section id="kits" class="tab">
+<!-- ================= MODELOS ================= -->
+<section id="tpl" class="tab">
   <div class="card">
-    <h2>Kits — composições padrão</h2>
-    <p class="muted">Um kit agrupa processos que sempre acontecem juntos (ex.: “Módulo aéreo padrão”). Na estimativa, você conta kits em vez de processos soltos.</p>
-    <div class="toolbar"><button class="btn pri" id="kAdd">+ Novo kit</button></div>
-    <div id="kitList"></div>
+    <h2>Modelos de demanda</h2>
+    <p class="muted">Pacotes de processos que se repetem em toda demanda (fechamento, orçamento, montagem de entidade…). Na estimativa, “Aplicar modelo” insere as linhas na demanda, já com as quantidades, e você ajusta.</p>
+    <div class="toolbar"><button class="btn pri" id="tAdd">+ Novo modelo</button></div>
+    <div id="tplList"></div>
+  </div>
+</section>
+
+<!-- ================= LEITOR DE SYSTEM ================= -->
+<section id="sys" class="tab">
+  <div class="card">
+    <h2>Leitor da pasta System do Promob</h2>
+    <p class="muted">Selecione a pasta <b>System</b> da biblioteca. A leitura acontece só no seu navegador (nenhum arquivo sai do computador).
+      O leitor inventaria arquivos por pasta e extensão e conta os elementos dos arquivos XML/config.
+      Vincule cada métrica a um processo do banco: o vínculo fica salvo e a contagem vira linhas de estimativa.
+      Salve um <b>retrato</b> antes de começar a customização e leia de novo no fim: a diferença é o trabalho realmente produzido.</p>
+    <div class="toolbar">
+      <button class="btn pri" id="sysPick">Selecionar pasta System</button>
+      <button class="btn" id="sysSnap" disabled>Salvar retrato (linha de base)</button>
+      <button class="btn" id="sysToEst" disabled>Gerar demanda com as métricas vinculadas</button>
+      <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="sysUseDiff"> usar diferença vs. retrato</label>
+      <span class="muted" id="sysInfo"></span>
+    </div>
+    <input type="file" id="sysDir" webkitdirectory directory multiple hidden>
+    <div id="sysOut"><p class="empty">Nenhuma leitura ainda.</p></div>
   </div>
 </section>
 
@@ -184,91 +212,169 @@ tr.cat td{background:var(--surface-2);font-weight:600;font-size:13px}
       <label>Horas produtivas/dia<input id="cHdia" type="number" min="1" step="0.5"></label>
       <label>Pessoas na equipe<input id="cEquipe" type="number" min="1" step="1"></label>
       <label>Contingência (%)<input id="cCont" type="number" min="0" step="1"></label>
-      <label>Gestão / comunicação (%)<input id="cGest" type="number" min="0" step="1"></label>
-    </div>
-    <div class="row" style="margin-top:12px">
+      <label>Gestão extra (%)<input id="cGest" type="number" min="0" step="1"></label>
       <label>Fator otimista<input id="cOti" type="number" min="0" step="0.05"></label>
       <label>Fator pessimista<input id="cPes" type="number" min="0" step="0.05"></label>
     </div>
-  </div>
-  <div class="card">
-    <h2>Níveis de complexidade</h2>
-    <div class="tbl"><table>
-      <thead><tr><th>Nível</th><th class="n">Multiplicador</th><th>Critério</th></tr></thead>
-      <tbody id="cxBody"></tbody>
-    </table></div>
+    <p class="muted" style="margin-top:12px">O “Administrativo” de cada demanda já entra como processo (ADM-01). Use “Gestão extra” só para overhead fora disso.</p>
   </div>
 </section>
 </main>
 
-<input type="file" id="fileIn" accept=".json,.csv" hidden>
+<input type="file" id="fileIn" hidden>
 
 <script>
-/* ================= BANCO PADRÃO ================= */
-const SEED = {
-  categorias: ["Gestão e levantamento","Modelagem 3D","Parametrização","Materiais e acabamentos","Produção e saídas","Comercial e preços","Testes e validação"],
-  processos: [
-    ["GES-01","Gestão e levantamento","Briefing técnico da linha / reunião de levantamento","reunião",2],
-    ["GES-02","Gestão e levantamento","Análise de catálogo e ficha técnica do fornecedor","catálogo",4],
-    ["GES-03","Gestão e levantamento","Documentação / manual da biblioteca","documento",3],
-    ["GES-04","Gestão e levantamento","Treinamento de projetistas","sessão",2],
-    ["GES-05","Gestão e levantamento","Publicação e distribuição de atualização da biblioteca","publicação",1],
-    ["MOD-01","Modelagem 3D","Modelagem de peça simples (painel, porta lisa, tampo)","peça",0.5],
-    ["MOD-02","Modelagem 3D","Modelagem de peça com perfil/usinagem (porta perfil, cava, frisos)","peça",1.5],
-    ["MOD-03","Modelagem 3D","Modelagem de acessório / ferragem 3D (puxador, pé, cabideiro)","item",2],
-    ["MOD-04","Modelagem 3D","Importação e otimização de 3D de fornecedor","item",1],
-    ["PAR-01","Parametrização","Cadastro de módulo paramétrico base (caixa)","módulo",3],
-    ["PAR-02","Parametrização","Variação dimensional de módulo existente","variação",0.5],
-    ["PAR-03","Parametrização","Regra / variável de dimensão (script)","regra",1],
-    ["PAR-04","Parametrização","Componente interno (prateleira, divisória, gaveta)","componente",1],
-    ["PAR-05","Parametrização","Configuração de porta / frente (abertura, inserção)","tipo",1.5],
-    ["MAT-01","Materiais e acabamentos","Cadastro de material / acabamento (cor, padrão)","acabamento",0.25],
-    ["MAT-02","Materiais e acabamentos","Tratamento e mapeamento de textura","textura",0.5],
-    ["MAT-03","Materiais e acabamentos","Grupo / lista de acabamentos por componente","grupo",0.75],
-    ["MAT-04","Materiais e acabamentos","Regra de fita de borda","regra",0.5],
-    ["PRO-01","Produção e saídas","Usinagem / furação CNC por componente","componente",1.5],
-    ["PRO-02","Produção e saídas","Regra de plano de corte / lista de peças","regra",1],
-    ["PRO-03","Produção e saídas","Mapeamento de código ERP / referência","item",0.1],
-    ["PRO-04","Produção e saídas","Ferragem automática (dobradiça, corrediça)","regra",1],
-    ["COM-01","Comercial e preços","Cadastro de preço por item (tabela)","item",0.1],
-    ["COM-02","Comercial e preços","Regra de precificação (markup, fórmula)","regra",1],
-    ["COM-03","Comercial e preços","Relatório / orçamento personalizado","relatório",3],
-    ["COM-04","Comercial e preços","Geração de miniatura (thumbnail) de catálogo","item",0.1],
-    ["QA-01","Testes e validação","Teste de módulo em projeto (inserção, render, listas)","módulo",0.5],
-    ["QA-02","Testes e validação","Validação de saída de produção com a fábrica","lote",2],
-    ["QA-03","Testes e validação","Correção pós-validação (retrabalho previsto)","lote",1.5]
-  ].map(([cod,cat,nome,un,h])=>({cod,cat,nome,un,h})),
-  kits: [
-    {cod:"KIT-01",nome:"Módulo aéreo padrão (1–2 portas)",itens:[["PAR-01",1],["PAR-04",2],["PAR-05",1],["MOD-01",3],["PRO-01",2],["PRO-03",8],["COM-01",1],["COM-04",1],["QA-01",1]]},
-    {cod:"KIT-02",nome:"Balcão com gavetas",itens:[["PAR-01",1],["PAR-04",3],["PAR-05",2],["MOD-01",4],["PRO-01",3],["PRO-04",1],["PRO-03",12],["COM-01",1],["COM-04",1],["QA-01",1]]},
-    {cod:"KIT-03",nome:"Pacote de 10 acabamentos",itens:[["MAT-01",10],["MAT-02",10],["MAT-03",1]]},
-    {cod:"KIT-04",nome:"Abertura e entrega de linha",itens:[["GES-01",1],["GES-02",1],["GES-03",1],["GES-04",1],["GES-05",1],["QA-02",1],["QA-03",1]]}
-  ],
-  complexidades: [
-    {nome:"Baixa",f:0.75,crit:"Replica algo já existente na biblioteca"},
-    {nome:"Normal",f:1,crit:"Padrão de mercado, regras conhecidas"},
-    {nome:"Alta",f:1.5,crit:"Regras específicas do fornecedor / muitas variações"},
-    {nome:"Crítica",f:2,crit:"Inédito, sem referência, dependência de terceiros"}
-  ],
-  cfg: {valor:120,hdia:6,equipe:1,cont:15,gest:10,oti:0.85,pes:1.35}
-};
+/* =====================================================================
+   BANCO PADRÃO
+   fonte H = Histórico (mapa XMind "Estimativa LT") · M = Manual Catalog Builder
+   alias = trechos do caminho no XMind usados para reconhecer o processo na importação
+   ===================================================================== */
+const FASES=["P&D","Estrutura da linha","Configurador","Cadastros","Modulação","Testes","Publicação","Administrativo"];
+const P=(cod,fase,grupo,nome,un,min,fonte,alias=[])=>({cod,fase,grupo,nome,un,min,fonte,alias});
+const SEED_PROC=[
+  P("PD-01","P&D","Construção de desenho","Desenvolvimento de desenho","desenho",120,"H",["desenvolvimento de desenho"]),
+  P("PD-02","P&D","Construção de desenho","Protótipo","protótipo",120,"H",["prototipo"]),
+  P("PD-03","P&D","Construção de desenho","Reunião de definição","reunião",45,"H",["reuniao de definicao"]),
+
+  P("SET-01","Estrutura da linha","Setup","Instalar plugin / integração (Builder, ERP, CNC, seccionadora)","plugin",35,"M"),
+  P("GRP-01","Estrutura da linha","Grupos","Criar grupo / subgrupo visível","grupo",10,"M"),
+  P("GRP-02","Estrutura da linha","Grupos","Criar grupo invisível (composições, caixas, ocultos, modelos frentes)","grupo",10,"M"),
+  P("GRP-03","Estrutura da linha","Grupos","Criar camada","camada",5,"M"),
+
+  P("CFG-01","Configurador","Configurador de dimensões","Atributo do configurador de dimensões","atributo",10,"H",["configurador de dimensoes"]),
+  P("CFG-02","Configurador","Configurador de dimensões","Aplicar atributos aos módulos (parâmetros de inserção)","grupo",20,"M"),
+
+  P("ENT-01","Cadastros","Cadastro de entidade","Cadastrar entidade / componente (afastador, miolo…)","entidade",30,"H",["cadastros de entidade>afastador","cadastros de entidade>miolo"]),
+  P("ENT-02","Cadastros","Cadastro de entidade","Duplicar estrutura e personalizar (ex.: tamburato)","estrutura",90,"H",["duplicar estrutura"]),
+  P("ENT-03","Cadastros","Cadastro de entidade","Painel frontal especial (cava, liso, com bit)","painel",30,"H",["paineis frontais especiais"]),
+  P("ENT-04","Cadastros","Cadastro de entidade","Desenho de puxador","puxador",30,"H",["puxadores>desenho"]),
+  P("ENT-05","Cadastros","Cadastro de entidade","Cadastro de puxador","puxador",20,"H",["puxadores>cadastro"]),
+  P("ENT-06","Cadastros","Montagem de entidade","Agregados e posicionamento","entidade",40,"H",["agregados posicionamento"]),
+  P("ENT-07","Cadastros","Montagem de entidade","Códigos","entidade",10,"H",["montagem entidade>codigos"]),
+  P("ENT-08","Cadastros","Montagem de entidade","Replicação das aplicações","entidade",10,"H",["replicacao das aplica"]),
+  P("BLD-01","Cadastros","Cadastro Builder","Usinagem","usinagem",30,"H",["cadastro builder>usinagem"]),
+  P("BLD-02","Cadastros","Cadastro Builder","Tipos de processo","tipo",20,"H",["tipos de processo"]),
+  P("BLD-03","Cadastros","Cadastro Builder","Cadastro de fitas","fita",30,"H",["cadastro fitas"]),
+  P("BLD-04","Cadastros","Cadastro Builder","Fita de borda em montagem / componente","peça",5,"H",["fita de bordas>montagem"]),
+  P("BLD-05","Cadastros","Cadastro Builder","Fita de borda em composição","composição",5,"H",["fita de bordas>composicao"]),
+  P("BLD-06","Cadastros","Cadastro Builder","Propriedades de borda (espessura, sobrecorte, raspagem, respiga)","configuração",55,"M"),
+  P("REV-01","Cadastros","Revisão de modelos","Revisão de modelo REF (montagem / tamponamento associado)","modelo",5,"H",["revisao modelos ref"]),
+  P("REV-02","Cadastros","Revisão de modelos","Revisão de modelo formato de porta / frente","modelo",10,"H",["revisao modelo formato porta>portas e frentes"]),
+  P("REV-03","Cadastros","Revisão de modelos","Revisão de modelo formato — vidro","modelo",15,"H",["revisao modelo formato porta>vidro"]),
+  P("MAT-01","Cadastros","Materiais e modelos","Cadastrar chapa (espessura, veio)","material",15,"M"),
+  P("MAT-02","Cadastros","Materiais e modelos","Cadastrar material de acabamento / textura","material",10,"M"),
+  P("MAT-03","Cadastros","Materiais e modelos","Cadastrar fita de borda (tipo × larguras)","fita",20,"M"),
+  P("MAT-04","Cadastros","Materiais e modelos","Criar modelo (composição, fita, frente)","modelo",20,"M"),
+  P("MAT-05","Cadastros","Materiais e modelos","Variável de modelo (LARG_MAX, PROF_MAX, CODE_CORTE)","variável",10,"M"),
+  P("CMP-01","Cadastros","Composições","Cadastrar composição (peça, rotação e normal)","peça",20,"M"),
+  P("CMP-02","Cadastros","Composições","Aplicar modelo/material às composições","módulo",30,"M"),
+  P("FER-01","Cadastros","Ferragens e furação","Desenhar ferragem em DXF","ferragem",30,"M"),
+  P("FER-02","Cadastros","Ferragens e furação","Cadastrar ferragem (DXF + contorno + limites)","ferragem",20,"M"),
+  P("FER-03","Cadastros","Ferragens e furação","Cadastrar diâmetro de furo","furo",10,"M"),
+  P("FER-04","Cadastros","Ferragens e furação","Aplicar furação em peça","operação",20,"M"),
+  P("FER-05","Cadastros","Ferragens e furação","Cadastrar rasgo (com condição)","rasgo",20,"M"),
+  P("FER-06","Cadastros","Ferragens e furação","Função automática de inserção de ferragem","função",30,"M"),
+  P("FER-07","Cadastros","Ferragens e furação","Configurar AutomaticStructures.config","arquivo",30,"M"),
+  P("FER-08","Cadastros","Ferragens e furação","Aplicar atributo Builder (Composed, PlateCutting, ModuleType…)","atributo",10,"M"),
+  P("REF-01","Cadastros","Referência","Referência normal","referência",20,"H",["referencia>normal"]),
+  P("REF-02","Cadastros","Referência","Criar coleção de referência (COMPLETE / CODE / MODEL)","coleção",20,"M"),
+  P("REF-03","Cadastros","Referência","Aplicar referência (variável TEXT + coleção) a grupo","grupo",20,"M"),
+  P("ORC-01","Cadastros","Orçamento","Vincular atributos","atributo",5,"H",["vincular atributos"]),
+  P("ORC-02","Cadastros","Orçamento","Ajustar estrutura de orçamento","estrutura",40,"H",["ajustar estrutura"]),
+  P("ORC-03","Cadastros","Orçamento","Teste de orçamento","teste",20,"H",["teste orcamento"]),
+  P("ORC-04","Cadastros","Orçamento","Criar estrutura de orçamento (chapa / fita) completa","estrutura",70,"M"),
+  P("ORC-05","Cadastros","Orçamento","Regra de orçamento por grupo (unidade, metro, não orçado)","grupo",10,"M"),
+  P("ORC-06","Cadastros","Orçamento","Categoria / redefinição de margem","margem",20,"M"),
+  P("ORC-07","Cadastros","Orçamento","Provedor, template e importação de preços","tabela",45,"M"),
+
+  P("MDL-01","Modulação","Montagem aplicação","Caixas por ambiente / modelo formato","caixa",20,"H",["montagem aplicacao>caixas"]),
+  P("MDL-02","Modulação","Montagem aplicação","Construtor de armários","item",10,"H",["construtor de armarios"]),
+  P("MDL-03","Modulação","Montagem aplicação","Composição","composição",25,"H",["montagem aplicacao>composicao"]),
+  P("MDL-04","Modulação","Modelos formatos / folhas","Montar entidades de modelo formato / folha de porta","entidade",20,"H",["folhas portas>montar entidades"]),
+  P("MDL-05","Modulação","Modelos formatos / folhas","Agregar ferragens","ferragem",10,"H",["agregar ferragens"]),
+  P("MDL-06","Modulação","Modelos formatos / folhas","Duplicar modelos formatos","modelo",20,"H",["duplicar modelos formatos"]),
+  P("MDL-07","Modulação","Montagem aplicação","Batentes — montar entidade","entidade",15,"H",["batentes"]),
+  P("MDL-08","Modulação","Montagem aplicação","Guarnições — montar entidades e modelos","item",20,"H",["guarnicoes"]),
+  P("MDL-09","Modulação","Entidades finais","Montar entidade final com agregados","entidade",30,"H",["montar entidade com agregados"]),
+  P("MDL-10","Modulação","Entidades finais","Aberturas","abertura",15,"H",["aberturas"]),
+  P("MDL-11","Modulação","Entidades finais","Bit e usinagens","usinagem",50,"H",["bit e usinagens"]),
+  P("MDL-12","Modulação","Caixas","Criar módulo-caixa","caixa",30,"M"),
+  P("MDL-13","Modulação","Caixas","Agregar peças à caixa e posicionar em 3D","caixa",60,"M"),
+  P("MDL-14","Modulação","Módulos","Criar módulo (desenho da coleção ou DXF único)","módulo",30,"M"),
+  P("MDL-15","Modulação","Módulos","Agregar item ao módulo (porta, prateleira, aramado)","agregado",20,"M"),
+  P("MDL-16","Modulação","Módulos","Agregado com condição ou rotação","agregado",25,"M"),
+  P("MDL-17","Modulação","Módulos","Criar família de porta / frente (conjunto de tamanhos)","família",30,"M"),
+  P("MDL-18","Modulação","Funções","Função automática / arquivo .aggregate (rodapé, tampo)","função",30,"M"),
+
+  P("TST-01","Testes","Testes","Teste em ambiente","teste",60,"H",["testes>ambiente"]),
+  P("TST-02","Testes","Testes","Teste de produção","teste",120,"H",["teste producao"]),
+
+  P("PUB-01","Publicação","Apresentação","Gerar slides / miniaturas","lote",20,"M"),
+  P("PUB-02","Publicação","Apresentação","Protótipos e tela inicial (logo)","pacote",50,"M"),
+  P("PUB-03","Publicação","Publicação","Validar sistema (Cadastro › Validações)","validação",30,"M"),
+  P("PUB-04","Publicação","Publicação","Publicar, liberar mídia no portal e reindexar","publicação",45,"M"),
+
+  P("ADM-01","Administrativo","Administrativo","Administrativo da demanda (alinhamento, comunicação, entrega)","demanda",30,"H",["administrativo"])
+];
+const SEED_TPL=[
+  {cod:"MD-01",nome:"Fechamento padrão da demanda",itens:[["TST-01",1],["TST-02",1],["ADM-01",1]]},
+  {cod:"MD-02",nome:"Montagem de entidade",itens:[["ENT-06",1],["ENT-07",1],["ENT-08",1]]},
+  {cod:"MD-03",nome:"Orçamento padrão",itens:[["ORC-01",2],["ORC-03",1]]},
+  {cod:"MD-04",nome:"Novo item com entidade (padrão Prateleira deslizante)",itens:[["ENT-01",2],["ENT-06",1],["ENT-07",1],["ENT-08",1],["BLD-01",2],["BLD-02",1],["REF-01",2],["ORC-01",2],["ORC-03",1],["MDL-01",6],["MDL-03",1],["TST-01",1],["TST-02",1],["ADM-01",1]]},
+  {cod:"MD-05",nome:"Nova linha completa (roteiro do manual Catalog Builder)",itens:[["SET-01",4],["GRP-01",9],["GRP-02",4],["GRP-03",5],["MAT-01",4],["MAT-02",3],["MAT-03",2],["MAT-04",4],["MAT-05",6],["CMP-01",7],["CMP-02",1],["MDL-12",5],["MDL-13",1],["MDL-14",14],["MDL-15",8],["MDL-16",3],["FER-01",4],["FER-02",3],["FER-03",5],["FER-04",4],["FER-05",2],["FER-06",1],["FER-07",1],["FER-08",8],["BLD-06",1],["ENT-04",7],["ENT-05",7],["MDL-17",6],["REF-02",3],["REF-03",2],["ORC-04",2],["ORC-05",3],["ORC-06",2],["ORC-07",1],["ORC-03",1],["CFG-01",13],["CFG-02",1],["MDL-18",3],["PUB-01",2],["PUB-02",1],["PUB-03",1],["PUB-04",1],["TST-01",1],["TST-02",1],["ADM-01",1]]}
+];
+const SEED_CFG={valor:120,hdia:6,equipe:1,cont:10,gest:0,oti:0.85,pes:1.3};
+const seedDb=()=>({processos:SEED_PROC.map(p=>({...p,alias:[...p.alias]})),modelos:JSON.parse(JSON.stringify(SEED_TPL)),cfg:{...SEED_CFG},vinculos:{}});
+
+/* Exemplo: mapa XMind "Estimativa LT" transcrito */
+const L=(cod,det,qtd,min)=>({cod,det,qtd,min});
+const EXEMPLO={nome:"Estimativa LT",resp:"",data:"",demandas:[
+  {nome:"Prateleira deslizante",status:"estimar",obs:"",linhas:[
+    L("ENT-01","Afastador",1,30),L("ENT-01","Miolo",1,30),L("ENT-06","",1,40),L("ENT-07","",1,10),L("ENT-08","",1,10),
+    L("BLD-01","",2,30),L("BLD-02","",1,20),L("REF-01","",2,20),L("ORC-01","",2,5),L("ORC-03","",1,20),
+    L("MDL-01","Cozinha / modelos formatos",2,20),L("MDL-01","Cozinha cava / modelos formatos",2,20),L("MDL-01","Cozinha cava madeira",2,20),
+    L("MDL-01","Banheiro",2,20),L("MDL-01","Dormitório",2,20),L("MDL-01","Sala",2,20),
+    L("MDL-02","Cozinha",19,10),L("MDL-02","Dormitório",22,15),L("MDL-03","",1,25),
+    L("TST-01","",1,60),L("TST-02","",1,120),L("ADM-01","",1,30)]},
+  {nome:"Fita Frontal",status:"estimar",obs:"",linhas:[
+    L("REV-01","Montagem — associados",9,5),L("REV-01","Tamponamentos — associados",9,5),
+    L("BLD-04","Montagem / componentes",245,5),L("BLD-05","Composição",20,5),L("REF-01","",2,30),
+    L("TST-01","",1,60),L("ADM-01","",1,30)]},
+  {nome:"Portas de Alumínio como item de compra",status:"estimar",obs:"",linhas:[
+    L("CFG-01","",18,10),L("REV-02","Portas e frentes",40,10),L("REV-03","Vidro",2,15),
+    L("ORC-02","",2,40),L("ORC-03","",1,20),L("TST-01","",1,30),L("ADM-01","",1,30)]},
+  {nome:"Portas Mimezada",status:"estimar",obs:"",linhas:[
+    L("PD-01","",1,120),L("PD-02","",1,120),L("PD-03","",2,45),
+    L("ENT-02","Tamburato",3,90),L("ENT-03","Cava",3,30),L("ENT-03","Liso",3,30),L("ENT-03","Com bit",3,30),
+    L("ENT-04","",3,30),L("ENT-05","",3,20),L("ENT-06","",1,40),L("ENT-07","",1,10),L("ENT-08","",1,10),
+    L("BLD-01","Cava",3,30),L("BLD-03","",5,30),L("REF-01","",2,20),L("ORC-01","",2,5),L("ORC-03","",1,20),
+    L("MDL-04","",5,20),L("MDL-05","",15,10),L("MDL-06","",4,20),L("MDL-07","",2,15),L("MDL-08","",6,20),
+    L("MDL-09","",9,30),L("MDL-10","",18,15),L("MDL-11","",3,50),
+    L("TST-01","",1,60),L("TST-02","",1,120),L("ADM-01","",1,30)]},
+  {nome:"Flow Rometal",status:"discussao",obs:"Aberto para discussões",linhas:[]},
+  {nome:"Alinhamento no Veio No Genio",status:"discussao",obs:"Revisão de decisões e ações · Próxima reunião dia 10 de agosto",linhas:[]},
+  {nome:"Restringir a profundidade das gavetas invisíveis 300–550 mm",status:"discussao",obs:"",linhas:[]}
+]};
 
 /* ================= ESTADO ================= */
-const K_DB="estimacerto.db.v1", K_EST="estimacerto.est.v1";
+const K_DB="estimacerto.db.v2", K_EST="estimacerto.est.v2", K_SNAP="estimacerto.snap.v2";
 const clone=o=>JSON.parse(JSON.stringify(o));
 function load(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def}catch(e){return def}}
 function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
-let db=load(K_DB,clone(SEED));
-let est=load(K_EST,{nome:"",resp:"",data:new Date().toISOString().slice(0,10),linhas:[]});
+const hoje=()=>new Date().toISOString().slice(0,10);
+let db=load(K_DB,null)||seedDb();
+let est=load(K_EST,null)||Object.assign(clone(EXEMPLO),{data:hoje()});
 const persist=()=>{save(K_DB,db);save(K_EST,est)};
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num=(v,d=1)=>Number(v).toLocaleString("pt-BR",{minimumFractionDigits:0,maximumFractionDigits:d});
 const brl=v=>v.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
+const hm=min=>{min=Math.round(min);const h=Math.floor(min/60),m=min%60;return h?`${h}h${m?String(m).padStart(2,"0"):""}`:`${m}min`};
+const hrs=min=>num(min/60)+" h";
+const norm=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/\s+/g," ").trim();
 const proc=cod=>db.processos.find(p=>p.cod===cod);
-const kit=cod=>db.kits.find(k=>k.cod===cod);
-const cxF=n=>(db.complexidades.find(c=>c.nome===n)||{f:1}).f;
+const fases=()=>[...FASES,...new Set(db.processos.map(p=>p.fase).filter(f=>!FASES.includes(f)))];
 
 /* ================= TABS ================= */
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
@@ -278,260 +384,438 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
 });
 
 /* ================= CÁLCULO ================= */
-// Explode linhas (processo ou kit) em processos unitários
-function explode(){
-  const out=[];
-  est.linhas.forEach((l,i)=>{
-    const f=cxF(l.cx);
-    if(l.tipo==="kit"){
-      const k=kit(l.cod); if(!k) return;
-      k.itens.forEach(([pc,q])=>{const p=proc(pc); if(p) out.push({linha:i,p,qtd:q*l.qtd,f,h:p.h*q*l.qtd*f})});
-    }else{
-      const p=proc(l.cod); if(p) out.push({linha:i,p,qtd:l.qtd,f,h:p.h*l.qtd*f});
-    }
-  });
-  return out;
-}
+const lineMin=l=>(+l.qtd||0)*(+l.min||0);
+const lineFase=l=>(proc(l.cod)||{}).fase||l.fase||"Outros";
 function calc(){
-  const it=explode(), c=db.cfg;
-  const base=it.reduce((s,x)=>s+x.h,0);
-  const res=base*(c.cont+c.gest)/100;
-  const total=base+res;
-  const dias=total/(c.hdia*c.equipe);
-  const porCat={};
-  it.forEach(x=>porCat[x.p.cat]=(porCat[x.p.cat]||0)+x.h);
-  return {it,base,res,total,dias,valor:total*c.valor,min:total*c.oti,max:total*c.pes,porCat};
+  const c=db.cfg, porDem=[], porFase={};
+  let base=0, real=0, estComReal=0;
+  est.demandas.forEach(d=>{
+    const t=d.linhas.reduce((s,l)=>s+lineMin(l),0);
+    porDem.push(t);
+    if(d.status==="discussao") return;
+    base+=t;
+    d.linhas.forEach(l=>{
+      porFase[lineFase(l)]=(porFase[lineFase(l)]||0)+lineMin(l);
+      if(l.real!==undefined&&l.real!==""&&l.real!==null){real+=+l.real;estComReal+=lineMin(l)}
+    });
+  });
+  const res=base*(c.cont+c.gest)/100, total=base+res;
+  return {base,res,total,porDem,porFase,real,estComReal,
+    dias:total/60/(c.hdia*c.equipe), valor:total/60*c.valor, min:total*c.oti, max:total*c.pes};
 }
 
 /* ================= RENDER ESTIMATIVA ================= */
-function renderAddSelect(){
-  const sel=$("#addItem"), cur=sel.value;
-  let h='<optgroup label="Kits">'+db.kits.map(k=>`<option value="kit:${esc(k.cod)}">${esc(k.cod)} · ${esc(k.nome)}</option>`).join("")+"</optgroup>";
-  db.categorias.forEach(cat=>{
-    const ps=db.processos.filter(p=>p.cat===cat); if(!ps.length) return;
-    h+=`<optgroup label="${esc(cat)}">`+ps.map(p=>`<option value="proc:${esc(p.cod)}">${esc(p.cod)} · ${esc(p.nome)} (${num(p.h,2)} h/${esc(p.un)})</option>`).join("")+"</optgroup>";
+function procOptions(sel){
+  let h='<option value="">— escolha o processo —</option><option value="__avulso">Linha avulsa (fora do banco)</option>';
+  fases().forEach(f=>{
+    const ps=db.processos.filter(p=>p.fase===f); if(!ps.length) return;
+    h+=`<optgroup label="${esc(f)}">`+ps.map(p=>`<option value="${esc(p.cod)}" ${p.cod===sel?"selected":""}>${esc(p.cod)} · ${esc(p.nome)} (${num(p.min)} min/${esc(p.un)})</option>`).join("")+"</optgroup>";
   });
-  sel.innerHTML=h; if(cur) sel.value=cur;
-  const cx=$("#addCx"), cxCur=cx.value||"Normal";
-  cx.innerHTML=db.complexidades.map(c=>`<option>${esc(c.nome)}</option>`).join(""); cx.value=cxCur;
+  return h;
 }
-function cxOptions(sel){return db.complexidades.map(c=>`<option ${c.nome===sel?"selected":""}>${esc(c.nome)}</option>`).join("")}
+const tplOptions=()=>'<option value="">Aplicar modelo…</option>'+db.modelos.map(t=>`<option value="${esc(t.cod)}">${esc(t.cod)} · ${esc(t.nome)}</option>`).join("");
 
 function renderEst(){
-  $("#pNome").value=est.nome; $("#pResp").value=est.resp; $("#pData").value=est.data;
-  const r=calc(), body=$("#estBody");
-  if(!est.linhas.length){body.innerHTML=`<tr><td colspan="8" class="empty">Nenhum item contado ainda. Adicione kits ou processos acima.</td></tr>`;}
-  else{
-    body.innerHTML=est.linhas.map((l,i)=>{
-      const f=cxF(l.cx);
-      if(l.tipo==="kit"){
-        const k=kit(l.cod); if(!k) return `<tr><td>${esc(l.cod)}</td><td colspan="6" class="muted">Kit removido do banco</td><td class="noprint"><button class="x" data-del="${i}">×</button></td></tr>`;
-        const hu=k.itens.reduce((s,[pc,q])=>s+((proc(pc)||{h:0}).h*q),0);
-        const sub=r.it.filter(x=>x.linha===i);
-        return `<tr><td><b>${esc(k.cod)}</b></td><td><b>${esc(k.nome)}</b><span class="pill">kit · ${k.itens.length} processos</span></td><td>kit</td>
-          <td class="n"><input type="number" min="0" step="1" value="${l.qtd}" data-qtd="${i}"></td>
-          <td><select data-cx="${i}">${cxOptions(l.cx)}</select></td>
-          <td class="n">${num(hu*f,2)}</td><td class="n"><b>${num(sub.reduce((s,x)=>s+x.h,0))}</b></td>
-          <td class="noprint"><button class="x" data-del="${i}" title="Remover">×</button></td></tr>`+
-          sub.map(x=>`<tr class="muted"><td style="padding-left:18px">${esc(x.p.cod)}</td><td style="padding-left:18px">${esc(x.p.nome)}</td><td>${esc(x.p.un)}</td><td class="n">${num(x.qtd)}</td><td></td><td class="n">${num(x.p.h*x.f,2)}</td><td class="n">${num(x.h)}</td><td class="noprint"></td></tr>`).join("");
-      }
-      const p=proc(l.cod); if(!p) return `<tr><td>${esc(l.cod)}</td><td colspan="6" class="muted">Processo removido do banco</td><td class="noprint"><button class="x" data-del="${i}">×</button></td></tr>`;
-      return `<tr><td>${esc(p.cod)}</td><td>${esc(p.nome)}</td><td>${esc(p.un)}</td>
-        <td class="n"><input type="number" min="0" step="1" value="${l.qtd}" data-qtd="${i}"></td>
-        <td><select data-cx="${i}">${cxOptions(l.cx)}</select></td>
-        <td class="n">${num(p.h*f,2)}</td><td class="n"><b>${num(p.h*l.qtd*f)}</b></td>
-        <td class="noprint"><button class="x" data-del="${i}" title="Remover">×</button></td></tr>`;
+  $("#pNome").value=est.nome||""; $("#pResp").value=est.resp||""; $("#pData").value=est.data||"";
+  const r=calc();
+  const popts=procOptions(""), topts=tplOptions();
+  $("#demList").innerHTML=est.demandas.map((d,di)=>{
+    const disc=d.status==="discussao";
+    const rows=d.linhas.map((l,li)=>{
+      const p=proc(l.cod);
+      const desc=p?esc(p.nome):(l.desc?esc(l.desc):'<span class="muted">processo não encontrado</span>');
+      const dif=p&&+l.min!==+p.min?`<div class="diff ${+l.min>p.min?"up":"down"}">padrão ${num(p.min)}</div>`:"";
+      return `<tr>
+        <td>${p?esc(p.cod):'<span class="pill">avulso</span>'}</td>
+        <td>${desc}<input class="det" placeholder="detalhe / variante" value="${esc(l.det)}" data-d="${di}" data-l="${li}" data-k="det" style="margin-top:3px;font-size:13px"></td>
+        <td class="muted">${esc(p?p.un:(l.un||"unid."))}</td>
+        <td class="n"><input type="number" min="0" step="1" value="${l.qtd}" data-d="${di}" data-l="${li}" data-k="qtd"></td>
+        <td class="n"><input type="number" min="0" step="1" value="${l.min}" data-d="${di}" data-l="${li}" data-k="min">${dif}</td>
+        <td class="n"><b>${hm(lineMin(l))}</b></td>
+        <td class="n noprint"><input type="number" min="0" step="1" placeholder="—" value="${l.real??""}" data-d="${di}" data-l="${li}" data-k="real" title="Minutos realizados (calibração)"></td>
+        <td class="noprint"><button class="x" data-dell="${di}:${li}" title="Remover linha">×</button></td></tr>`;
     }).join("");
-  }
+    return `<div class="card dem ${disc?"disc":""}">
+      <div class="dem-h">
+        <input class="nome" value="${esc(d.nome)}" data-d="${di}" data-dk="nome">
+        <select data-d="${di}" data-dk="status" style="width:auto">
+          <option value="estimar" ${!disc?"selected":""}>Estimar</option>
+          <option value="discussao" ${disc?"selected":""}>Em discussão (não soma)</option>
+        </select>
+        <span class="pill">${hm(r.porDem[di])}</span>
+        <button class="x noprint" data-up="${di}" title="Subir">↑</button>
+        <button class="x noprint" data-deld="${di}" title="Excluir demanda">×</button>
+      </div>
+      <textarea placeholder="Observações, escopo, premissas…" data-d="${di}" data-dk="obs" style="${d.obs||disc?"":"display:none"}">${esc(d.obs)}</textarea>
+      ${d.linhas.length?`<div class="tbl"><table>
+        <thead><tr><th>Cód.</th><th>Atividade</th><th>Unid.</th><th class="n">Qtd.</th><th class="n">min/unid.</th><th class="n">Total</th><th class="n noprint">Real (min)</th><th class="noprint"></th></tr></thead>
+        <tbody>${rows}</tbody></table></div>`:""}
+      <div class="addrow">
+        <select data-addp="${di}">${popts}</select>
+        <input placeholder="detalhe / descrição" data-adddet="${di}" style="width:170px">
+        <input type="number" min="0" step="1" value="1" data-addq="${di}" title="Quantidade">
+        <input type="number" min="0" step="1" placeholder="min" data-addm="${di}" title="Minutos por unidade (vazio = padrão do banco)">
+        <button class="btn" data-add="${di}">Adicionar</button>
+        <select data-addt="${di}" style="flex:0 1 220px;min-width:160px">${topts}</select>
+        ${!d.obs&&!disc?`<button class="btn" data-obs="${di}">+ Obs.</button>`:""}
+      </div>
+      <div class="sub"><span class="muted">${d.linhas.length} linhas</span><span>Subtotal <b>${hm(r.porDem[di])}</b> (${hrs(r.porDem[di])})${disc?' <span class="pill w">não contabilizada</span>':""}</span></div>
+    </div>`;
+  }).join("")||'<div class="card empty">Nenhuma demanda. Crie uma, importe um XMind ou carregue o exemplo.</div>';
+
   const c=db.cfg;
-  $("#kTotal").textContent=num(r.total)+" h";
-  $("#kBase").textContent=num(r.base);
-  $("#kRes").textContent=num(r.res);
+  $("#kTotal").textContent=hrs(r.total);
+  $("#kBase").textContent=num(r.base/60);
+  $("#kRes").textContent=num(r.res/60);
   $("#kDias").textContent=num(Math.ceil(r.dias*10)/10);
   $("#kValor").textContent=brl(r.valor);
-  $("#rMin").textContent=num(r.min)+" h";
-  $("#rMax").textContent=num(r.max)+" h";
-  const max=Math.max(1,...Object.values(r.porCat));
-  $("#bars").innerHTML=Object.entries(r.porCat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>
-    `<div class="bar"><span title="${esc(k)}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(k)}</span><i style="width:${v/max*100}%"></i><span class="n" style="text-align:right">${num(v)} h</span></div>`).join("");
-  $("#memo").textContent=r.base?`Memória: ${num(r.base)} h técnicas + ${c.cont}% contingência + ${c.gest}% gestão = ${num(r.total)} h ÷ (${c.hdia} h/dia × ${c.equipe} pessoa${c.equipe>1?"s":""}) × ${brl(c.valor)}/h.`:"";
+  $("#rMin").textContent=hrs(r.min); $("#rMax").textContent=hrs(r.max);
+  $("#realBox").innerHTML=r.estComReal?`<p class="muted" style="margin:10px 0 0">Calibração: nas linhas com realizado, estimado <b>${hm(r.estComReal)}</b> × real <b>${hm(r.real)}</b> → desvio <b class="${r.real>r.estComReal?"diff up":"diff down"}">${r.real>=r.estComReal?"+":""}${num((r.real/r.estComReal-1)*100,0)}%</b></p>`:"";
+  const bars=(arr)=>{const mx=Math.max(1,...arr.map(a=>a[1]));return arr.map(([k,v,x])=>`<div class="bar"><span title="${esc(k)}">${esc(k)}</span><i style="width:${v/mx*100}%;${x?"opacity:.35":""}"></i><span class="n" style="text-align:right">${hrs(v)}</span></div>`).join("")};
+  $("#barsDem").innerHTML=bars(est.demandas.map((d,i)=>[d.nome,r.porDem[i],d.status==="discussao"]).filter(a=>a[1]>0));
+  $("#barsFase").innerHTML=bars(Object.entries(r.porFase).sort((a,b)=>b[1]-a[1]));
+  $("#memo").textContent=r.base?`Memória: ${hrs(r.base)} estimadas + ${c.cont}% contingência${c.gest?` + ${c.gest}% gestão`:""} = ${hrs(r.total)} ÷ (${c.hdia} h/dia × ${c.equipe} pessoa${c.equipe>1?"s":""}) · ${brl(c.valor)}/h.`:"";
 }
 
-$("#estBody").addEventListener("change",e=>{
-  const t=e.target;
-  if(t.dataset.qtd!==undefined){est.linhas[+t.dataset.qtd].qtd=Math.max(0,+t.value||0)}
-  else if(t.dataset.cx!==undefined){est.linhas[+t.dataset.cx].cx=t.value}
-  else return;
+const dl=$("#demList");
+dl.addEventListener("change",e=>{
+  const t=e.target, di=t.dataset.d;
+  if(di===undefined) return;
+  const d=est.demandas[+di];
+  if(t.dataset.dk){d[t.dataset.dk]=t.value}
+  else if(t.dataset.k){
+    const l=d.linhas[+t.dataset.l], k=t.dataset.k;
+    if(k==="det") l.det=t.value;
+    else if(k==="real") l.real=t.value===""?undefined:Math.max(0,+t.value||0);
+    else l[k]=Math.max(0,+t.value||0);
+  } else return;
   persist(); renderEst();
 });
-$("#estBody").addEventListener("click",e=>{
-  const d=e.target.dataset.del; if(d===undefined) return;
-  est.linhas.splice(+d,1); persist(); renderEst();
+dl.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.dataset.addt===undefined||!t.value) return;
+  const d=est.demandas[+t.dataset.addt], tp=db.modelos.find(x=>x.cod===t.value); if(!tp) return;
+  tp.itens.forEach(([cod,q])=>{const p=proc(cod); if(p) d.linhas.push({cod,det:"",qtd:q,min:p.min})});
+  persist(); renderEst();
+});
+dl.addEventListener("click",e=>{
+  const t=e.target, ds=t.dataset;
+  if(ds.add!==undefined){
+    const di=+ds.add, d=est.demandas[di];
+    const cod=document.querySelector(`[data-addp="${di}"]`).value;
+    const det=document.querySelector(`[data-adddet="${di}"]`).value.trim();
+    const qtd=Math.max(0,+document.querySelector(`[data-addq="${di}"]`).value||0);
+    const mIn=document.querySelector(`[data-addm="${di}"]`).value;
+    if(!cod){alert("Escolha um processo.");return}
+    if(cod==="__avulso"){
+      if(!det){alert("Descreva a linha avulsa no campo detalhe.");return}
+      d.linhas.push({cod:"",desc:det,det:"",qtd,min:Math.max(0,+mIn||0)});
+    }else d.linhas.push({cod,det,qtd,min:mIn===""?proc(cod).min:Math.max(0,+mIn||0)});
+    persist(); renderEst();
+  }else if(ds.dell){
+    const [di,li]=ds.dell.split(":").map(Number); est.demandas[di].linhas.splice(li,1); persist(); renderEst();
+  }else if(ds.deld!==undefined){
+    if(confirm(`Excluir a demanda “${est.demandas[+ds.deld].nome}”?`)){est.demandas.splice(+ds.deld,1);persist();renderEst()}
+  }else if(ds.up!==undefined){
+    const i=+ds.up; if(i>0){[est.demandas[i-1],est.demandas[i]]=[est.demandas[i],est.demandas[i-1]];persist();renderEst()}
+  }else if(ds.obs!==undefined){
+    est.demandas[+ds.obs].obs=" "; renderEst(); est.demandas[+ds.obs].obs="";
+    document.querySelector(`textarea[data-d="${ds.obs}"]`).focus();
+  }
 });
 ["pNome","pResp","pData"].forEach(id=>$("#"+id).addEventListener("input",e=>{
   est[{pNome:"nome",pResp:"resp",pData:"data"}[id]]=e.target.value; persist();
 }));
-$("#addBtn").onclick=()=>{
-  const [tipo,cod]=$("#addItem").value.split(":"); const qtd=Math.max(0,+$("#addQtd").value||0);
-  if(!cod||!qtd) return;
-  const cx=$("#addCx").value;
-  const ex=est.linhas.find(l=>l.tipo===tipo&&l.cod===cod&&l.cx===cx);
-  if(ex) ex.qtd+=qtd; else est.linhas.push({tipo,cod,qtd,cx});
-  persist(); renderEst();
-};
-$("#btnClear").onclick=()=>{if(confirm("Limpar a estimativa atual?")){est={nome:"",resp:"",data:new Date().toISOString().slice(0,10),linhas:[]};persist();renderEst()}};
+$("#btnNovaDem").onclick=()=>{est.demandas.push({nome:"Nova demanda",status:"estimar",obs:"",linhas:[]});persist();renderEst();
+  const ins=document.querySelectorAll("#demList input.nome"); const last=ins[ins.length-1]; last.focus(); last.select()};
+$("#btnClear").onclick=()=>{if(confirm("Limpar a estimativa atual?")){est={nome:"",resp:"",data:hoje(),demandas:[]};persist();renderEst()}};
+$("#btnExemplo").onclick=()=>{if(confirm("Substituir a estimativa atual pelo exemplo “Estimativa LT”?")){est=Object.assign(clone(EXEMPLO),{data:hoje()});persist();renderEst()}};
 $("#btnPrint").onclick=()=>window.print();
 $("#btnCsv").onclick=()=>{
   const r=calc(), c=db.cfg;
-  const rows=[["Projeto",est.nome],["Responsável",est.resp],["Data",est.data],[],["Origem","Código","Processo","Categoria","Unidade","Qtd","Complexidade","Fator","h/unid","Horas"]];
-  r.it.forEach(x=>{const l=est.linhas[x.linha];rows.push([l.tipo==="kit"?l.cod:"avulso",x.p.cod,x.p.nome,x.p.cat,x.p.un,x.qtd,l.cx,x.f,x.p.h,x.h.toFixed(2)])});
-  rows.push([],["Horas técnicas",r.base.toFixed(2)],["Contingência %",c.cont],["Gestão %",c.gest],["Total horas",r.total.toFixed(2)],["Prazo dias úteis",r.dias.toFixed(1)],["Valor/hora",c.valor],["Investimento",r.valor.toFixed(2)]);
-  const csv=rows.map(r=>r.map(v=>{v=String(v??"");return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(";")).join("\n");
-  download("﻿"+csv,(est.nome||"estimativa")+".csv","text/csv");
+  const rows=[["Projeto",est.nome],["Responsável",est.resp],["Data",est.data],[],
+    ["Demanda","Status","Fase","Código","Atividade","Detalhe","Unidade","Qtd","min/unid","Total (min)","Total (h)","Real (min)"]];
+  est.demandas.forEach(d=>{
+    if(!d.linhas.length) rows.push([d.nome,d.status,"","",d.obs]);
+    d.linhas.forEach(l=>{const p=proc(l.cod);rows.push([d.nome,d.status,lineFase(l),l.cod,p?p.nome:l.desc,l.det,p?p.un:"",l.qtd,l.min,lineMin(l),(lineMin(l)/60).toFixed(2),l.real??""])});
+  });
+  rows.push([],["Horas estimadas",(r.base/60).toFixed(2)],["Contingência %",c.cont],["Gestão extra %",c.gest],["Total horas",(r.total/60).toFixed(2)],["Prazo dias úteis",r.dias.toFixed(1)],["Valor/hora",c.valor],["Investimento",r.valor.toFixed(2)]);
+  download("﻿"+toCsv(rows),(est.nome||"estimativa")+".csv","text/csv");
 };
 $("#btnSaveEst").onclick=()=>download(JSON.stringify({estimativa:est,cfg:db.cfg},null,2),(est.nome||"estimativa")+".estimacerto.json","application/json");
-$("#btnLoadEst").onclick=()=>pickFile(txt=>{
-  const o=JSON.parse(txt); if(!o.estimativa) throw new Error("Arquivo não é uma estimativa EstimaCerto");
+$("#btnLoadEst").onclick=()=>pickFile(".json",async f=>{
+  const o=JSON.parse(await f.text()); if(!o.estimativa||!o.estimativa.demandas) throw new Error("Arquivo não é uma estimativa EstimaCerto v2");
   est=o.estimativa; if(o.cfg) db.cfg=o.cfg; persist(); render();
+});
+
+/* ================= IMPORTAÇÃO XMIND ================= */
+// Leitor mínimo de ZIP (o .xmind é um zip com content.json)
+async function unzipEntry(buf,wanted){
+  const dv=new DataView(buf), u8=new Uint8Array(buf);
+  let eocd=-1; for(let i=buf.byteLength-22;i>=Math.max(0,buf.byteLength-66000);i--){if(dv.getUint32(i,true)===0x06054b50){eocd=i;break}}
+  if(eocd<0) throw new Error("arquivo não é um .xmind válido");
+  let p=dv.getUint32(eocd+16,true); const n=dv.getUint16(eocd+10,true), dec=new TextDecoder();
+  for(let i=0;i<n;i++){
+    const method=dv.getUint16(p+10,true), csize=dv.getUint32(p+20,true), nl=dv.getUint16(p+28,true), xl=dv.getUint16(p+30,true), cl=dv.getUint16(p+32,true), off=dv.getUint32(p+42,true);
+    const name=dec.decode(u8.subarray(p+46,p+46+nl));
+    if(name===wanted){
+      const start=off+30+dv.getUint16(off+26,true)+dv.getUint16(off+28,true), data=u8.subarray(start,start+csize);
+      if(method===0) return dec.decode(data);
+      if(method===8) return await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text();
+      throw new Error("compressão não suportada");
+    }
+    p+=46+nl+xl+cl;
+  }
+  return null;
+}
+const RX_MIN=/^\s*(\d+(?:[.,]\d+)?)\s*(m|min|h)\s*$/i, RX_NUM=/^\s*(\d+(?:[.,]\d+)?)\s*$/;
+const isFiller=t=>!t||!t.trim()||/^(subt[oó]pico|subtopic|t[oó]pico|main topic)\b/i.test(t.trim());
+function matchProc(path){
+  const s=norm(path.join(">"));
+  for(const p of db.processos) for(const a of (p.alias||[])) if(s.includes(norm(a))) return p;
+  return null;
+}
+function xmindToDemandas(sheet){
+  const kids=t=>(t.children&&t.children.attached)||[];
+  const out=[];
+  kids(sheet.rootTopic).forEach(dt=>{
+    const d={nome:(dt.title||"").replace(/\s+/g," ").trim(),status:"estimar",obs:"",linhas:[]}, notes=[];
+    (function walk(t,path){
+      const ti=(t.title||"").trim();
+      kids(t).forEach(c=>{
+        const ct=(c.title||"").trim(), m=RX_MIN.exec(ct), n=RX_NUM.exec(ct);
+        if(m||(n&&!kids(c).length&&RX_NUM.test(ti))){
+          const min=parseFloat((m||n)[1].replace(",","."))*(m&&m[2].toLowerCase()==="h"?60:1);
+          const q=RX_NUM.test(ti)?parseFloat(ti.replace(",",".")):1;
+          const clean=path.filter(x=>!isFiller(x)&&!RX_NUM.test(x));
+          const p=matchProc(clean), last=clean[clean.length-1]||"";
+          const fase=clean[0]||"";
+          if(p) d.linhas.push({cod:p.cod,det:last,qtd:q,min});
+          else d.linhas.push({cod:"",desc:clean.slice(1).join(" › ")||last,fase,det:"",qtd:q,min});
+        }else walk(c,[...path,ct]);
+      });
+      if(!kids(t).length&&!isFiller(ti)&&path.length===1&&ti!==d.nome) notes.push(ti);
+    })(dt,[]);
+    kids(dt).forEach(c=>{if(!kids(c).length&&!isFiller(c.title)) notes.push(c.title.replace(/\s+/g," ").trim())});
+    if(!d.linhas.length){
+      if(!kids(dt).length&&isFiller(d.nome)) return;
+      d.status="discussao"; d.obs=[...new Set(notes)].join(" · ");
+    }
+    out.push(d);
+  });
+  return out;
+}
+$("#btnXmind").onclick=()=>pickFile(".xmind",async f=>{
+  const txt=await unzipEntry(await f.arrayBuffer(),"content.json");
+  if(!txt) throw new Error("este .xmind não tem content.json (formato XMind 8 antigo). Salve-o numa versão recente do XMind.");
+  const sheets=JSON.parse(txt), sh=sheets[0];
+  const dems=xmindToDemandas(sh);
+  const nLin=dems.reduce((s,d)=>s+d.linhas.length,0), nAv=dems.reduce((s,d)=>s+d.linhas.filter(l=>!l.cod).length,0);
+  const subst=est.demandas.length?confirm(`${dems.length} demandas e ${nLin} linhas lidas (${nAv} sem processo reconhecido, entram como avulsas).\n\nOK = substituir a estimativa atual · Cancelar = adicionar às demandas atuais`):true;
+  if(subst) est={nome:(sh.rootTopic.title||"").trim()||f.name.replace(/\.xmind$/i,""),resp:est.resp||"",data:hoje(),demandas:dems};
+  else est.demandas.push(...dems);
+  persist(); renderEst();
 });
 
 /* ================= BANCO DE PROCESSOS ================= */
 function renderProc(){
-  const f=$("#pFiltro").value.trim().toLowerCase();
+  const f=norm($("#pFiltro").value);
   let h="";
-  const cats=[...db.categorias, ...new Set(db.processos.map(p=>p.cat).filter(c=>!db.categorias.includes(c)))];
-  cats.forEach(cat=>{
-    const ps=db.processos.map((p,i)=>({p,i})).filter(({p})=>p.cat===cat&&(!f||(p.cod+" "+p.nome+" "+p.un).toLowerCase().includes(f)));
+  fases().forEach(fase=>{
+    const ps=db.processos.map((p,i)=>({p,i})).filter(({p})=>p.fase===fase&&(!f||norm(p.cod+" "+p.grupo+" "+p.nome+" "+p.un).includes(f)));
     if(!ps.length) return;
-    h+=`<tr class="cat"><td colspan="6">${esc(cat)} <span class="pill">${ps.length}</span></td></tr>`;
+    h+=`<tr class="cat"><td colspan="8">${esc(fase)} <span class="pill">${ps.length}</span></td></tr>`;
     h+=ps.map(({p,i})=>`<tr>
       <td><input value="${esc(p.cod)}" data-i="${i}" data-k="cod"></td>
-      <td><input value="${esc(p.cat)}" data-i="${i}" data-k="cat" list="catList"></td>
+      <td><input value="${esc(p.fase)}" data-i="${i}" data-k="fase" list="faseList"></td>
+      <td><input value="${esc(p.grupo)}" data-i="${i}" data-k="grupo"></td>
       <td><input value="${esc(p.nome)}" data-i="${i}" data-k="nome"></td>
       <td><input value="${esc(p.un)}" data-i="${i}" data-k="un"></td>
-      <td class="n"><input type="number" min="0" step="0.05" value="${p.h}" data-i="${i}" data-k="h"></td>
+      <td class="n"><input type="number" min="0" step="1" value="${p.min}" data-i="${i}" data-k="min"></td>
+      <td><select data-i="${i}" data-k="fonte"><option value="H" ${p.fonte==="H"?"selected":""}>Histórico</option><option value="M" ${p.fonte!=="H"?"selected":""}>Manual</option></select></td>
       <td><button class="x" data-pdel="${i}" title="Excluir">×</button></td></tr>`).join("");
   });
-  $("#procBody").innerHTML=h+`<datalist id="catList">${db.categorias.map(c=>`<option value="${esc(c)}">`).join("")}</datalist>`;
+  $("#procBody").innerHTML=(h||'<tr><td colspan="8" class="empty">Nada encontrado.</td></tr>')+`<datalist id="faseList">${fases().map(c=>`<option value="${esc(c)}">`).join("")}</datalist>`;
 }
 $("#procBody").addEventListener("change",e=>{
   const t=e.target; if(t.dataset.i===undefined) return;
   const p=db.processos[+t.dataset.i], k=t.dataset.k, old=p.cod;
-  p[k]=k==="h"?Math.max(0,+t.value||0):t.value.trim();
-  if(k==="cod"&&old!==p.cod){ // propaga renomeação de código
-    db.kits.forEach(kt=>kt.itens.forEach(it=>{if(it[0]===old) it[0]=p.cod}));
-    est.linhas.forEach(l=>{if(l.tipo==="proc"&&l.cod===old) l.cod=p.cod});
-  }
-  if(k==="cat"&&p.cat&&!db.categorias.includes(p.cat)) db.categorias.push(p.cat);
-  persist(); if(k==="cat") renderProc();
+  if(k==="cod"){
+    const v=t.value.trim(); if(!v||(v!==old&&proc(v))){alert("Código vazio ou já existente.");t.value=old;return}
+    p.cod=v;
+    db.modelos.forEach(m=>m.itens.forEach(it=>{if(it[0]===old) it[0]=v}));
+    est.demandas.forEach(d=>d.linhas.forEach(l=>{if(l.cod===old) l.cod=v}));
+    Object.keys(db.vinculos).forEach(k2=>{if(db.vinculos[k2]===old) db.vinculos[k2]=v});
+  }else p[k]=k==="min"?Math.max(0,+t.value||0):t.value.trim();
+  persist(); if(k==="fase") renderProc();
 });
 $("#procBody").addEventListener("click",e=>{
   const d=e.target.dataset.pdel; if(d===undefined) return;
   const p=db.processos[+d];
-  const usos=db.kits.filter(k=>k.itens.some(it=>it[0]===p.cod)).map(k=>k.cod);
-  if(!confirm(`Excluir ${p.cod}?`+(usos.length?`\nEle é usado nos kits: ${usos.join(", ")} (será removido deles).`:""))) return;
-  db.kits.forEach(k=>k.itens=k.itens.filter(it=>it[0]!==p.cod));
+  const usos=db.modelos.filter(m=>m.itens.some(it=>it[0]===p.cod)).map(m=>m.cod);
+  if(!confirm(`Excluir ${p.cod}?`+(usos.length?`\nEle é usado nos modelos: ${usos.join(", ")} (será removido deles).`:""))) return;
+  db.modelos.forEach(m=>m.itens=m.itens.filter(it=>it[0]!==p.cod));
   db.processos.splice(+d,1); persist(); renderProc();
 });
 $("#pFiltro").oninput=renderProc;
 $("#pAdd").onclick=()=>{
-  const cat=db.categorias[0]||"Geral";
-  let n=db.processos.length+1, cod; do{cod="NOV-"+String(n++).padStart(2,"0")}while(proc(cod));
-  db.processos.push({cod,cat,nome:"Novo processo",un:"unid.",h:1});
+  let n=1, cod; do{cod="NOV-"+String(n++).padStart(2,"0")}while(proc(cod));
+  db.processos.unshift({cod,fase:"Cadastros",grupo:"",nome:"Novo processo",un:"unid.",min:10,fonte:"M",alias:[]});
   $("#pFiltro").value=""; persist(); renderProc();
 };
 $("#dbExport").onclick=()=>download(JSON.stringify(db,null,2),"banco-processos-promob.json","application/json");
-$("#dbImport").onclick=()=>pickFile((txt,name)=>{
-  if(/\.csv$/i.test(name)){
-    // CSV: codigo;categoria;processo;unidade;horas
-    const linhas=txt.replace(/^﻿/,"").split(/\r?\n/).filter(Boolean);
-    const sep=linhas[0].includes(";")?";":",";
-    const novos=linhas.slice(1).map(l=>l.split(sep).map(s=>s.trim().replace(/^"|"$/g,""))).filter(c=>c[0]).map(c=>({cod:c[0],cat:c[1]||"Geral",nome:c[2]||c[0],un:c[3]||"unid.",h:+String(c[4]||"0").replace(",",".")||0}));
-    novos.forEach(n=>{const ex=proc(n.cod); if(ex) Object.assign(ex,n); else db.processos.push(n); if(!db.categorias.includes(n.cat)) db.categorias.push(n.cat)});
+$("#dbImport").onclick=()=>pickFile(".json,.csv",async f=>{
+  const txt=await f.text();
+  if(/\.csv$/i.test(f.name)){
+    // CSV: codigo;fase;grupo;processo;unidade;minutos
+    const linhas=txt.replace(/^﻿/,"").split(/\r?\n/).filter(Boolean), sep=linhas[0].includes(";")?";":",";
+    const novos=linhas.slice(1).map(l=>l.split(sep).map(s=>s.trim().replace(/^"|"$/g,""))).filter(c=>c[0])
+      .map(c=>({cod:c[0],fase:c[1]||"Cadastros",grupo:c[2]||"",nome:c[3]||c[0],un:c[4]||"unid.",min:+String(c[5]||"0").replace(",",".")||0}));
+    novos.forEach(n=>{const ex=proc(n.cod); if(ex) Object.assign(ex,n); else db.processos.push({...n,fonte:"M",alias:[]})});
     alert(novos.length+" processos importados/atualizados.");
   }else{
     const o=JSON.parse(txt); if(!o.processos) throw new Error("JSON sem lista de processos");
-    db=Object.assign(clone(SEED),o);
+    db=Object.assign(seedDb(),o);
   }
   persist(); render();
 });
-$("#dbReset").onclick=()=>{if(confirm("Restaurar o banco padrão? Seus processos e kits personalizados serão substituídos.")){db=clone(SEED);persist();render()}};
+$("#dbReset").onclick=()=>{if(confirm("Restaurar o banco padrão? Processos, modelos e vínculos personalizados serão substituídos.")){db=seedDb();persist();render()}};
 
-/* ================= KITS ================= */
-function renderKits(){
-  const opts=db.processos.map(p=>`<option value="${esc(p.cod)}">${esc(p.cod)} · ${esc(p.nome)}</option>`).join("");
-  $("#kitList").innerHTML=db.kits.map((k,ki)=>{
-    const tot=k.itens.reduce((s,[pc,q])=>s+((proc(pc)||{h:0}).h*q),0);
+/* ================= MODELOS ================= */
+function renderTpl(){
+  const opts=procOptions("").replace('<option value="__avulso">Linha avulsa (fora do banco)</option>',"");
+  $("#tplList").innerHTML=db.modelos.map((m,mi)=>{
+    const tot=m.itens.reduce((s,[pc,q])=>s+((proc(pc)||{min:0}).min*q),0);
     return `<div class="card" style="background:var(--surface-2)">
       <div class="row" style="margin-bottom:10px">
-        <label style="width:100px">Código<input value="${esc(k.cod)}" data-ki="${ki}" data-kk="cod"></label>
-        <label style="flex:1;min-width:200px">Nome do kit<input value="${esc(k.nome)}" data-ki="${ki}" data-kk="nome"></label>
-        <span class="pill" style="align-self:center">${num(tot,2)} h em complexidade normal</span>
-        <button class="btn" data-kdel="${ki}">Excluir kit</button>
+        <label style="width:90px">Código<input value="${esc(m.cod)}" data-mi="${mi}" data-mk="cod"></label>
+        <label style="flex:1;min-width:200px">Nome do modelo<input value="${esc(m.nome)}" data-mi="${mi}" data-mk="nome"></label>
+        <span class="pill" style="align-self:center">${hm(tot)} · ${m.itens.length} processos</span>
+        <button class="btn" data-mdel="${mi}">Excluir</button>
       </div>
-      <div class="tbl"><table><thead><tr><th>Processo</th><th class="n">Qtd. por kit</th><th class="n">Horas</th><th></th></tr></thead><tbody>
-      ${k.itens.map(([pc,q],ii)=>{const p=proc(pc);return `<tr><td>${esc(pc)} · ${p?esc(p.nome):'<span class="muted">não encontrado</span>'}</td>
-        <td class="n"><input type="number" min="0" step="1" value="${q}" data-ki="${ki}" data-ii="${ii}"></td>
-        <td class="n">${num(p?p.h*q:0,2)}</td><td><button class="x" data-ki="${ki}" data-idel="${ii}">×</button></td></tr>`}).join("")}
+      <div class="tbl"><table><thead><tr><th>Processo</th><th class="n">Qtd.</th><th class="n">Total</th><th></th></tr></thead><tbody>
+      ${m.itens.map(([pc,q],ii)=>{const p=proc(pc);return `<tr><td>${esc(pc)} · ${p?esc(p.nome):'<span class="muted">não encontrado</span>'}</td>
+        <td class="n"><input type="number" min="0" step="1" value="${q}" data-mi="${mi}" data-ii="${ii}"></td>
+        <td class="n">${hm(p?p.min*q:0)}</td><td><button class="x" data-mi="${mi}" data-idel="${ii}">×</button></td></tr>`}).join("")}
       </tbody></table></div>
-      <div class="row" style="margin-top:10px"><select data-kaddsel="${ki}" style="flex:1;min-width:200px">${opts}</select><button class="btn" data-kadd="${ki}">+ Adicionar processo</button></div>
-    </div>`}).join("")||'<p class="empty">Nenhum kit cadastrado.</p>';
+      <div class="row" style="margin-top:10px"><select data-maddsel="${mi}" style="flex:1;min-width:200px">${opts}</select><button class="btn" data-madd="${mi}">+ Adicionar processo</button></div>
+    </div>`}).join("")||'<p class="empty">Nenhum modelo cadastrado.</p>';
 }
-$("#kitList").addEventListener("change",e=>{
-  const t=e.target, ki=t.dataset.ki; if(ki===undefined) return;
-  const k=db.kits[+ki];
-  if(t.dataset.kk){
-    const old=k.cod; k[t.dataset.kk]=t.value.trim();
-    if(t.dataset.kk==="cod") est.linhas.forEach(l=>{if(l.tipo==="kit"&&l.cod===old) l.cod=k.cod});
-  }
-  else if(t.dataset.ii!==undefined) k.itens[+t.dataset.ii][1]=Math.max(0,+t.value||0);
-  persist(); renderKits();
+$("#tplList").addEventListener("change",e=>{
+  const t=e.target, mi=t.dataset.mi; if(mi===undefined) return;
+  const m=db.modelos[+mi];
+  if(t.dataset.mk) m[t.dataset.mk]=t.value.trim();
+  else if(t.dataset.ii!==undefined) m.itens[+t.dataset.ii][1]=Math.max(0,+t.value||0);
+  persist(); renderTpl();
 });
-$("#kitList").addEventListener("click",e=>{
+$("#tplList").addEventListener("click",e=>{
   const t=e.target;
-  if(t.dataset.kdel!==undefined){if(confirm("Excluir este kit?")){db.kits.splice(+t.dataset.kdel,1);persist();renderKits()}}
-  else if(t.dataset.idel!==undefined){db.kits[+t.dataset.ki].itens.splice(+t.dataset.idel,1);persist();renderKits()}
-  else if(t.dataset.kadd!==undefined){
-    const ki=+t.dataset.kadd, pc=document.querySelector(`[data-kaddsel="${ki}"]`).value, k=db.kits[ki];
-    const ex=k.itens.find(it=>it[0]===pc); if(ex) ex[1]++; else k.itens.push([pc,1]);
-    persist(); renderKits();
+  if(t.dataset.mdel!==undefined){if(confirm("Excluir este modelo?")){db.modelos.splice(+t.dataset.mdel,1);persist();renderTpl()}}
+  else if(t.dataset.idel!==undefined){db.modelos[+t.dataset.mi].itens.splice(+t.dataset.idel,1);persist();renderTpl()}
+  else if(t.dataset.madd!==undefined){
+    const mi=+t.dataset.madd, pc=document.querySelector(`[data-maddsel="${mi}"]`).value, m=db.modelos[mi]; if(!pc) return;
+    const ex=m.itens.find(it=>it[0]===pc); if(ex) ex[1]++; else m.itens.push([pc,1]);
+    persist(); renderTpl();
   }
 });
-$("#kAdd").onclick=()=>{
-  let n=db.kits.length+1, cod; do{cod="KIT-"+String(n++).padStart(2,"0")}while(kit(cod));
-  db.kits.push({cod,nome:"Novo kit",itens:[]}); persist(); renderKits();
+$("#tAdd").onclick=()=>{
+  let n=db.modelos.length+1, cod; do{cod="MD-"+String(n++).padStart(2,"0")}while(db.modelos.some(m=>m.cod===cod));
+  db.modelos.push({cod,nome:"Novo modelo",itens:[]}); persist(); renderTpl();
+};
+
+/* ================= LEITOR DE SYSTEM ================= */
+let sysScan=null;
+const XML_EXT=new Set([".xml",".config",".aggregate",".xsd",".promob",".pbl"]);
+const extOf=n=>{const i=n.lastIndexOf(".");return i>0?n.slice(i).toLowerCase():"(sem extensão)"};
+$("#sysPick").onclick=()=>{$("#sysDir").value="";$("#sysDir").click()};
+$("#sysDir").onchange=async()=>{
+  const files=[...$("#sysDir").files]; if(!files.length) return;
+  const m={}; const add=(k,v=1)=>m[k]=(m[k]||0)+v;
+  const info=$("#sysInfo"); let xmlLidos=0, xmlErro=0, bytes=0;
+  const parser=new DOMParser();
+  for(let i=0;i<files.length;i++){
+    const f=files[i], rel=f.webkitRelativePath||f.name, parts=rel.split("/");
+    const sub=parts.length>2?parts[1]:"(raiz)", ext=extOf(f.name);
+    bytes+=f.size; add("ext:"+ext); add("pasta:"+sub);
+    if(parts.length>3) add("pasta:"+parts[1]+"/"+parts[2]);
+    if(XML_EXT.has(ext)&&f.size<8e6){
+      try{
+        let txt=await f.text(); if(!txt.trimStart().startsWith("<")) continue;
+        const doc=parser.parseFromString(txt,"application/xml");
+        if(doc.getElementsByTagName("parsererror").length){xmlErro++;continue}
+        xmlLidos++;
+        for(const el of doc.getElementsByTagName("*")) add("tag:"+el.localName);
+      }catch(err){xmlErro++}
+    }
+    if(i%200===0){info.textContent=`Lendo ${i+1}/${files.length}…`;await new Promise(r=>setTimeout(r))}
+  }
+  const raiz=(files[0].webkitRelativePath||"").split("/")[0];
+  sysScan={raiz,quando:new Date().toLocaleString("pt-BR"),arquivos:files.length,bytes,xmlLidos,xmlErro,m};
+  info.textContent="";
+  renderSys();
+};
+function renderSys(){
+  const snap=load(K_SNAP,null);
+  $("#sysSnap").disabled=!sysScan; $("#sysToEst").disabled=!sysScan;
+  if(!sysScan){$("#sysOut").innerHTML=`<p class="empty">Nenhuma leitura ainda.${snap?` Retrato salvo: ${esc(snap.raiz)} em ${esc(snap.quando)}.`:""}</p>`;return}
+  const s=sysScan, sm=snap?snap.m:{};
+  const opts=cod=>'<option value="">— sem vínculo —</option>'+fases().map(f=>`<optgroup label="${esc(f)}">`+db.processos.filter(p=>p.fase===f).map(p=>`<option value="${esc(p.cod)}" ${p.cod===cod?"selected":""}>${esc(p.cod)} · ${esc(p.nome)}</option>`).join("")+"</optgroup>").join("");
+  const sec=(pref,titulo,lim)=>{
+    const keys=Object.keys(s.m).filter(k=>k.startsWith(pref)).sort((a,b)=>s.m[b]-s.m[a]).slice(0,lim);
+    if(!keys.length) return "";
+    return `<h3 style="margin:16px 0 8px">${titulo}</h3><div class="tbl"><table>
+      <thead><tr><th>Métrica</th><th class="n">Qtd.</th>${snap?'<th class="n">Δ vs. retrato</th>':""}<th style="width:45%">Vincular ao processo</th></tr></thead><tbody>
+      ${keys.map(k=>{const d=s.m[k]-(sm[k]||0);return `<tr><td>${esc(k.slice(pref.length))}</td><td class="n">${num(s.m[k],0)}</td>
+        ${snap?`<td class="n ${d>0?"diff up":""}">${d>0?"+":""}${num(d,0)}</td>`:""}
+        <td><select data-vinc="${esc(k)}">${opts(db.vinculos[k]||"")}</select></td></tr>`}).join("")}
+      </tbody></table></div>`;
+  };
+  $("#sysOut").innerHTML=`<p class="muted">Pasta <b>${esc(s.raiz)}</b> · lida em ${esc(s.quando)} · ${num(s.arquivos,0)} arquivos · ${num(s.bytes/1048576)} MB · ${num(s.xmlLidos,0)} XML/config lidos${s.xmlErro?` · ${s.xmlErro} não legíveis (binários ou corrompidos)`:""}${snap?` · retrato de base: ${esc(snap.quando)}`:""}</p>`
+    +sec("pasta:","Arquivos por pasta",60)+sec("ext:","Arquivos por extensão",40)+sec("tag:","Elementos encontrados nos XML/config",80);
+}
+$("#sysOut").addEventListener("change",e=>{
+  const k=e.target.dataset.vinc; if(k===undefined) return;
+  if(e.target.value) db.vinculos[k]=e.target.value; else delete db.vinculos[k];
+  persist();
+});
+$("#sysSnap").onclick=()=>{if(!sysScan) return; save(K_SNAP,sysScan); alert("Retrato salvo como linha de base."); renderSys()};
+$("#sysToEst").onclick=()=>{
+  if(!sysScan) return;
+  const useDiff=$("#sysUseDiff").checked, snap=load(K_SNAP,null);
+  if(useDiff&&!snap){alert("Salve um retrato antes para usar a diferença.");return}
+  const linhas=[];
+  Object.entries(db.vinculos).forEach(([k,cod])=>{
+    const p=proc(cod); if(!p||sysScan.m[k]===undefined) return;
+    const q=useDiff?sysScan.m[k]-(snap.m[k]||0):sysScan.m[k];
+    if(q>0) linhas.push({cod,det:"System: "+k,qtd:q,min:p.min});
+  });
+  if(!linhas.length){alert("Nenhuma métrica vinculada com quantidade > 0.");return}
+  est.demandas.push({nome:(useDiff?"Produzido no System":"Inventário do System")+" — "+sysScan.raiz,status:"estimar",obs:`Gerado pelo Leitor de System em ${sysScan.quando}${useDiff?" (diferença vs. retrato de "+snap.quando+")":""}.`,linhas});
+  persist(); document.querySelector('nav button[data-tab="est"]').click();
 };
 
 /* ================= PARÂMETROS ================= */
 const CFG={cValor:"valor",cHdia:"hdia",cEquipe:"equipe",cCont:"cont",cGest:"gest",cOti:"oti",cPes:"pes"};
-function renderCfg(){
-  Object.entries(CFG).forEach(([id,k])=>$("#"+id).value=db.cfg[k]);
-  $("#cxBody").innerHTML=db.complexidades.map((c,i)=>`<tr><td>${esc(c.nome)}</td>
-    <td class="n"><input type="number" min="0" step="0.05" value="${c.f}" data-cxi="${i}"></td>
-    <td><input value="${esc(c.crit)}" data-cxc="${i}"></td></tr>`).join("");
-}
-Object.entries(CFG).forEach(([id,k])=>$("#"+id).addEventListener("change",e=>{db.cfg[k]=Math.max(0,+e.target.value||0);if(k==="hdia"||k==="equipe")db.cfg[k]=Math.max(1,db.cfg[k]);persist()}));
-$("#cxBody").addEventListener("change",e=>{
-  const t=e.target;
-  if(t.dataset.cxi!==undefined) db.complexidades[+t.dataset.cxi].f=Math.max(0,+t.value||0);
-  if(t.dataset.cxc!==undefined) db.complexidades[+t.dataset.cxc].crit=t.value;
-  persist();
-});
+function renderCfg(){Object.entries(CFG).forEach(([id,k])=>$("#"+id).value=db.cfg[k])}
+Object.entries(CFG).forEach(([id,k])=>$("#"+id).addEventListener("change",e=>{
+  db.cfg[k]=Math.max(0,+e.target.value||0); if(k==="hdia"||k==="equipe") db.cfg[k]=Math.max(1,db.cfg[k]); persist();
+}));
 
 /* ================= UTIL ================= */
+function toCsv(rows){return rows.map(r=>r.map(v=>{v=String(v??"");return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(";")).join("\n")}
 function download(content,name,type){
   const a=document.createElement("a");
   a.href=URL.createObjectURL(new Blob([content],{type}));
   a.download=name.replace(/[\\/:*?"<>|]/g,"-"); a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
-function pickFile(cb){
-  const inp=$("#fileIn"); inp.value="";
-  inp.onchange=()=>{const f=inp.files[0]; if(!f) return;
-    f.text().then(t=>{try{cb(t,f.name)}catch(err){alert("Não foi possível importar: "+err.message)}})};
+function pickFile(accept,cb){
+  const inp=$("#fileIn"); inp.value=""; inp.accept=accept;
+  inp.onchange=async()=>{const f=inp.files[0]; if(!f) return;
+    try{await cb(f)}catch(err){alert("Não foi possível importar: "+err.message)}};
   inp.click();
 }
-function render(){renderAddSelect();renderEst();renderProc();renderKits();renderCfg()}
+function render(){renderEst();renderProc();renderTpl();renderSys();renderCfg()}
 render();
 </script>
 </body>

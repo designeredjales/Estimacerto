@@ -1,40 +1,61 @@
 # EstimaCerto — Estimativa de esforço para bibliotecas Promob
 
-Ferramenta para estimar o esforço de customização de bibliotecas Promob **por contagem**.
-Cada tipo de trabalho que se repete vira um **processo padronizado** com tempo-padrão. Uma
-estimativa passa a ser: *quantos de cada processo (ou kit) × complexidade*, mais as reservas.
+Estima o esforço de customização de bibliotecas Promob Catalog/Builder **por contagem**:
+cada trabalho que se repete é um processo padronizado com tempo-padrão em minutos, e a estimativa
+de uma demanda é *Σ quantidade × minutos*, mais reservas.
 
-## Como usar
+Abra `index.html` no navegador (Chrome/Edge). Não precisa de instalação nem de internet; os dados
+ficam no próprio navegador (localStorage) e podem ser exportados em JSON/CSV.
 
-Abra `index.html` no navegador. Não precisa de instalação, servidor nem internet. Os dados
-ficam salvos no próprio navegador (localStorage).
+## Estrutura
 
-1. **Banco de processos**: o catálogo de processos repetitivos, por categoria (Gestão,
-   Modelagem 3D, Parametrização, Materiais, Produção/saídas, Comercial, Testes). Edite os
-   tempos-padrão com o histórico real da equipe.
-2. **Kits**: composições que sempre acontecem juntas (ex.: “Módulo aéreo padrão” = cadastro
-   da caixa + 2 componentes internos + 1 frente + furação + códigos ERP + teste…). Na estimativa,
-   você conta kits em vez de processos soltos.
-3. **Estimativa**: some kits e processos com quantidade e nível de complexidade. O painel mostra
-   as horas técnicas, as reservas (contingência + gestão), o total, o prazo em dias úteis, o
-   investimento, a faixa otimista/pessimista e a distribuição por categoria.
-4. **Parâmetros**: valor/hora, horas produtivas/dia, tamanho da equipe, % de contingência e de
-   gestão, e os multiplicadores de complexidade (Baixa 0,75 · Normal 1 · Alta 1,5 · Crítica 2).
+**Estimativa → Demandas → Linhas.** Uma estimativa tem várias demandas (ex.: *Prateleira deslizante*,
+*Portas Mimezada*). Cada linha é `processo + detalhe/variante + qtd + min/unid + real (opcional)`.
+Demandas marcadas como **Em discussão** aparecem na estimativa, mas não somam.
+
+**Banco de processos**, classificado em **Fase › Grupo › Processo**:
+
+| Fase | Exemplos de grupos |
+|---|---|
+| P&D | Construção de desenho, protótipo, reunião de definição |
+| Estrutura da linha | Setup, grupos, camadas |
+| Configurador | Atributos do configurador de dimensões |
+| Cadastros | Entidade, montagem de entidade, Builder, revisão de modelos, materiais, composições, ferragens, referência, orçamento |
+| Modulação | Montagem aplicação, modelos formatos/folhas, entidades finais, caixas, módulos, funções |
+| Testes | Teste em ambiente, teste de produção |
+| Publicação | Slides, validação, publicação |
+| Administrativo | Administrativo da demanda |
+
+Fonte de cada tempo: **Histórico** (medido no mapa XMind *Estimativa LT* da equipe) ou **Manual**
+(derivado do guia Catalog Builder; precisa de calibração).
+
+**Modelos de demanda**: pacotes que se repetem (fechamento padrão, orçamento padrão, montagem de
+entidade, novo item com entidade, nova linha completa). Na demanda, “Aplicar modelo” insere as linhas.
+
+## Importar XMind
+
+Lê o `.xmind` direto (XMind 2020+). Convenção do mapa:
+`Estimativa › Demanda › Fase › Grupo › Atividade › Variante › quantidade › minutos (ex.: 30m, 2h)`.
+Cada caminho é reconhecido no banco pelos *aliases* dos processos; o que não for reconhecido entra
+como linha avulsa. Demandas sem tempos viram “Em discussão”, com as anotações em observações.
+
+## Leitor de System
+
+Selecione a pasta `System` da biblioteca. O leitor inventaria arquivos por pasta e extensão e conta
+os elementos dos arquivos XML/config. Cada métrica pode ser vinculada a um processo do banco (o vínculo
+fica salvo). Com **Salvar retrato** antes da customização e uma nova leitura depois, a **diferença**
+mostra o que foi produzido, que pode virar uma demanda para comparar estimado × realizado.
+
+## Calibração
+
+Preencha **Real (min)** nas linhas executadas. O painel mostra o desvio estimado × real, que indica
+quais tempos-padrão ajustar no banco.
 
 ## Fórmula
 
 ```
-horas técnicas = Σ (qtd × tempo-padrão × fator de complexidade)   [kits explodidos em processos]
-total          = horas técnicas × (1 + contingência% + gestão%)
-prazo (dias)   = total ÷ (horas produtivas/dia × pessoas)
-investimento   = total × valor/hora
-faixa          = total × fator otimista … total × fator pessimista
+horas estimadas = Σ (qtd × min/unid) / 60          [demandas "Estimar"]
+total           = horas estimadas × (1 + contingência% + gestão extra%)
+prazo (dias)    = total ÷ (horas produtivas/dia × pessoas)
+investimento    = total × valor/hora
 ```
-
-## Importar / exportar
-
-- **Banco**: exporta e importa em `.json` (completo, com kits) ou importa `.csv` com as colunas
-  `codigo;categoria;processo;unidade;horas` (vírgula ou ponto e vírgula; atualiza pelo código).
-- **Estimativa**: salva e abre em `.json`, exporta CSV (abre no Excel) e imprime/gera PDF.
-
-Os tempos-padrão que vêm no banco são **pontos de partida**. Calibre com dados reais.
