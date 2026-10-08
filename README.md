@@ -30,6 +30,10 @@ Se o texto não existir no banco, a busca oferece **＋ Cadastrar novo processo*
 nome; ao salvar, o processo entra no grupo escolhido e a linha é adicionada à demanda) ou **linha
 avulsa**; para modelos, **＋ Criar modelo com as linhas desta demanda** ou **modelo vazio**.
 
+Na aba **Modelos**: busca de modelos (por nome, código ou processo contido) com **＋ Criar modelo** quando
+não existe, e em cada modelo a busca de processo (Enter adiciona com a quantidade ao lado) com
+**＋ Cadastrar novo processo**, que entra no banco e no modelo ao salvar.
+
 ## Status e demandas ignoradas
 
 Cada demanda tem um **status de andamento** (Não iniciada · Em andamento · Aguardando cliente ·

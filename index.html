@@ -280,7 +280,8 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
   <div class="card">
     <h2>Modelos de demanda</h2>
     <p class="muted">Pacotes de processos que se repetem (fechamento, orçamento, montagem de entidade…). Crie aqui ou pelo botão “Salvar como modelo” de uma demanda pronta. Na estimativa, “Aplicar modelo” insere as linhas na demanda e você ajusta.</p>
-    <div class="toolbar"><button class="btn pri" id="tAdd">+ Novo modelo</button></div>
+    <div class="toolbar"><input id="tBusca" placeholder="Buscar modelo pelo nome, código ou processo…" style="flex:1;min-width:220px" autocomplete="off"><button class="btn pri" id="tAdd">+ Novo modelo</button></div>
+    <div id="tNovoBox"></div>
     <div id="tplList"></div>
   </div>
 </section>
@@ -731,7 +732,7 @@ function aplicarModelo(di,codModelo){
   persist(); renderEst();
 }
 /* ---------- Busca com cadastro rápido (processo e modelo) ---------- */
-function opcoesCombo(tipo,q,di){
+function opcoesCombo(tipo,q,di,ctx){
   const nq=norm(q), its=[];
   if(tipo==="p"){
     let ultFase="";
@@ -741,7 +742,7 @@ function opcoesCombo(tipo,q,di){
     });
     if(q.trim()&&!db.processos.some(p=>norm(p.nome)===nq||norm(p.cod)===nq)){
       its.push({v:"__novo",cls:"novo",html:`＋ Cadastrar novo processo “${esc(q.trim())}”`});
-      its.push({v:"__avulso",cls:"novo alt",html:`Usar como linha avulsa “${esc(q.trim())}” (sem cadastrar)`});
+      if(ctx!=="mod") its.push({v:"__avulso",cls:"novo alt",html:`Usar como linha avulsa “${esc(q.trim())}” (sem cadastrar)`});
     }
   }else{
     db.modelos.filter(m=>!nq||norm(m.cod+" "+m.nome).includes(nq)).forEach(m=>{
@@ -756,7 +757,7 @@ function opcoesCombo(tipo,q,di){
   return its;
 }
 function abrirCombo(cb){
-  const inp=cb.querySelector("input"), its=opcoesCombo(cb.dataset.cb,inp.value,+cb.dataset.d);
+  const inp=cb.querySelector("input"), its=opcoesCombo(cb.dataset.cb,inp.value,+cb.dataset.d,cb.dataset.ctx);
   cb._its=its.filter(x=>!x.grupo); let sel=+(cb.dataset.sel||0); if(sel>=cb._its.length) sel=0; cb.dataset.sel=sel;
   let k=-1;
   cb.querySelector(".cmenu").innerHTML=its.length?its.map(x=>x.grupo?`<div class="cgr">${esc(x.grupo)}</div>`:`<div class="copt ${x.cls||""} ${++k===sel?"on":""}" data-ci="${k}">${x.html}</div>`).join(""):'<div class="copt muted">Nenhum resultado</div>';
@@ -771,6 +772,11 @@ function criarModelo(nome,itens){
 async function escolherCombo(cb,x){
   const inp=cb.querySelector("input"), di=+cb.dataset.d, q=inp.value.trim();
   fecharCombo(cb);
+  if(cb.dataset.ctx==="mod"){
+    const mi=+cb.dataset.mi;
+    if(x.v==="__novo") return cadastrarProcessoRapido(q,null,{mi});
+    return addItemModelo(mi,x.v);
+  }
   if(cb.dataset.cb==="p"){
     if(x.v==="__novo") return cadastrarProcessoRapido(q,di);
     if(x.v==="__avulso"){inp.dataset.cod="__avulso";inp.dataset.txt=q;inp.value="Avulsa: "+q}
@@ -789,29 +795,38 @@ async function escolherCombo(cb,x){
     }else{inp.value="";aplicarModelo(di,x.v)}
   }
 }
-function cadastrarProcessoRapido(nome,di){
+function addItemModelo(mi,cod){
+  const m=db.modelos[mi]; if(!m) return;
+  const q=Math.max(1,+((document.querySelector(`[data-mq="${mi}"]`)||{}).value)||1);
+  const ex=m.itens.find(it=>it[0]===cod&&!it[2]); if(ex) ex[1]+=q; else m.itens.push([cod,q]);
+  persist(); renderTpl();
+  const inp=document.querySelector(`.combo[data-ctx="mod"][data-mi="${mi}"] input`); if(inp) inp.focus();
+}
+function cadastrarProcessoRapido(nome,di,alvo){
   const fase=fases().includes("Cadastros")?"Cadastros":fases()[0];
   const p={cod:codigoLivre(fase,""),fase,grupo:"",nome,un:"unid.",min:10,fonte:"M",alias:[],desc:""};
   db.processos.push(p);
   editarProc(db.processos.length-1,true,pp=>{
     const idx=db.processos.indexOf(pp); db.processos.splice(idx,1); db.processos.splice(posGrupo(pp.fase,pp.grupo),0,pp);
+    if(alvo&&alvo.mi!==undefined){addItemModelo(alvo.mi,pp.cod);renderProc();return}
     const det=(document.querySelector(`[data-adddet="${di}"]`)||{}).value||"";
     const qtd=Math.max(0,+((document.querySelector(`[data-addq="${di}"]`)||{}).value)||1);
     est.demandas[di].linhas.push({cod:pp.cod,det:det.trim(),qtd,min:pp.min});
     persist(); renderEst(); renderProc();
   });
 }
-dl.addEventListener("input",e=>{
+function ligarCombos(el){
+el.addEventListener("input",e=>{
   const cb=e.target.closest(".combo"); if(!cb) return;
   const inp=cb.querySelector("input"); delete inp.dataset.cod; delete inp.dataset.txt; cb.dataset.sel=0; abrirCombo(cb);
 });
-dl.addEventListener("focusin",e=>{const cb=e.target.closest(".combo"); if(cb&&e.target.classList.contains("cbi")) abrirCombo(cb)});
-dl.addEventListener("focusout",e=>{const cb=e.target.closest(".combo"); if(cb) setTimeout(()=>{if(!cb.contains(document.activeElement)) fecharCombo(cb)},150)});
-dl.addEventListener("mousedown",e=>{
+el.addEventListener("focusin",e=>{const cb=e.target.closest(".combo"); if(cb&&e.target.classList.contains("cbi")) abrirCombo(cb)});
+el.addEventListener("focusout",e=>{const cb=e.target.closest(".combo"); if(cb) setTimeout(()=>{if(!cb.contains(document.activeElement)) fecharCombo(cb)},150)});
+el.addEventListener("mousedown",e=>{
   const o=e.target.closest(".copt[data-ci]"); if(!o) return;
   e.preventDefault(); const cb=o.closest(".combo"); escolherCombo(cb,cb._its[+o.dataset.ci]);
 });
-dl.addEventListener("keydown",e=>{
+el.addEventListener("keydown",e=>{
   const cb=e.target.closest(".combo"); if(!cb||!e.target.classList.contains("cbi")) return;
   if(!cb.classList.contains("open")&&(e.key==="ArrowDown"||e.key==="Enter")){abrirCombo(cb);if(e.key==="ArrowDown"){e.preventDefault();return}}
   const n=(cb._its||[]).length; let sel=+(cb.dataset.sel||0);
@@ -820,6 +835,8 @@ dl.addEventListener("keydown",e=>{
   else if(e.key==="Enter"){e.preventDefault(); if(n) escolherCombo(cb,cb._its[sel])}
   else if(e.key==="Escape"){fecharCombo(cb)}
 });
+}
+ligarCombos(dl); ligarCombos($("#tplList"));
 dl.addEventListener("click",async e=>{
   const t=e.target, ds=t.dataset;
   if(ds.add!==undefined){
@@ -1046,7 +1063,7 @@ function editarProc(i,novo=false,aoSalvar=null){
     }},
    {label:"Duplicar",fn:()=>{fecharModal();duplicarProc(db.processos.indexOf(p))}},
    {label:novo?"Descartar":"Excluir",fn:async()=>{if(await excluirProc(db.processos.indexOf(p),novo)) fecharModal()}}]);
-  setTimeout(()=>$(novo?"#peNome":"#peMin").select(),50);
+  $(novo?"#peNome":"#peMin").select();
 }
 function novoProc(fase,grupo){
   const p={cod:codigoLivre(fase,grupo),fase,grupo,nome:"Novo processo",un:"unid.",min:10,fonte:"M",alias:[],desc:""};
@@ -1227,8 +1244,11 @@ $("#estTplList").addEventListener("click",async e=>{
 /* ================= MODELOS ================= */
 function renderTpl(){
   renderEstTpl();
-  const opts=procOptions("").replace('<option value="__avulso">Linha avulsa (fora do banco)</option>',"");
+  const fq=norm(($("#tBusca")||{}).value||""), fqRaw=(($("#tBusca")||{}).value||"").trim();
+  const casaM=m=>!fq||norm(m.cod+" "+m.nome+" "+m.itens.map(([pc,q,det,min,desc])=>pc+" "+((proc(pc)||{}).nome||"")+" "+(desc||"")).join(" ")).includes(fq);
+  $("#tNovoBox").innerHTML=fqRaw&&!db.modelos.some(m=>norm(m.nome)===fq)?`<div class="card" style="padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="muted">${db.modelos.some(casaM)?"Nenhum modelo com esse nome exato.":"Nenhum modelo encontrado."}</span><button class="btn pri" id="tNovoBtn">＋ Criar modelo “${esc(fqRaw)}”</button></div>`:"";
   $("#tplList").innerHTML=db.modelos.map((m,mi)=>{
+    if(!casaM(m)) return "";
     const tot=m.itens.reduce((s,[pc,q,det,min])=>s+((min??(proc(pc)||{min:0}).min)*q),0);
     return `<div class="card" style="background:var(--surface-2)" data-mcard="${mi}">
       <div class="row" style="margin-bottom:10px">
@@ -1242,8 +1262,8 @@ function renderTpl(){
         <td class="n"><input type="number" min="0" step="1" value="${q}" data-mi="${mi}" data-ii="${ii}"></td>
         <td class="n">${hm(mm*q)}</td><td><button class="x" data-mi="${mi}" data-idel="${ii}">×</button></td></tr>`}).join("")||'<tr><td colspan="4" class="muted">Sem processos. Adicione abaixo.</td></tr>'}
       </tbody></table></div>
-      <div class="row" style="margin-top:10px"><select data-maddsel="${mi}" style="flex:1;min-width:200px">${opts}</select><button class="btn" data-madd="${mi}">+ Adicionar processo</button></div>
-    </div>`}).join("")||'<p class="empty">Nenhum modelo cadastrado.</p>';
+      <div class="row" style="margin-top:10px"><div class="combo" data-cb="p" data-ctx="mod" data-mi="${mi}"><input class="cbi" placeholder="Adicionar processo: digite código ou nome… (Enter adiciona)" autocomplete="off" spellcheck="false"><div class="cmenu"></div></div><input type="number" min="1" step="1" value="1" data-mq="${mi}" title="Quantidade"></div>
+    </div>`}).join("")||(fq?"":'<p class="empty">Nenhum modelo cadastrado.</p>');
 }
 $("#tplList").addEventListener("change",e=>{
   const t=e.target, mi=t.dataset.mi; if(mi===undefined) return;
@@ -1256,15 +1276,17 @@ $("#tplList").addEventListener("click",async e=>{
   const t=e.target;
   if(t.dataset.mdel!==undefined){if(await uiConfirm("Excluir este modelo?")){db.modelos.splice(+t.dataset.mdel,1);persist();renderTpl()}}
   else if(t.dataset.idel!==undefined){db.modelos[+t.dataset.mi].itens.splice(+t.dataset.idel,1);persist();renderTpl()}
-  else if(t.dataset.madd!==undefined){
-    const mi=+t.dataset.madd, pc=document.querySelector(`[data-maddsel="${mi}"]`).value, m=db.modelos[mi]; if(!pc) return;
-    const ex=m.itens.find(it=>it[0]===pc); if(ex) ex[1]++; else m.itens.push([pc,1]);
-    persist(); renderTpl();
-  }
+
+});
+$("#tBusca").oninput=renderTpl;
+$("#tNovoBox").addEventListener("click",e=>{
+  if(e.target.id!=="tNovoBtn") return;
+  criarModelo($("#tBusca").value.trim(),[]);
+  const inp=document.querySelector('.combo[data-ctx="mod"][data-mi="0"] input'); if(inp){inp.closest(".card").scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>inp.focus(),250)}
 });
 $("#tAdd").onclick=()=>{
   let n=db.modelos.length+1, cod; do{cod="MD-"+String(n++).padStart(2,"0")}while(db.modelos.some(m=>m.cod===cod));
-  db.modelos.unshift({cod,nome:"Novo modelo",itens:[]}); persist(); renderTpl();
+  $("#tBusca").value=""; db.modelos.unshift({cod,nome:"Novo modelo",itens:[]}); persist(); renderTpl();
   const card=document.querySelector('[data-mcard="0"]'); card.scrollIntoView({behavior:"smooth",block:"center"});
   const inp=card.querySelector('[data-mk="nome"]'); setTimeout(()=>{inp.focus();inp.select()},250);
 };
