@@ -884,10 +884,22 @@ Object.entries(CFG).forEach(([id,k])=>$("#"+id).addEventListener("change",e=>{
 
 /* ================= UTIL ================= */
 function toCsv(rows){return rows.map(r=>r.map(v=>{v=String(v??"");return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(";")).join("\n")}
-function download(content,name,type){
+// No link publicado (claude.ai) o download passa pela capacidade "downloads"; aberto localmente, usa link comum.
+let dlReady=null;
+async function download(content,name,type){
+  name=name.replace(/[\\/:*?"<>|]/g,"-");
+  if(window.claude&&window.claude.use){
+    dlReady=dlReady||window.claude.use("downloads").catch(()=>null);
+    const dlCap=await dlReady;
+    if(dlCap){
+      try{await dlCap.save({filename:name,data:new Blob([content],{type})})}
+      catch(e){if(e&&e.code!=="declined") alert("Não foi possível salvar o arquivo ("+(e.code||"erro")+").")}
+      return;
+    }
+  }
   const a=document.createElement("a");
   a.href=URL.createObjectURL(new Blob([content],{type}));
-  a.download=name.replace(/[\\/:*?"<>|]/g,"-"); a.click();
+  a.download=name; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 function pickFile(accept,cb){
